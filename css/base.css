@@ -1,0 +1,273 @@
+/* ============ BASE & RESET ============ */
+* {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text);
+            background: #EFE7F7;
+            overflow-x: hidden;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        ::selection {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        img {
+            max-width: 100%;
+            display: block;
+        }
+
+        /* ============ SCROLLBAR STYLING ============ */
+        ::-webkit-scrollbar {
+            width: var(--scrollbar-width);
+            height: var(--scrollbar-width);
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Firefox scrollbar */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        }
+
+        /* ============ FULL SCREEN AMBIENCE ============ */
+        .app-bg {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 12% 18%, rgba(123, 44, 191, 0.16), transparent 42%),
+                radial-gradient(circle at 88% 12%, rgba(244, 180, 0, 0.14), transparent 38%),
+                radial-gradient(circle at 80% 88%, rgba(157, 78, 221, 0.18), transparent 45%),
+                linear-gradient(160deg, #F3EDFB 0%, #EFE7F7 55%, #F6EEE0 100%);
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ============ APP CONTAINER ============ */
+        .app-container {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            min-height: 100vh;
+            margin: 0 auto;
+        }
+
+        /* Desktop max-width with rounded corners */
+        @media (min-width:768px) {
+            .app-container {
+                max-width: 100%;
+                margin: 0 auto;
+            }
+        }
+
+        /* focus visibility */
+        button:focus-visible,
+        input:focus-visible,
+        .dd-trigger:focus-visible,
+        .toggle:focus-visible {
+            outline: 2.5px solid var(--secondary);
+            outline-offset: 2px;
+        }
+
+        /* ============ SCREEN STACK ============ */
+        .screen {
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+            -ms-overflow-style: none;
+            animation: slideIn .38s cubic-bezier(.22, .68, .36, 1);
+            min-height: 100vh;
+            scrollbar-width: thin;
+            scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+        }
+
+        .screen::-webkit-scrollbar {
+            width: var(--scrollbar-width);
+        }
+
+        .screen::-webkit-scrollbar-track {
+            background: var(--scrollbar-track);
+        }
+
+        .screen::-webkit-scrollbar-thumb {
+            background: var(--scrollbar-thumb);
+            border-radius: 10px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(18px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .screen-pad {
+            padding: 20px 20px 110px;
+            flex: 1;
+        }
+
+        .screen-pad.no-tab {
+            padding-bottom: 30px;
+        }
+
+        /* ============ TOPBAR ============ */
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px 8px;
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            border-bottom: 1px solid transparent;
+        }
+
+        .topbar h1 {
+            font-family: var(--font-display);
+            font-size: 19px;
+            font-weight: 600;
+            margin: 0;
+            color: var(--text);
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 14px;
+            border: none;
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            color: var(--primary);
+            box-shadow: var(--shadow-card);
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform .15s ease;
+        }
+
+        .icon-btn:active {
+            transform: scale(.92);
+        }
+
+        .topbar-spacer {
+            flex: 1;
+        }
+
+        /* ============ TYPO ============ */
+        .h-display {
+            font-family: var(--font-display);
+            font-weight: 600;
+            line-height: 1.18;
+            color: var(--text);
+        }
+
+        .h-xl {
+            font-size: 28px;
+        }
+
+        @media (min-width:600px) {
+            .h-xl {
+                font-size: 32px;
+            }
+        }
+
+        .h-lg {
+            font-size: 22px;
+        }
+
+        @media (min-width:600px) {
+            .h-lg {
+                font-size: 25px;
+            }
+        }
+
+        .h-md {
+            font-size: 18px;
+        }
+
+        @media (min-width:600px) {
+            .h-md {
+                font-size: 20px;
+            }
+        }
+
+        .p-muted {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .eyebrow {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: .01em;
+        }
+
+        .section-label {
+            font-family: var(--font-display);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--primary-dark);
+            margin: 26px 0 14px;
+            padding-bottom: 8px;
+            border-bottom: 1.5px solid var(--border);
+        }
+
+        .section-label:first-child {
+            margin-top: 4px;
+        }

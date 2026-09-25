@@ -1,0 +1,2675 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>Lagna Setu Connecting Communities</title>
+    <link rel="icon" type="image/png" href="images/lagna_setu_logo.png">
+    <link rel="apple-touch-icon" href="images/icon-192.png">
+    <!-- Progressive Web App (PWA) Manifest & Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#7B2CBF">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Lagna Setu">
+    <script>
+        (function () {
+            try {
+                var lsUser = localStorage.getItem('lagnaSetu_activeUser');
+                var lastActive = Number(localStorage.getItem('lagnaSetu_lastActiveTimestamp') || 0);
+                var TEN_MIN = 10 * 60 * 1000;
+                var isSessionValid = Boolean(lsUser && lastActive && ((Date.now() - lastActive) <= TEN_MIN));
+                if (!isSessionValid && lsUser && lastActive && ((Date.now() - lastActive) > TEN_MIN)) {
+                    try {
+                        localStorage.removeItem('lagnaSetu_activeUser');
+                        localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
+                        sessionStorage.removeItem('lagnaSetu_currentUser');
+                    } catch (_) { }
+                }
+
+                var visited = sessionStorage.getItem('lagnaSetu_visited');
+                var hash = window.location.hash.replace('#/', '');
+                var saved = sessionStorage.getItem('lagnaSetu_activeScreen');
+                var target = '';
+                if (isSessionValid) {
+                    target = hash ? ('scr-' + hash) : (saved || 'scr-home');
+                } else {
+                    target = hash ? ('scr-' + hash) : (saved || 'scr-welcome');
+                }
+
+                if ((visited || hash || saved || isSessionValid) && target && target !== 'scr-splash') {
+                    document.documentElement.classList.add('bypassing-splash');
+                    var style = document.createElement('style');
+                    style.id = 'spa-preload-css';
+                    style.textContent = 'html.bypassing-splash #scr-splash{display:none!important;}' +
+                        'html.bypassing-splash #' + target + '{display:flex!important;animation:none!important;}' +
+                        'html.bypassing-splash #globalPageLoader{opacity:1!important;visibility:visible!important;pointer-events:all!important;transition:none!important;}';
+                    document.head.appendChild(style);
+                }
+            } catch (e) { }
+        })();
+    </script>
+    <!-- Offline Fonts & Icons Stylesheets -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fontawesome.css">
+    <!-- Modular Stylesheets -->
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/screens.css?v=3.3">
+</head>
+
+<body>
+
+    <div class="app-bg"></div>
+
+    <!-- ============================================================ GLOBAL PAGE LOADER ============================================================ -->
+    <div id="globalPageLoader" class="global-page-loader" role="status" aria-live="polite">
+        <div class="gloader-card">
+            <div class="gloader-logo-ring">
+                <div class="gloader-spin-arc"></div>
+                <div class="gloader-icon"><i class="fa-solid fa-shield-heart"></i></div>
+            </div>
+            <div class="gloader-title">Lagna Setu</div>
+            <div class="gloader-subtitle">Matrimony Community</div>
+            <div class="gloader-status-wrap">
+                <div class="gloader-dots">
+                    <div class="gloader-dot"></div>
+                    <div class="gloader-dot"></div>
+                    <div class="gloader-dot"></div>
+                </div>
+                <span id="globalLoaderText" class="gloader-status">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============ DESKTOP LEFT ICON RAIL (dashboard nav, desktop only) ============ -->
+    <nav class="desktop-sidebar" id="desktopSidebar">
+        <div class="ds-logo">
+            <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="21" cy="21" r="21" fill="url(#gside)" />
+                <path d="M21 30c-4.5-3.2-9-6.6-9-11.4A5.6 5.6 0 0 1 21 15a5.6 5.6 0 0 1 9 3.6C30 23.4 25.5 26.8 21 30Z"
+                    fill="#fff" fill-opacity=".95" />
+                <defs>
+                    <linearGradient id="gside" x1="0" y1="0" x2="42" y2="42">
+                        <stop stop-color="#7B2CBF" />
+                        <stop offset="1" stop-color="#F4B400" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <div class="ds-brand">Lagna Setu</div>
+        <div class="ds-nav">
+            <button class="ds-item" data-nav="scr-home" onclick="go('scr-home')"><i
+                    class="fa-solid fa-house"></i><span>Home</span></button>
+            <button class="ds-item" data-nav="scr-browse" onclick="setTab('girls');go('scr-browse')"><i
+                    class="fa-solid fa-magnifying-glass"></i><span>Browse</span></button>
+            <button class="ds-item" data-nav="scr-inbox" onclick="setInboxTab('requests');go('scr-inbox')"><i
+                    class="fa-solid fa-heart-circle-check"></i><span>Inbox</span><span class="ds-badge"
+                    id="dsInboxBadge" style="display:none;">0</span></button>
+            <button class="ds-item" data-nav="scr-favorites" onclick="go('scr-favorites')"><i
+                    class="fa-solid fa-heart"></i><span>Saved</span></button>
+            <button class="ds-item" data-nav="scr-membership" onclick="go('scr-membership')"><i
+                    class="fa-solid fa-crown"></i><span>Plan</span></button>
+            <button class="ds-item" data-nav="scr-notifs" onclick="go('scr-notifs')"><i
+                    class="fa-solid fa-bell"></i><span>Alerts</span><span class="ds-badge" id="dsNotifBadge"
+                    style="display:none;">0</span></button>
+            <button class="ds-item" data-nav="scr-editprofile" onclick="go('scr-editprofile')"><i
+                    class="fa-solid fa-user"></i><span>Profile</span></button>
+        </div>
+        <div class="ds-bottom">
+            <button class="ds-item" id="dsInstallAppBtn" onclick="triggerPwaInstall()" title="Install App on Device"><i
+                    class="fa-solid fa-mobile-screen-button"></i><span>App</span></button>
+            <button class="ds-item" onclick="window.open('terms.html', '_blank')" title="Legal &amp; Policies"><i
+                    class="fa-solid fa-scale-balanced"></i><span>Legal</span></button>
+            <button class="ds-item" data-nav="scr-help" onclick="go('scr-help')"><i
+                    class="fa-solid fa-headset"></i><span>Help</span></button>
+            <button class="ds-item danger" onclick="openModal('modalLogout')"><i
+                    class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
+        </div>
+    </nav>
+
+    <div class="app-container" id="app">
+
+        <!-- ============ TOAST ============ -->
+        <div class="toast" id="toast"><i class="fa-solid fa-circle-check"></i><span id="toastMsg">Saved</span></div>
+
+        <!-- ============ INTERACTIVE REALTIME CHAT TOAST ============ -->
+        <div class="chat-toast-banner" id="chatToastBanner" style="display:none;" onclick="openChatFromToast()">
+            <img id="chatToastAvatar" src="images/default_avatar.png" alt="User" class="chat-toast-avatar">
+            <div class="chat-toast-body">
+                <div class="chat-toast-header">
+                    <span class="chat-toast-title" id="chatToastSender">Member</span>
+                    <span class="chat-toast-tag">New Message</span>
+                </div>
+                <div class="chat-toast-text" id="chatToastText">Hello...</div>
+            </div>
+            <div class="chat-toast-actions">
+                <button type="button" class="chat-toast-reply-btn"><i class="fa-solid fa-reply"></i> Reply</button>
+                <button type="button" class="chat-toast-close-btn" onclick="event.stopPropagation();closeChatToast()"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <!-- ============================================================ SPLASH ============================================================ -->
+        <section class="screen active" id="scr-splash" style="align-items:center;justify-content:center;">
+            <div style="text-align:center;padding:20px;">
+                <div
+                    style="width:96px;height:96px;margin:0 auto 22px;filter:drop-shadow(0 14px 26px rgba(123,44,191,.4));">
+                    <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="21" cy="21" r="21" fill="url(#gsplash)" />
+                        <path
+                            d="M21 30c-4.5-3.2-9-6.6-9-11.4A5.6 5.6 0 0 1 21 15a5.6 5.6 0 0 1 9 3.6C30 23.4 25.5 26.8 21 30Z"
+                            fill="#fff" fill-opacity=".95" />
+                        <defs>
+                            <linearGradient id="gsplash" x1="0" y1="0" x2="42" y2="42">
+                                <stop stop-color="#7B2CBF" />
+                                <stop offset="1" stop-color="#F4B400" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="h-display h-xl" style="margin-bottom:6px;">Lagna Setu</div>
+                <div class="p-muted" style="font-weight:700;letter-spacing:.02em;color:var(--secondary);">Connecting
+                    Communities</div>
+                <div style="margin-top:34px;"><i class="fa-solid fa-circle-notch spin"
+                        style="color:var(--primary);font-size:20px;"></i></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ WELCOME ============================================================ -->
+        <section class="screen auth-screen" id="scr-welcome">
+            <div class="screen-pad no-tab" style="display:flex;flex-direction:column;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding-top:6px;">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                        <svg width="30" height="30" viewBox="0 0 42 42" fill="none">
+                            <circle cx="21" cy="21" r="21" fill="url(#gw)" />
+                            <path
+                                d="M21 30c-4.5-3.2-9-6.6-9-11.4A5.6 5.6 0 0 1 21 15a5.6 5.6 0 0 1 9 3.6C30 23.4 25.5 26.8 21 30Z"
+                                fill="#fff" />
+                            <defs>
+                                <linearGradient id="gw" x1="0" y1="0" x2="42" y2="42">
+                                    <stop stop-color="#7B2CBF" />
+                                    <stop offset="1" stop-color="#F4B400" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <b class="h-md" style="font-family:var(--font-display);">Lagna Setu</b>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="go('scr-login')">Log in</button>
+                </div>
+
+                <div
+                    style="margin-top:26px;border-radius:24px;overflow:hidden;height:230px;position:relative;box-shadow:var(--shadow-soft);">
+                    <img src="images/lagna_setu-welcome_banner.png"
+                        style="width:100%;height:100%;object-fit:cover;object-position:center 25%;"
+                        alt="Lagna Setu Indian Wedding">
+                    <div
+                        style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(90,24,154,0) 35%,rgba(58,14,102,.75) 100%);">
+                    </div>
+                    <div style="position:absolute;left:18px;bottom:16px;color:#fff;">
+                        <div class="verified-tag" style="background:rgba(244,180,0,.92);color:#3B2A00;"><i
+                                class="fa-solid fa-shield-heart"></i> Community-verified profiles</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:26px;">
+                    <div class="h-display h-xl">Find your <span
+                            style="color:var(--primary);font-style:italic;">match</span>, rooted in family.</div>
+                    <p class="p-muted" style="margin-top:10px;">Connect with verified members of your community, built
+                        for real families, not just matches.</p>
+                </div>
+
+                <div style="margin-top:auto;padding-top:26px;">
+                    <button class="btn btn-primary" onclick="go('scr-reg1')"><i class="fa-solid fa-user-plus"></i>
+                        Create account</button>
+                    <div class="center-txt p-muted" style="margin-top:16px;">Already have an account? <span
+                            class="link-txt" onclick="go('scr-login')">Log in</span></div>
+                    <button class="btn btn-ghost" style="margin-top:6px;" onclick="openGuide()"><i
+                            class="fa-solid fa-circle-info"></i> How it works</button>
+                    <div
+                        style="text-align:center;margin-top:12px;font-size:11px;color:var(--text-muted);line-height:1.4;">
+                        By continuing, you agree to our
+                        <a href="legal/terms.html" target="_blank"
+                            style="color:var(--primary);font-weight:700;text-decoration:underline;">Terms</a> &amp;
+                        <a href="legal/privacy-policy.html" target="_blank"
+                            style="color:var(--primary);font-weight:700;text-decoration:underline;">Privacy Policy</a>.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ LOGIN ============================================================ -->
+        <section class="screen auth-screen" id="scr-login">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab">
+                <div
+                    style="width:64px;height:64px;border-radius:20px;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;box-shadow:var(--shadow-soft);margin-bottom:20px;">
+                    <i class="fa-solid fa-heart"></i>
+                </div>
+                <div class="h-display h-xl">Welcome back</div>
+                <p class="p-muted" style="margin-top:6px;">Log in to continue your search.</p>
+
+                <div style="margin-top:26px;">
+                    <div class="field">
+                        <label>Gmail or username</label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i>
+                            <input class="input" id="loginEmail" placeholder="you@gmail.com" value=""
+                                oninput="liveGmailValidate(this)" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-lock leading"></i>
+                            <input class="input" id="loginPass" type="password" placeholder="........." value=""
+                                autocomplete="current-password">
+                            <button class="trailing-btn" type="button" onclick="togglePw('loginPass',this)"
+                                aria-label="Show or hide password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin:-4px 0 20px;">
+                        <label
+                            style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-muted);font-weight:600;">
+                            <input type="checkbox" id="loginRememberMe"
+                                onchange="if(typeof onRememberMeToggle==='function')onRememberMeToggle(this);"
+                                style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;border-radius:4px;margin:0;">
+                            <span>Remember me</span>
+                        </label>
+                        <span class="link-txt" style="font-size:12.5px;" onclick="go('scr-forgot')">Forgot
+                            password?</span>
+                    </div>
+                    <button class="btn btn-primary" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Log
+                        in</button>
+                    <div class="center-txt p-muted" style="margin-top:20px;">Don't have an account? <span
+                            class="link-txt" onclick="go('scr-reg1')">Register</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORGOT PASSWORD -->
+        <section class="screen auth-screen" id="scr-forgot">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab">
+                <div
+                    style="width:64px;height:64px;border-radius:20px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:24px;margin-bottom:20px;">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div class="h-display h-xl">Reset password</div>
+                <p class="p-muted" style="margin-top:6px;">Enter your Gmail and we'll send a 6-digit OTP to reset your
+                    password.</p>
+                <div style="margin-top:26px;">
+                    <div class="field"><label>Gmail address <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
+                                id="forgotEmailInput" placeholder="you@gmail.com" oninput="liveGmailValidate(this)">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleSendForgotOtp()"><i
+                            class="fa-solid fa-paper-plane"></i> Send OTP Code</button>
+                    <div class="center-txt p-muted" style="margin-top:20px;">Remember your password? <span
+                            class="link-txt" onclick="go('scr-login')">Log in</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen auth-screen" id="scr-forgot-otp">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab center-txt">
+                <div
+                    style="width:74px;height:74px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:28px;margin:10px auto 6px;">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                </div>
+                <div class="h-display h-lg">Verify OTP Code</div>
+                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit verification code to <b
+                        id="forgotOtpEmailDisplay">your email</b></p>
+                <div class="otp-boxes" onpaste="handleOtpPaste(event, 'forgotOtp')">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp1" onkeyup="otpMove(this, event)"
+                        autocomplete="one-time-code">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp2" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp3" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp4" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp5" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="forgotOtp6" onkeyup="otpMove(this, event)">
+                </div>
+                <div class="p-muted" style="margin-bottom:22px;">Didn't get it? <span class="link-txt"
+                        onclick="handleSendForgotOtp(true)">Resend OTP</span></div>
+                <button class="btn btn-primary" onclick="verifyForgotOtp()"><i class="fa-solid fa-check"></i> Verify
+                    &amp; Proceed</button>
+            </div>
+        </section>
+
+        <section class="screen auth-screen" id="scr-newpass">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab">
+                <div class="h-display h-xl">Set new password</div>
+                <p class="p-muted" style="margin-top:6px;">Choose a strong new password (minimum 6 characters).</p>
+                <div style="margin-top:26px;">
+                    <div class="field"><label>New password <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
+                                id="newPassInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                autocomplete="new-password">
+                            <button class="trailing-btn" type="button" onclick="togglePw('newPassInput',this)"
+                                aria-label="Show or hide password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <span class="hint">Minimum 6 characters</span>
+                    </div>
+                    <div class="field"><label>Confirm password <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
+                                id="confirmPassInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                autocomplete="new-password">
+                            <button class="trailing-btn" type="button" onclick="togglePw('confirmPassInput',this)"
+                                aria-label="Show or hide confirm password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="handleResetPassword()"><i class="fa-solid fa-rotate"></i>
+                        Update Password &amp; Log in</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REGISTER ACCOUNT (GMAIL + SINGLE PASSWORD) ============================================================ -->
+        <section class="screen auth-screen" id="scr-reg1">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Create account</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="h-display h-lg" style="margin-top:4px;">Account details</div>
+                <p class="p-muted" style="margin-top:4px;">Enter your Gmail and create a secure password.</p>
+
+                <div style="margin-top:22px;">
+                    <div class="field"><label>Gmail address <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
+                                id="r1email" placeholder="you@gmail.com" value="" autocomplete="off"
+                                oninput="liveGmailValidate(this)">
+                        </div>
+                    </div>
+                    <div class="field"><label>Password <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
+                                id="r1pass" type="password" placeholder="Create a password" value=""
+                                autocomplete="new-password">
+                            <button class="trailing-btn" type="button" onclick="togglePw('r1pass',this)"
+                                aria-label="Show or hide password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                        <span class="hint"><i class="fa-solid fa-circle-check" style="color:var(--success);"></i>
+                            Single secure password (minimum 6 characters)</span>
+                    </div>
+                    <div class="field" style="margin-top:14px;margin-bottom:18px;">
+                        <label for="agreeTermsCheck"
+                            style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:12px;color:var(--text);line-height:1.5;user-select:none;">
+                            <input type="checkbox" id="agreeTermsCheck"
+                                style="width:18px;height:18px;margin-top:1px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;"
+                                onchange="toggleRegSubmitButton()">
+                            <span>
+                                I have read and agree to the
+                                <a href="legal/terms.html" target="_blank" rel="noopener noreferrer" class="link-txt"
+                                    style="font-weight:700;text-decoration:underline;">Terms of Service</a>,
+                                <a href="legal/privacy-policy.html" target="_blank" rel="noopener noreferrer"
+                                    class="link-txt" style="font-weight:700;text-decoration:underline;">Privacy
+                                    Policy</a> &amp;
+                                <a href="legal/refund-policy.html" target="_blank" rel="noopener noreferrer"
+                                    class="link-txt" style="font-weight:700;text-decoration:underline;">Refund
+                                    Policy</a>.
+                            </span>
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" id="btnVerifyEmail" onclick="handleSendSignupOtp()" disabled
+                        style="opacity:0.5;cursor:not-allowed;width:100%;">Verify Email <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                    <div class="center-txt p-muted" style="margin-top:20px;">Already have an account? <span
+                            class="link-txt" onclick="go('scr-login')">Log in</span></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ OTP RIGHT AFTER ACCOUNT CREATION ============================================================ -->
+        <section class="screen auth-screen" id="scr-otp-signup">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab center-txt"
+                style="justify-content:center;flex:1;display:flex;flex-direction:column;">
+                <div
+                    style="width:78px;height:78px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:30px;margin:0 auto 18px;">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <div class="h-display h-lg">Verify your email</div>
+                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit verification code to your registered Gmail
+                    address to activate your account.</p>
+                <div class="otp-boxes" onpaste="handleOtpPaste(event, 'regOtp')">
+                    <input maxlength="1" inputmode="numeric" id="regOtp1" onkeyup="otpMove(this, event)"
+                        autocomplete="one-time-code">
+                    <input maxlength="1" inputmode="numeric" id="regOtp2" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="regOtp3" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="regOtp4" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="regOtp5" onkeyup="otpMove(this, event)">
+                    <input maxlength="1" inputmode="numeric" id="regOtp6" onkeyup="otpMove(this, event)">
+                </div>
+                <div class="p-muted" style="margin-bottom:24px;">Didn't get it? <span class="link-txt"
+                        onclick="handleResendSignupOtp()">Resend OTP</span></div>
+                <button class="btn btn-primary" onclick="signupOtpVerified()"><i class="fa-solid fa-check"></i> Verify
+                    &amp; Complete Profile</button>
+            </div>
+        </section>
+
+        <!-- ============================================================ REGISTER STEP 1 : CASTE SELECTION (33%) ============================================================ -->
+        <section class="screen auth-screen" id="scr-reg-caste">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Community</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="progress-dots">
+                    <div class="seg current"><i></i></div>
+                    <div class="seg"><i></i></div>
+                    <div class="seg"><i></i></div>
+                </div>
+                <div class="eyebrow">STEP 1 OF 3 Â· 33%</div>
+                <div class="h-display h-lg" style="margin-top:4px;">Select your community</div>
+                <p class="p-muted" style="margin-top:4px;">Search and pick your caste. Matches will be curated based on
+                    your community.</p>
+
+                <div style="margin-top:22px;">
+                    <!-- Selected Caste Tag with 'X' (hidden until selected) -->
+                    <div class="caste-chip-box" id="regCasteChip" style="display:none;">
+                        <span id="regCasteChipText"><i class="fa-solid fa-users" style="margin-right:8px;"></i></span>
+                        <div class="caste-remove-btn" onclick="removeRegCaste()"><i class="fa-solid fa-xmark"></i></div>
+                    </div>
+
+                    <div class="field" id="regCasteSearchWrap">
+                        <label>Search Caste / Community <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-magnifying-glass leading"></i>
+                            <input class="input" id="regCasteInput"
+                                placeholder="Search in English or àª—à«àªœàª°àª¾àª¤à«€ (e.g. Kadva, àª¬à«àª°àª¾àª¹à«àª®àª£, Suthar...)"
+                                autocomplete="off" onfocus="filterRegCaste(this.value)"
+                                oninput="filterRegCaste(this.value)">
+                        </div>
+                        <div class="caste-dropdown-menu" id="regCasteDropdown"></div>
+                    </div>
+
+                    <button class="btn btn-primary" style="margin-top:26px;" onclick="goToRegStep2()">Personal
+                        &amp; Family <i class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REGISTER STEP 2 : PHOTOS & PERSONAL + FAMILY (66%) ============================================================ -->
+        <section class="screen auth-screen" id="scr-reg2">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Personal &amp; family</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="progress-dots">
+                    <div class="seg done"><i></i></div>
+                    <div class="seg current"><i></i></div>
+                    <div class="seg"><i></i></div>
+                </div>
+                <div class="eyebrow">STEP 2 OF 3 Â· 66%</div>
+
+                <!-- 3-SLOT PROFILE PHOTO UPLOAD (1 REQUIRED, 2 OPTIONAL) -->
+                <div class="section-label" style="margin-top:2px;">Upload Profile Photos (Up to 3 Photos)</div>
+                <p class="p-muted" style="font-size:12px;margin-top:-6px;margin-bottom:12px;">Slot 1 is your main
+                    verified photo. You can also add 1 or 2 optional photos.</p>
+                <div class="photo-upload-grid-3" id="regPhotoUploadGrid">
+                    <!-- Slot 1 (Main - Required) -->
+                    <label class="photo-slot-card" id="regSlotCard1" onclick="openRegSlotUpload(1)">
+                        <span class="slot-tag">Slot 1 (Main) *</span>
+                        <img id="regSlotImg1" src="" style="display:none;" alt="">
+                        <div id="regSlotEmpty1"
+                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-camera"
+                                style="font-size:22px;color:var(--primary);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--primary-dark);">Main Photo *</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-plus"></i></div>
+                    </label>
+                    <!-- Slot 2 (Optional) -->
+                    <label class="photo-slot-card" id="regSlotCard2" onclick="openRegSlotUpload(2)">
+                        <span class="slot-tag">Slot 2</span>
+                        <img id="regSlotImg2" src="" style="display:none;" alt="">
+                        <div id="regSlotEmpty2"
+                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-image"
+                                style="font-size:22px;color:var(--text-faint);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--text-muted);">Optional</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-plus"></i></div>
+                    </label>
+                    <!-- Slot 3 (Optional) -->
+                    <label class="photo-slot-card" id="regSlotCard3" onclick="openRegSlotUpload(3)">
+                        <span class="slot-tag">Slot 3</span>
+                        <img id="regSlotImg3" src="" style="display:none;" alt="">
+                        <div id="regSlotEmpty3"
+                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-image"
+                                style="font-size:22px;color:var(--text-faint);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--text-muted);">Optional</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-plus"></i></div>
+                    </label>
+                </div>
+                <input type="file" id="regPhotoSlotInput" accept="image/*" style="display:none;"
+                    onchange="handleRegPhotoSlotSelect(event)">
+                <!-- Backwards compatibility element aliases -->
+                <div id="regAvatarBox" style="display:none;"></div>
+                <img id="regAvatarImg" src="" style="display:none;" alt="">
+                <input type="file" id="regAvatarInput" accept="image/*" style="display:none;"
+                    onchange="handleAvatarFileSelect(event)">
+
+                <div class="section-label">Personal details</div>
+
+                <!-- Gender dropdown (Girl / Boy) -->
+                <div class="field"><label>Gender <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="ddGender">
+                        <div class="dd-trigger placeholder" onclick="ddOpen('ddGender')">
+                            <span id="genderValText"
+                                style="display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;">Select
+                                gender</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <ul class="dd-menu">
+                            <li onclick="pickGender('Boy', this)" style="justify-content:flex-start;gap:8px;"><i
+                                    class="fa-solid fa-mars" style="color:var(--primary);font-size:14px;"></i>Boy</li>
+                            <li onclick="pickGender('Girl', this)" style="justify-content:flex-start;gap:8px;"><i
+                                    class="fa-solid fa-venus" style="color:#E91E63;font-size:14px;"></i>Girl (100%
+                                Lifetime Free)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="field"><label>Full name <span style="color:var(--error);">*</span></label><input
+                        class="input" id="regFullName" placeholder="Enter your full name" value="" autocomplete="off">
+                </div>
+
+                <!-- Date of Birth (Opens custom modal & auto-computes age in years) -->
+                <div class="field"><label>Date of birth <span style="color:var(--error);">*</span></label>
+                    <div class="input-icon-wrap" style="cursor:pointer;" onclick="openDobModal('reg')">
+                        <i class="fa-solid fa-calendar-days leading"></i>
+                        <input class="input" id="regDobInput" placeholder="DD / MM / YYYY" value="" readonly
+                            style="cursor:pointer;" autocomplete="off">
+                    </div>
+                    <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+                        <span class="dob-age-badge" id="regAgeBadge" style="display:none;"><i
+                                class="fa-solid fa-cake-candles"></i> Age: <b id="regAgeNum">18</b> Years</span>
+                    </div>
+                </div>
+
+                <!-- User's Personal Contact Number (100% Private & Confidential for Admin only) -->
+                <div class="field">
+                    <label>Your personal mobile number <span style="color:var(--error);">*</span></label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-phone leading"></i>
+                        <input class="input" id="regOwnMobile" placeholder="e.g. 9876543210" type="tel" maxlength="16"
+                            value="" autocomplete="off">
+                    </div>
+                    <div
+                        style="margin-top:6px;padding:9px 12px;border-radius:12px;background:rgba(212,160,23,0.08);border:1px solid rgba(212,160,23,0.25);display:flex;align-items:flex-start;gap:8px;">
+                        <i class="fa-solid fa-shield-halved"
+                            style="color:var(--primary);font-size:13px;margin-top:2px;flex-shrink:0;"></i>
+                        <span style="font-size:11.5px;color:var(--text);line-height:1.45;">
+                            <b>100% Private &amp; Safe:</b> This personal number is kept strictly confidential for admin
+                            verification only. It is <u>never</u> shown to other members or on your public profile.
+                            (Direct WhatsApp &amp; Call buttons are provided for family matrimonial inquiry).
+                        </span>
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field"><label>Height (cm) <span style="color:var(--error);">*</span></label><input
+                            class="input" id="regHeight" type="number" placeholder="e.g. 165" value="" min="90"
+                            max="250" autocomplete="off" oninput="this.value=this.value.slice(0,3)"></div>
+                    <div class="field"><label>Weight (kg) <span style="color:var(--error);">*</span></label><input
+                            class="input" id="regWeight" type="number" placeholder="e.g. 65" value="" min="30" max="200"
+                            autocomplete="off" oninput="this.value=this.value.slice(0,3)"></div>
+                </div>
+
+                <div class="field"><label>Education degree <span style="color:var(--error);">*</span></label><input
+                        class="input" id="regEducation" placeholder="e.g. B.Tech / B.Com / MBA" value=""
+                        autocomplete="off"></div>
+
+                <div class="field"><label>Marital status <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="ddMarital">
+                        <div class="dd-trigger placeholder" onclick="ddOpen('ddMarital')"><span>Select marital
+                                status</span><i class="fa-solid fa-chevron-down"></i></div>
+                        <ul class="dd-menu">
+                            <li onclick="ddPick('ddMarital',this,'Unmarried'); state.regData.marital='Unmarried';">
+                                Unmarried</li>
+                            <li onclick="ddPick('ddMarital',this,'Divorced'); state.regData.marital='Divorced';">
+                                Divorced</li>
+                            <li onclick="ddPick('ddMarital',this,'Widowed'); state.regData.marital='Widowed';">Widowed
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="field"><label>Physical status <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="ddPhysical">
+                        <div class="dd-trigger placeholder" onclick="ddOpen('ddPhysical')"><span>Select physical
+                                status</span><i class="fa-solid fa-chevron-down"></i></div>
+                        <ul class="dd-menu">
+                            <li onclick="ddPick('ddPhysical',this,'Normal'); state.regData.physical='Normal';">Normal
+                            </li>
+                            <li
+                                onclick="ddPick('ddPhysical',this,'Physically Challenged'); state.regData.physical='Physically Challenged';">
+                                Physically Challenged</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="field"><label>Occupation <span style="color:var(--error);">*</span></label><input
+                        class="input" id="regOccupation"
+                        placeholder="Enter occupation (e.g. Software Engineer / Business)" value="" autocomplete="off">
+                </div>
+                <div class="field"><label>Monthly income <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="ddIncome">
+                        <div class="dd-trigger placeholder" onclick="ddOpen('ddIncome')"><span>Select income
+                                range</span><i class="fa-solid fa-chevron-down"></i></div>
+                        <ul class="dd-menu">
+                            <li
+                                onclick="ddPick('ddIncome',this,'No income (N/A)'); state.regData.income='No income (N/A)';">
+                                No income (N/A)</li>
+                            <li onclick="ddPick('ddIncome',this,'Below â‚¹20K'); state.regData.income='Below â‚¹20K';">
+                                Below
+                                â‚¹20K</li>
+                            <li
+                                onclick="ddPick('ddIncome',this,'â‚¹20K â€“ â‚¹40K'); state.regData.income='â‚¹20K â€“ â‚¹40K';">
+                                â‚¹20K â€“ â‚¹40K</li>
+                            <li
+                                onclick="ddPick('ddIncome',this,'â‚¹40K â€“ â‚¹75K'); state.regData.income='â‚¹40K â€“ â‚¹75K';">
+                                â‚¹40K â€“ â‚¹75K</li>
+                            <li onclick="ddPick('ddIncome',this,'Above â‚¹75K'); state.regData.income='Above â‚¹75K';">
+                                Above
+                                â‚¹75K</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="field"><label>Hobbies</label>
+                    <div id="hobbyList"></div>
+                    <button class="add-dashed" onclick="addHobby()"><i class="fa-solid fa-plus"></i> Add hobby</button>
+                </div>
+
+                <div class="section-label">Family details</div>
+                <div class="field"><label>Father's name <span style="color:var(--error);">*</span></label><input
+                        class="input" id="regFatherName" placeholder="Father's full name" value="" autocomplete="off">
+                </div>
+                <div class="field"><label>Father's occupation</label><input class="input" id="regFatherOcc"
+                        placeholder="Father's occupation" value="" autocomplete="off"></div>
+
+                <!-- Father's contact number right below Father's name with WhatsApp checkbox -->
+                <div class="field"><label>Father's mobile number (Public Contact) <span
+                            style="color:var(--error);">*</span></label>
+                    <div class="input-icon-wrap"><i class="fa-solid fa-phone leading"></i><input class="input"
+                            id="regFatherMobile" placeholder="e.g. 9876543210" type="tel" maxlength="16" value=""
+                            autocomplete="off">
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+                        <div class="checkbox on" id="regFatherWhatsapp" onclick="toggleCheck('regFatherWhatsapp',this)">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <span style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;"
+                            onclick="toggleCheck('regFatherWhatsapp',this)">
+                            Active on WhatsApp <i class="fa-brands fa-whatsapp" style="color:#128C7E;"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="field"><label>Mother's name <span style="color:var(--error);">*</span></label><input
+                        class="input" id="regMotherName" placeholder="Mother's full name" value="" autocomplete="off">
+                </div>
+                <div class="field"><label>Mother's occupation</label><input class="input" id="regMotherOcc"
+                        placeholder="Mother's occupation" value="" autocomplete="off"></div>
+
+                <div style="margin-top:22px;">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="tlabel">I don't have a sister</div>
+                        </div>
+                        <button class="toggle" id="tglSister" onclick="toggleSibling('sister',this)"></button>
+                    </div>
+                    <div id="sisterBlock">
+                        <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block;">Sister
+                            details</label>
+                        <div id="sisterList"></div>
+                        <button class="add-dashed" onclick="addSibling('sister')"><i class="fa-solid fa-plus"></i> Add
+                            another sister</button>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px;">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="tlabel">I don't have a brother</div>
+                        </div>
+                        <button class="toggle" id="tglBrother" onclick="toggleSibling('brother',this)"></button>
+                    </div>
+                    <div id="brotherBlock">
+                        <label style="font-size:13px;font-weight:700;margin-bottom:8px;display:block;">Brother
+                            details</label>
+                        <div id="brotherList"></div>
+                        <button class="add-dashed" onclick="addSibling('brother')"><i class="fa-solid fa-plus"></i> Add
+                            another brother</button>
+                    </div>
+                </div>
+
+                <div class="btn-row" style="margin-top:26px;">
+                    <button class="btn btn-outline" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i>
+                        Back</button>
+                    <button class="btn btn-primary" onclick="goToRegStep3()">Address <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REGISTER STEP 3 : ADDRESS & CONTACT (100%) ============================================================ -->
+        <section class="screen auth-screen" id="scr-reg3">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Address</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="progress-dots">
+                    <div class="seg done"><i></i></div>
+                    <div class="seg done"><i></i></div>
+                    <div class="seg done"><i></i></div>
+                </div>
+                <div class="eyebrow">STEP 3 OF 3 Â· 100% Â· FINAL STEP</div>
+                <div class="h-display h-lg" style="margin-top:4px;">Where are you based?</div>
+                <p class="p-muted" style="margin-top:4px;">This helps us match you with nearby verified families.</p>
+
+                <div style="margin-top:22px;">
+                    <div class="field"><label>Village / City <span style="color:var(--error);">*</span></label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-location-dot leading"></i><input
+                                class="input" id="regCity" placeholder="Village / City (e.g. Rajkot)" value=""
+                                autocomplete="off"></div>
+                    </div>
+                    <div class="field"><label>Taluka</label><input class="input" id="regTaluka"
+                            placeholder="Taluka (e.g. Rajkot)" value="" autocomplete="off"></div>
+                    <div class="field"><label>District <span style="color:var(--error);">*</span></label><input
+                            class="input" id="regDistrict" placeholder="District (e.g. Rajkot)" value=""
+                            autocomplete="off"></div>
+                    <div class="field"><label>Full address <span style="color:var(--error);">*</span></label><textarea
+                            class="textarea" id="regAddress" autocomplete="off"
+                            placeholder="House / street / landmark / pincode..."></textarea></div>
+
+                    <!-- Privacy note -->
+                    <div class="card" style="margin-top:14px;background:var(--primary-light);box-shadow:none;">
+                        <div style="font-size:12px;color:var(--primary-dark);line-height:1.6;">
+                            <i class="fa-solid fa-shield-halved"></i> <b>Privacy Constraint</b>: Your personal
+                            registration phone number and email are strictly stored for Admin review only. Direct
+                            contact
+                            options on your profile are provided via WhatsApp and Call to your father.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i>
+                        Back</button>
+                    <button class="btn btn-primary" onclick="submitProfileCompletion()"><i
+                            class="fa-solid fa-circle-check"></i> Complete Profile</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REGISTER STEP 4 : COMMUNITY VERIFICATION ============================================================ -->
+
+
+        <!-- ============================================================ HOME ============================================================ -->
+        <section class="screen" id="scr-home">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:11px;">
+                        <img id="homeUserAvatar"
+                            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop"
+                            style="width:46px;height:46px;border-radius:14px;object-fit:cover;border:2px solid #fff;box-shadow:var(--shadow-card);"
+                            alt="">
+                        <div>
+                            <div id="homeUserGreeting" style="font-weight:800;font-size:15px;">Hello <i
+                                    class="fa-solid fa-hand" style="color:var(--accent);"></i></div>
+                            <div class="p-muted" style="font-size:11.5px;">Find your connection</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <button class="icon-btn" onclick="setInboxTab('requests');go('scr-inbox')"
+                            style="position:relative;"><i class="fa-solid fa-heart-circle-check"></i><span
+                                id="inboxDotHome" class="home-inbox-badge" style="display:none;">0</span></button>
+                        <button class="icon-btn" onclick="go('scr-notifs')" id="userNotifBellBtn"
+                            style="position:relative;" title="Notifications"><i class="fa-solid fa-bell"></i><span
+                                id="userNotifBadge" class="home-inbox-badge" style="display:none;">0</span></button>
+                        <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                    </div>
+                </div>
+
+                <div class="card" id="profileIncompleteBanner"
+                    style="display:none;margin-top:18px;background:var(--pending-bg);box-shadow:none;">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <div
+                            style="width:38px;height:38px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:var(--pending);flex-shrink:0;">
+                            <i class="fa-solid fa-user-pen"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:800;font-size:13px;color:var(--pending);">Your profile is
+                                incomplete</div>
+                            <div class="p-muted" style="font-size:11.5px;margin-top:3px;">Add your details so families
+                                can discover you â€” and unlock everyone else's profiles too.</div>
+                            <button class="btn btn-sm btn-primary" style="margin-top:10px;" onclick="go('scr-reg2')"><i
+                                    class="fa-solid fa-arrow-right"></i> Complete profile
+                                now</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" id="userSuspendedNotice"
+                    style="display:none;margin-top:16px;background:#FBEAEA;border:1.5px solid #E63946;box-shadow:none;">
+                    <div style="display:flex;align-items:flex-start;gap:12px;">
+                        <div
+                            style="width:38px;height:38px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:#D64545;flex-shrink:0;">
+                            <i class="fa-solid fa-ban"></i>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-weight:800;font-size:13px;color:#D64545;">Account Temporarily Suspended
+                            </div>
+                            <div style="font-size:11.5px;color:var(--text);margin-top:3px;">Your account has been
+                                temporarily suspended by the community admin team. Please contact email
+                                <b>lagnasetu330@gmail.com</b> or WhatsApp <b>+91 97263 62863</b>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="search-bar" style="margin-top:20px;" onclick="setTab('girls');go('scr-browse');">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input placeholder="Search profiles by name, city..." readonly style="cursor:pointer;">
+                </div>
+
+                <div class="hero-grid" id="homeHeroGrid">
+                    <div class="hero-tile girls" id="heroTileGirls" onclick="handleHeroTileClick('girls')"><i
+                            class="fa-solid fa-person-dress deco"></i>
+                        <div class="htitle" id="heroTitleGirls">Girls</div>
+                        <div class="hsub" id="homeGirlsCount">0 verified profiles</div>
+                    </div>
+                    <div class="hero-tile boys" id="heroTileBoys" onclick="handleHeroTileClick('boys')"><i
+                            class="fa-solid fa-person deco"></i>
+                        <div class="htitle" id="heroTitleBoys">Boys</div>
+                        <div class="hsub" id="homeBoysCount">0 verified profiles</div>
+                    </div>
+                </div>
+
+                <div class="stat-strip">
+                    <div class="s"><b id="homeTotalMembers">0</b><small>MEMBERS</small></div>
+                    <div class="s"><b id="favCountHome">0</b><small>FAVORITES</small></div>
+                    <div class="s"><b id="homePlanStatus">Free</b><small>PLAN</small></div>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+                    <div class="h-display h-md">Girls near you</div>
+                    <span class="link-txt" style="font-size:12.5px;" onclick="setTab('girls');go('scr-browse');">See
+                        all</span>
+                </div>
+                <div style="margin-top:14px;" id="homeGirlsList"></div>
+            </div>
+            <div class="tabbar" id="tabbarHome"></div>
+        </section>
+
+        <!-- ============================================================ BROWSE (GIRLS / BOYS TAB) ============================================================ -->
+        <section class="screen" id="scr-browse">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="h-display h-lg" id="browseScreenTitle">Browse profiles</div>
+                    <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                </div>
+                <div class="seg-toggle" id="browseSegToggle" style="margin-top:16px;">
+                    <button id="segGirls" class="active" onclick="setTab('girls')">Girls</button>
+                    <button id="segBoys" onclick="setTab('boys')">Boys</button>
+                </div>
+                <div class="search-bar" style="margin-top:16px;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input placeholder="Search by name, city, occupation..." id="browseSearchInput"
+                        oninput="renderBrowse(this.value)">
+                    <i class="fa-solid fa-sliders" onclick="openFilterModal()"
+                        style="cursor:pointer;color:var(--primary);" title="Filter Profiles"></i>
+                </div>
+                <div style="margin-top:16px;" id="browseList"></div>
+            </div>
+            <div class="tabbar" id="tabbarBrowse"></div>
+        </section>
+
+        <!-- ============================================================ FULL PROFILE ============================================================ -->
+        <section class="screen" id="scr-profile">
+            <div id="profileContent"></div>
+        </section>
+
+        <!-- ============================================================ FAVORITES ============================================================ -->
+        <section class="screen" id="scr-favorites">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Favorites</h1>
+            </div>
+            <div class="screen-pad" id="favContent" style="padding-bottom:80px;"></div>
+            <div class="tabbar" id="tabbarFav"></div>
+        </section>
+
+        <!-- ============================================================ INBOX (INTEREST REQUESTS + CHATS) ============================================================ -->
+        <section class="screen" id="scr-inbox">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="h-display h-lg">Inbox</div>
+                    <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                </div>
+                <p class="p-muted" style="margin-top:4px;">Interest requests and conversations with your matches.</p>
+                <div class="seg-toggle" style="margin-top:16px;">
+                    <button id="inboxTabRequests" class="active" onclick="setInboxTab('requests')">Requests <span
+                            id="inboxReqBadge" class="seg-badge" style="display:none;">0</span></button>
+                    <button id="inboxTabChats" onclick="setInboxTab('chats')">Chats <span id="inboxChatBadge"
+                            class="seg-badge" style="display:none;">0</span></button>
+                </div>
+                <div style="margin-top:16px;" id="inboxContent"></div>
+            </div>
+            <div class="tabbar" id="tabbarInbox"></div>
+        </section>
+
+        <!-- ============================================================ CHAT CONVERSATION (WHATSAPP STYLE) ============================================================ -->
+        <section class="screen" id="scr-chat">
+            <!-- Pinned Top Header -->
+            <header class="chat-header">
+                <div class="chat-header-inner">
+                    <button class="icon-btn" onclick="goBack()" title="Back"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <div class="chat-user-profile-btn" onclick="viewChatProfile()" title="Click to view full profile">
+                        <div class="chat-avatar-wrap">
+                            <img id="chatAvatar" src="" alt="Avatar">
+                            <span class="chat-online-dot"></span>
+                        </div>
+                        <div class="chat-header-info">
+                            <div class="chat-header-title">
+                                <span id="chatName" class="chat-header-name"></span>
+                                <i class="fa-solid fa-circle-check chat-header-verified" title="Verified Match"></i>
+                            </div>
+                            <div class="chat-header-subtitle">
+                                <span class="chat-active-indicator" id="chatStatusText">Online</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="icon-btn" onclick="promptClearChatHistory()" title="Clear Chat History"
+                        style="background:rgba(239,68,68,0.08);color:var(--error,#ef4444);flex-shrink:0;">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Messages Area -->
+            <main class="chat-messages-container" id="chatMessagesWrap">
+                <div class="chat-messages-inner">
+                    <div class="chat-security-badge">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>Strictly Text-Only Safe Matrimonial Chat â€¢ End-to-End Privacy</span>
+                    </div>
+                    <div id="chatMessages" class="chat-messages-list"></div>
+                </div>
+            </main>
+
+            <!-- Pinned Bottom Bar -->
+            <footer class="chat-bottom-bar">
+                <div class="chat-edit-bar" id="chatEditBanner">
+                    <div class="chat-edit-content">
+                        <div class="chat-edit-icon"><i class="fa-solid fa-pen"></i></div>
+                        <div class="chat-edit-texts">
+                            <div class="chat-edit-title">Editing Message</div>
+                            <div class="chat-edit-snippet" id="chatEditSnippet"></div>
+                        </div>
+                    </div>
+                    <button class="chat-edit-close-btn" type="button" onclick="cancelChatEdit()" title="Cancel editing">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="chat-bottom-inner">
+                    <div class="chat-input-wrapper">
+                        <textarea class="chat-input-pill" id="chatInput" placeholder="Type a message..." rows="1"
+                            autocomplete="off" oninput="autoResizeChatInput(this)"
+                            onkeydown="handleChatInputKeyDown(event)"></textarea>
+                    </div>
+                    <button class="chat-send-btn" id="btnSendChat" onclick="sendChatMessage()" title="Send Message">
+                        <i class="fa-solid fa-paper-plane" id="chatSendIcon"></i>
+                    </button>
+                </div>
+            </footer>
+        </section>
+
+        <!-- ============================================================ NOTIFICATIONS - FULL WIDTH ============================================================ -->
+        <section class="screen panel-screen" id="scr-notifs">
+            <div class="topbar" style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="icon-btn" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i></button>
+                    <h1>Notifications</h1>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="markAllUserNotifsAsRead()"
+                    style="font-size:11.5px;padding:6px 12px;border-radius:20px;">
+                    <i class="fa-solid fa-check-double"></i> Mark read
+                </button>
+            </div>
+            <div class="screen-pad no-tab notif-full" id="notifListWrap"></div>
+        </section>
+
+        <!-- ============================================================ EDIT PROFILE - 2 COLUMN LAYOUT ============================================================ -->
+        <section class="screen panel-screen" id="scr-editprofile">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Edit profile</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="section-label" style="margin-top:2px;">Upload Photos (3 Slots)</div>
+                <p class="p-muted" style="font-size:12px;margin-top:-6px;margin-bottom:12px;">Slot 1 is your verified
+                    main profile picture. Add up to 2 additional photos.</p>
+                <div class="photo-upload-grid-3">
+                    <!-- Slot 1 (Main) -->
+                    <label class="photo-slot-card" id="editSlotCard1" onclick="openEditSlotUpload(1)">
+                        <span class="slot-tag">Slot 1 (Main)</span>
+                        <img id="editSlotImg1"
+                            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=800&auto=format&fit=crop"
+                            style="display:block;" alt="">
+                        <div id="editSlotEmpty1" style="display:none;">
+                            <i class="fa-solid fa-camera"
+                                style="font-size:22px;color:var(--primary);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--primary-dark);">Main Photo</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-pen"></i></div>
+                    </label>
+                    <!-- Slot 2 -->
+                    <label class="photo-slot-card" id="editSlotCard2" onclick="openEditSlotUpload(2)">
+                        <span class="slot-tag">Slot 2</span>
+                        <img id="editSlotImg2" src="" style="display:none;" alt="">
+                        <div id="editSlotEmpty2"
+                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-image"
+                                style="font-size:22px;color:var(--text-faint);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--text-muted);">Optional</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-plus"></i></div>
+                    </label>
+                    <!-- Slot 3 -->
+                    <label class="photo-slot-card" id="editSlotCard3" onclick="openEditSlotUpload(3)">
+                        <span class="slot-tag">Slot 3</span>
+                        <img id="editSlotImg3" src="" style="display:none;" alt="">
+                        <div id="editSlotEmpty3"
+                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-image"
+                                style="font-size:22px;color:var(--text-faint);margin-bottom:4px;"></i>
+                            <div style="font-size:11px;font-weight:700;color:var(--text-muted);">Optional</div>
+                        </div>
+                        <div class="cam-btn"><i class="fa-solid fa-plus"></i></div>
+                    </label>
+                </div>
+                <input type="file" id="editPhotoSlotInput" accept="image/*" style="display:none;"
+                    onchange="handleEditPhotoSlotSelect(event)">
+
+                <div class="section-label">Personal details</div>
+                <div class="edit-profile-grid">
+                    <div class="field"><label>Full name</label><input class="input" id="editFullName"
+                            placeholder="Enter your full name" value=""></div>
+                    <div class="field"><label>Date of birth</label>
+                        <div class="datefield" style="cursor:pointer;" onclick="openDobModal('edit')">
+                            <i class="fa-solid fa-calendar-days leading"></i>
+                            <input class="input" id="editDobInput" placeholder="DD / MM / YYYY" value="" readonly
+                                style="cursor:pointer;">
+                        </div>
+                    </div>
+                    <div class="field"><label>Height (cm)</label><input class="input" id="editHeight" type="number"
+                            placeholder="e.g. 175" value="" min="90" max="250"
+                            oninput="this.value=this.value.slice(0,3)"></div>
+                    <div class="field"><label>Weight (kg)</label><input class="input" id="editWeight" type="number"
+                            placeholder="e.g. 65" value="" min="30" max="200"
+                            oninput="this.value=this.value.slice(0,3)"></div>
+                    <div class="field"><label>Marital status</label>
+                        <div class="dd" id="ddMaritalEdit">
+                            <div class="dd-trigger" onclick="ddOpen('ddMaritalEdit')"><span>Unmarried</span><i
+                                    class="fa-solid fa-chevron-down"></i></div>
+                            <ul class="dd-menu">
+                                <li onclick="ddPick('ddMaritalEdit',this,'Unmarried')">Unmarried</li>
+                                <li onclick="ddPick('ddMaritalEdit',this,'Divorced')">Divorced</li>
+                                <li onclick="ddPick('ddMaritalEdit',this,'Widowed')">Widowed</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="field"><label>Physical status</label>
+                        <div class="dd" id="ddPhysicalEdit">
+                            <div class="dd-trigger" onclick="ddOpen('ddPhysicalEdit')"><span>Normal</span><i
+                                    class="fa-solid fa-chevron-down"></i></div>
+                            <ul class="dd-menu">
+                                <li onclick="ddPick('ddPhysicalEdit',this,'Normal')">Normal</li>
+                                <li onclick="ddPick('ddPhysicalEdit',this,'Physically Challenged')">Physically
+                                    Challenged</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="field"><label>Occupation</label><input class="input" id="editOccupation"
+                            placeholder="e.g. Software Engineer, Business" value=""></div>
+                    <div class="field"><label>Monthly income</label>
+                        <div class="dd" id="ddIncomeEdit">
+                            <div class="dd-trigger" onclick="ddOpen('ddIncomeEdit')"><span>â‚¹40K â€“ â‚¹75K</span><i
+                                    class="fa-solid fa-chevron-down"></i></div>
+                            <ul class="dd-menu">
+                                <li onclick="ddPick('ddIncomeEdit',this,'No income (N/A)')">No income (N/A)</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'Below â‚¹20K')">Below â‚¹20K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'â‚¹20K â€“ â‚¹40K')">â‚¹20K â€“ â‚¹40K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'â‚¹40K â€“ â‚¹75K')">â‚¹40K â€“ â‚¹75K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'Above â‚¹75K')">Above â‚¹75K</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="field"><label>Education degree</label><input class="input" id="editEducation"
+                            placeholder="e.g. B.Tech, B.Com, MBA..." value=""></div>
+                </div>
+
+                <div class="section-label">Family details</div>
+                <div class="edit-profile-grid">
+                    <div class="field"><label>Father's name</label><input class="input" id="editFatherName"
+                            placeholder="Father's full name" value=""></div>
+                    <div class="field"><label>Father's occupation</label><input class="input" id="editFatherOcc"
+                            placeholder="e.g. Business, Agriculture" value=""></div>
+                    <div class="field"><label>Father's mobile</label><input class="input" id="editFatherMobile"
+                            placeholder="+91 98765 43210" value=""></div>
+                    <div class="field"><label>Mother's name</label><input class="input" id="editMotherName"
+                            placeholder="Mother's name" value=""></div>
+                    <div class="field"><label>Mother's occupation</label><input class="input" id="editMotherOcc"
+                            placeholder="e.g. Homemaker" value=""></div>
+                    <div class="field"><label>Sister</label><input class="input" id="editSister"
+                            placeholder="e.g. 1 married, or None" value=""></div>
+                    <div class="field"><label>Brother</label><input class="input" id="editBrother"
+                            placeholder="e.g. 1 younger, or None" value=""></div>
+                </div>
+
+                <div class="section-label">Address</div>
+                <div class="edit-profile-grid">
+                    <div class="field"><label>Village / City</label><input class="input" id="editCity"
+                            placeholder="City or Village" value="">
+                    </div>
+                    <div class="field"><label>Taluka</label><input class="input" id="editTaluka" placeholder="Taluka"
+                            value=""></div>
+                    <div class="field"><label>District</label><input class="input" id="editDistrict"
+                            placeholder="District" value="">
+                    </div>
+                    <div class="field full-width"><label>Full address</label><textarea class="textarea" id="editAddress"
+                            placeholder="House / Flat no., Society / Area, Landmark..."></textarea></div>
+                </div>
+
+                <div class="section-label">Hobbies</div>
+                <div id="editHobbyList"></div>
+                <button class="add-dashed" onclick="addEditHobby()"><i class="fa-solid fa-plus"></i> Add hobby</button>
+
+                <div class="section-label">Contact number</div>
+                <p class="p-muted" style="margin-top:-8px;margin-bottom:12px;font-size:12px;"><i
+                        class="fa-solid fa-lock"></i> Your personal mobile number is kept private and is never shown
+                    on your profile to other members. Direct WhatsApp &amp; Call options connect to your family, and
+                    your personal number is visible to the Lagna Setu admin team only.</p>
+                <div class="field"><label>Your mobile number (private)</label>
+                    <div class="input-icon-wrap"><i class="fa-solid fa-phone leading"></i><input class="input"
+                            id="editOwnMobile" placeholder="+91 98765 43210" value=""></div>
+                    <span class="hint"><i class="fa-solid fa-eye-slash"></i> Hidden from other members â€” admin
+                        use only</span>
+                </div>
+
+                <div class="section-label">Settings</div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="tlabel">Show profile to everyone</div>
+                        <div class="tsub">Turn off to hide from search</div>
+                    </div>
+                    <button id="editVisibleToggle" class="toggle on" onclick="this.classList.toggle('on')"></button>
+                </div>
+
+                <button class="btn btn-primary" onclick="saveEditProfile()"><i class="fa-solid fa-floppy-disk"></i> Save
+                    changes</button>
+
+                <!-- Danger Zone / Delete Account Option -->
+                <div
+                    style="margin-top: 32px; padding: 18px 16px; border-radius: 18px; background: rgba(214, 69, 69, 0.05); border: 1px dashed rgba(214, 69, 69, 0.28);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div>
+                            <div
+                                style="font-size: 14px; font-weight: 700; color: var(--error); display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-triangle-exclamation"></i> Delete Account
+                            </div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">
+                                Permanently delete your profile, photos, and chat history.
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="openDeleteAccountModal()"
+                            style="white-space: nowrap; border-color: var(--error); color: var(--error); font-weight: 700; border-radius: 12px; padding: 8px 14px; font-size: 12px; cursor: pointer;">
+                            <i class="fa-solid fa-trash-can"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ MEMBERSHIP - LEFT ALIGNED ============================================================ -->
+        <section class="screen panel-screen" id="scr-membership">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Membership</h1>
+            </div>
+            <div class="screen-pad no-tab membership-wrap">
+                <div class="card" style="background:var(--grad-primary);box-shadow:var(--shadow-soft);color:#fff;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                        <div>
+                            <div class="badge-plan"><i class="fa-solid fa-crown"></i> GOLD MEMBER</div>
+                            <div class="h-display h-lg" style="color:#fff;margin-top:12px;">Active membership</div>
+                            <div style="font-size:12px;opacity:.85;margin-top:4px;">Valid until 30 Aug 2027</div>
+                        </div>
+                        <i class="fa-solid fa-medal" style="font-size:30px;opacity:.5;"></i>
+                    </div>
+                </div>
+
+                <div class="section-label">Membership fee</div>
+                <div class="card" style="border:1.4px solid var(--border);box-shadow:none;">
+                    <div class="detail-row">
+                        <div class="dlabel"><i class="fa-solid fa-person"></i> Boys (30 Days Pass)</div>
+                        <div class="dval" style="color:var(--primary);font-size:18px;font-weight:800;">â‚¹49</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="dlabel"><i class="fa-solid fa-person-dress"></i> Girls</div>
+                        <div class="dval" style="color:var(--success);font-size:16px;font-weight:700;">100% Lifetime
+                            Free</div>
+                    </div>
+                </div>
+
+                <div class="section-label">Benefits</div>
+                <div class="step-item">
+                    <div class="snum"><i class="fa-solid fa-eye"></i></div>
+                    <div>
+                        <div class="stitle">Unlimited profile views</div>
+                        <div class="sdesc">Browse every verified profile without limits.</div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="snum"><i class="fa-solid fa-heart-circle-check"></i></div>
+                    <div>
+                        <div class="stitle">Unlimited interest requests</div>
+                        <div class="sdesc">Send interest and chat once a match accepts.</div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <div class="snum"><i class="fa-solid fa-shield-heart"></i></div>
+                    <div>
+                        <div class="stitle">Verified badge priority</div>
+                        <div class="sdesc">Your profile is shown higher in search.</div>
+                    </div>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <button class="btn btn-gold" id="btnMembershipPayAction"
+                        style="display:none;margin-bottom:12px;font-size:15.5px;padding:14px;box-shadow:0 6px 20px rgba(217,119,6,0.3);"
+                        onclick="payNow()"><i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI (30 Days Pass)</button>
+                    <button class="btn btn-outline" onclick="openPaymentHistoryModal()"><i
+                            class="fa-solid fa-receipt"></i> View payment history</button>
+                    <div class="center-txt p-muted" style="margin-top:18px;font-size:13px;">
+                        Want to sign out? <span class="link-txt" onclick="doLogout()">Log out</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ HOW IT WORKS ============================================================ -->
+        <section class="screen panel-screen" id="scr-howitworks">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>How it works</h1>
+            </div>
+            <div class="screen-pad no-tab" id="scrHowItWorksContent">
+                <!-- dynamically rendered from localStorage / DEFAULT_HOW_IT_WORKS -->
+            </div>
+        </section>
+
+        <!-- ============================================================ HELP & SUPPORT ============================================================ -->
+        <section class="screen panel-screen" id="scr-help">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Help &amp; support</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <div class="search-bar" style="margin-bottom:20px;"><i class="fa-solid fa-magnifying-glass"></i><input
+                        id="faqSearchInput" oninput="filterFaqs(this.value)" placeholder="Search help articles...">
+                </div>
+                <div class="section-label" style="margin-top:0;">Frequently asked</div>
+                <div id="faqList"></div>
+                <div class="section-label">Still need help?</div>
+                <button class="btn btn-outline"
+                    style="margin-bottom:10px;background:#E7F5EC;color:#1D7A44;border-color:#CDEBD8;"
+                    onclick="contactSupportAction('whatsapp')"><i class="fa-brands fa-whatsapp"></i> WhatsApp
+                    support</button>
+                <button class="btn btn-outline" style="margin-bottom:10px;" onclick="contactSupportAction('phone')"><i
+                        class="fa-solid fa-phone"></i> Call
+                    support</button>
+                <button class="btn btn-outline" onclick="contactSupportAction('email')"><i
+                        class="fa-solid fa-envelope"></i> Email support</button>
+
+                <div class="section-label" style="margin-top:24px;">Legal &amp; Policies (Razorpay Verified)</div>
+                <div class="card"
+                    style="padding:12px 14px;border:1.4px solid var(--border);box-shadow:none;margin-bottom:16px;">
+                    <a href="legal/terms.html" target="_blank"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:var(--text);font-size:13.5px;font-weight:600;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-file-contract" style="color:var(--primary);width:18px;"></i>
+                            <span>Terms &amp; Conditions</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"
+                            style="font-size:12px;color:var(--text-muted);"></i>
+                    </a>
+                    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+                    <a href="legal/privacy-policy.html" target="_blank"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:var(--text);font-size:13.5px;font-weight:600;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-user-shield" style="color:var(--primary);width:18px;"></i>
+                            <span>Privacy Policy</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"
+                            style="font-size:12px;color:var(--text-muted);"></i>
+                    </a>
+                    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+                    <a href="legal/refund-policy.html" target="_blank"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:var(--text);font-size:13.5px;font-weight:600;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-rotate-left" style="color:var(--primary);width:18px;"></i>
+                            <span>Refund &amp; Cancellation Policy</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"
+                            style="font-size:12px;color:var(--text-muted);"></i>
+                    </a>
+                    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+                    <a href="legal/service-pricing.html" target="_blank"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:var(--text);font-size:13.5px;font-weight:600;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-tag" style="color:var(--primary);width:18px;"></i>
+                            <span>Pricing &amp; Delivery Policy</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"
+                            style="font-size:12px;color:var(--text-muted);"></i>
+                    </a>
+                    <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+                    <a href="legal/contact.html" target="_blank"
+                        style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;color:var(--text);font-size:13.5px;font-weight:600;text-decoration:none;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <i class="fa-solid fa-headset" style="color:var(--primary);width:18px;"></i>
+                            <span>Contact Us &amp; Grievance Redressal</span>
+                        </div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"
+                            style="font-size:12px;color:var(--text-muted);"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REPORT PROFILE ============================================================ -->
+        <section class="screen panel-screen" id="scr-report">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Report profile</h1>
+            </div>
+            <div class="screen-pad no-tab">
+                <p class="p-muted">Why are you reporting this profile? Your report is confidential.</p>
+                <div style="margin-top:16px;" id="reportOpts">
+                    <div class="report-opt" onclick="pickReport(this)">
+                        <div class="radio-dot"></div><span>Fake profile</span>
+                    </div>
+                    <div class="report-opt" onclick="pickReport(this)">
+                        <div class="radio-dot"></div><span>Wrong information</span>
+                    </div>
+                    <div class="report-opt" onclick="pickReport(this)">
+                        <div class="radio-dot"></div><span>Harassment</span>
+                    </div>
+                    <div class="report-opt" onclick="pickReport(this)">
+                        <div class="radio-dot"></div><span>Inappropriate content</span>
+                    </div>
+                    <div class="report-opt" onclick="pickReport(this)">
+                        <div class="radio-dot"></div><span>Other</span>
+                    </div>
+                </div>
+                <div class="field" style="margin-top:14px;"><label>Additional details</label><textarea class="textarea"
+                        id="reportScreenDetails" placeholder="Tell us more (optional)"></textarea></div>
+                <button class="btn btn-danger" onclick="submitReport()"><i class="fa-solid fa-flag"></i> Submit
+                    report</button>
+            </div>
+        </section>
+
+        <!-- ============================================================ MODALS / POPUPS ============================================================ -->
+
+        <!-- Guide popup -->
+        <div class="modal-backdrop" id="modalGuide">
+            <div class="modal-sheet" style="max-height:85vh;overflow-y:auto;">
+                <div class="modal-handle"></div>
+                <div class="center-txt" style="margin-bottom:16px;">
+                    <div class="h-display h-lg">How it works <i class="fa-solid fa-hand-sparkles"
+                            style="color:var(--accent);"></i></div>
+                    <p class="p-muted" style="font-size:12.5px;margin-top:4px;">Simple, transparent steps to find your
+                        trusted life partner.</p>
+                </div>
+                <div id="modalGuideSteps">
+                    <!-- dynamically rendered with Title and Paragraph -->
+                </div>
+                <button class="btn btn-primary" onclick="closeModal('modalGuide')" style="margin-top:16px;">Got
+                    it</button>
+            </div>
+        </div>
+
+        <!-- Verification pending popup -->
+        <div class="modal-backdrop modal-center" id="modalPending">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--pending-bg);color:var(--pending);"><i
+                        class="fa-solid fa-hourglass-half"></i></div>
+                <div class="h-display h-lg">Verification pending</div>
+                <p class="p-muted" style="margin-top:8px;">Your registration is complete. Your community profile has
+                    been submitted for admin verification.</p>
+                <div class="card"
+                    style="margin-top:16px;background:var(--pending-bg);box-shadow:none;text-align:left;display:flex;align-items:center;gap:10px;">
+                    <i class="fa-solid fa-circle-notch spin" style="color:var(--pending);"></i>
+                    <div style="font-size:12.5px;font-weight:800;color:var(--pending);">Status: Under review</div>
+                </div>
+                <p class="p-muted" style="margin-top:14px;font-size:12px;">You can log in once your community
+                    verification is approved. An update will be sent to your Gmail.</p>
+                <button class="btn btn-primary" style="margin-top:20px;"
+                    onclick="closeModal('modalPending'); go('scr-approvalemail')"><i class="fa-solid fa-forward"></i>
+                    Continue (demo)</button>
+                <div class="p-muted" style="margin-top:10px;font-size:11px;">Demo mode simulates instant admin approval
+                    so you can preview every screen.</div>
+            </div>
+        </div>
+
+        <!-- Rejected -->
+        <div class="modal-backdrop modal-center" id="modalRejected">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--error-bg);color:var(--error);"><i
+                        class="fa-solid fa-circle-xmark"></i></div>
+                <div class="h-display h-lg">Verification rejected</div>
+                <p class="p-muted" style="margin-top:8px;">Your profile could not be verified. Please update your
+                    details and submit again.</p>
+                <button class="btn btn-primary" style="margin-top:20px;"
+                    onclick="closeModal('modalRejected'); go('scr-reg3')"><i class="fa-solid fa-user-pen"></i>
+                    Update profile</button>
+            </div>
+        </div>
+
+        <!-- Membership popup after login -->
+        <div class="modal-backdrop modal-center" id="modalMembership">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--primary-light);color:var(--primary);"><i
+                        class="fa-solid fa-crown"></i></div>
+                <div class="h-display h-lg">Membership</div>
+                <p class="p-muted" style="margin-top:8px;">Welcome! Your account is approved. Boys enjoy 30 Days Full
+                    Access for â‚¹49, and Girls enjoy 100% Lifetime Free access.</p>
+                <div class="card"
+                    style="margin:18px 0;box-shadow:none;border:1.4px solid var(--border);text-align:left;">
+                    <div class="detail-row">
+                        <div class="dlabel"><i class="fa-solid fa-person"></i> Boys (30 Days Pass)</div>
+                        <div class="dval" style="color:var(--primary);font-weight:800;font-size:17px;">â‚¹49</div>
+                    </div>
+                    <div class="detail-row">
+                        <div class="dlabel"><i class="fa-solid fa-person-dress"></i> Girls</div>
+                        <div class="dval" style="color:var(--success);font-weight:700;">100% Lifetime Free</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="closeModal('modalMembership'); payNow()"><i
+                        class="fa-solid fa-arrow-right"></i> Continue to payment</button>
+            </div>
+        </div>
+
+        <!-- Payment success -->
+        <div class="modal-backdrop modal-center" id="modalPaySuccess">
+            <div class="modal-card">
+                <div class="modal-icon-circle"
+                    style="background:var(--success-bg);color:var(--success);font-size:34px;"><i
+                        class="fa-solid fa-check"></i></div>
+                <div class="h-display h-lg">Payment successful</div>
+                <p class="p-muted" style="margin-top:8px;">Your membership is now active. Start exploring verified
+                    profiles.</p>
+                <button class="btn btn-primary" style="margin-top:20px;"
+                    onclick="closeModal('modalPaySuccess'); enterHome();"><i class="fa-solid fa-house"></i> Go to
+                    home</button>
+            </div>
+        </div>
+
+        <!-- Interest sent confirm -->
+        <div class="modal-backdrop modal-center" id="modalInterest">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--primary-light);color:var(--primary);"><i
+                        class="fa-solid fa-heart-circle-check"></i></div>
+                <div class="h-display h-lg">Send interest?</div>
+                <p class="p-muted" style="margin-top:8px;" id="interestText">You're about to send an interest request
+                    to this profile. They'll get a notification and an email.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalInterest')">Cancel</button>
+                    <button class="btn btn-primary" id="interestConfirmBtn" onclick="confirmSendInterest()">Send
+                        interest</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account created (right after signup OTP) -->
+        <div class="modal-backdrop modal-center" id="modalAccountCreated">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--success-bg);color:var(--success);"><i
+                        class="fa-solid fa-circle-check"></i></div>
+                <div class="h-display h-lg">Account created!</div>
+                <p class="p-muted" style="margin-top:8px;">Your email is verified. Add your personal, family and
+                    address details next so families can discover and match with you.</p>
+                <button class="btn btn-primary" style="margin-top:18px;"
+                    onclick="closeModal('modalAccountCreated');go('scr-reg2')"><i class="fa-solid fa-arrow-right"></i>
+                    Complete my profile now</button>
+                <button class="btn btn-ghost" style="margin-top:4px;" onclick="chooseCompleteLater()"><i
+                        class="fa-solid fa-arrow-right-from-bracket"></i> Exit &amp; Complete Later</button>
+            </div>
+        </div>
+
+        <!-- Complete profile gate (blocks viewing other profiles / any other action) -->
+        <div class="modal-backdrop modal-center" id="modalCompleteProfile">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--pending-bg);color:var(--pending);"><i
+                        class="fa-solid fa-user-lock"></i></div>
+                <div class="h-display h-lg">Complete your profile first</div>
+                <p class="p-muted" style="margin-top:8px;">Add your personal, family, address and community details to
+                    unlock the app. Once submitted, Boys get 30 Days Full Access for just â‚¹49, and Girls enjoy 100%
+                    Lifetime Free access.</p>
+                <button class="btn btn-primary" style="margin-top:20px;" onclick="goToCompleteProfile()"><i
+                        class="fa-solid fa-arrow-right"></i> Complete profile now</button>
+            </div>
+        </div>
+
+        <!-- ============================================================ PAGE ROUTE LOADER ============================================================ -->
+        <div class="page-route-loader" id="pageRouteLoader">
+            <div
+                style="width:52px;height:52px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:24px;box-shadow:var(--shadow-pop);border:1.5px solid var(--secondary);">
+                <i class="fa-solid fa-circle-notch spin"></i>
+            </div>
+            <div style="font-weight:700;font-size:12.5px;color:var(--primary-dark);letter-spacing:.02em;">Loading Lagna
+                Setu...</div>
+        </div>
+
+        <!-- ============================================================ ACCOUNT SUSPENDED MODAL (NON-DISMISSIBLE) ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalSuspended" style="z-index:9999;">
+            <div class="modal-card" style="border: 2px solid var(--error);">
+                <div class="modal-icon-circle"
+                    style="background:rgba(214,69,69,0.15);color:var(--error);font-size:32px;">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div class="h-display h-lg" style="color:var(--error);">Account Suspended</div>
+                <p class="p-muted" style="margin-top:10px;line-height:1.5;">Your account is suspended.<br><b
+                        style="color:var(--text);">Reason: <span id="suspensionReasonText">Violation of community
+                            terms</span></b></p>
+                <p class="p-muted" style="font-size:12px;margin-top:10px;">Please contact Lagna Setu admin support if
+                    you believe this is an error.</p>
+                <a href="https://wa.me/919726362863" target="_blank" class="btn btn-primary"
+                    style="margin-top:18px;text-decoration:none;">
+                    <i class="fa-brands fa-whatsapp"></i> Contact Admin Support
+                </a>
+            </div>
+        </div>
+
+        <!-- ============================================================ GENDER PAYWALL MODAL (BOYS: â‚¹49 FOR 30 DAYS) ============================================================ -->
+
+        <!-- Profile Complete Modal for Girls (100% Lifetime Free) -->
+        <div class="modal-backdrop modal-center" id="modalGirlComplete" style="z-index:999;">
+            <div class="modal-card" style="border:1.5px solid var(--secondary);text-align:center;position:relative;">
+                <button class="icon-btn" onclick="closeModal('modalGirlComplete'); enterHome();"
+                    style="position:absolute;top:14px;right:14px;width:32px;height:32px;"><i
+                        class="fa-solid fa-xmark"></i></button>
+                <div class="modal-icon-circle"
+                    style="background:var(--success-bg);color:var(--success);font-size:32px;">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div class="h-display h-lg">Profile Completed! ðŸŽ‰</div>
+                <p class="p-muted" style="margin-top:8px;">Your account and profile have been successfully completed.
+                    You can now explore the home screen.</p>
+                <div class="card"
+                    style="margin:16px 0;background:var(--success-bg);border:1.5px solid rgba(46,157,98,0.3);text-align:left;padding:14px 16px;">
+                    <div
+                        style="font-weight:800;font-size:14px;color:var(--success);display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-heart"></i> 100% Lifetime Free for Girls
+                    </div>
+                    <p style="font-size:12px;color:var(--text);margin-top:4px;line-height:1.5;">
+                        There are no membership charges for female members â€” access is 100% Lifetime Free! You can
+                        directly explore and connect with all verified community groom profiles.
+                    </p>
+                </div>
+                <button class="btn btn-primary" onclick="closeModal('modalGirlComplete'); enterHome();">
+                    <i class="fa-solid fa-house"></i> Go to Home Screen
+                </button>
+            </div>
+        </div>
+
+        <!-- Profile Complete Modal for Boys (â‚¹49 / 30 Days Membership Prompt) -->
+        <div class="modal-backdrop modal-center" id="modalBoyComplete" style="z-index:999;">
+            <div class="modal-card" style="border:1.5px solid var(--secondary);text-align:center;position:relative;">
+                <button class="icon-btn" onclick="closeModal('modalBoyComplete'); go('scr-membership');"
+                    style="position:absolute;top:14px;right:14px;width:32px;height:32px;"><i
+                        class="fa-solid fa-xmark"></i></button>
+                <div class="modal-icon-circle"
+                    style="background:var(--primary-light);color:var(--primary);font-size:32px;">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <div class="h-display h-lg">Profile Completed! ðŸŽ‰</div>
+                <p class="p-muted" style="margin-top:8px;">Your account and profile are ready! Activate your 30-day
+                    membership pass to connect directly with verified bride profiles.</p>
+                <div class="card"
+                    style="margin:16px 0;background:var(--primary-light);border:1.5px solid var(--secondary);text-align:left;padding:14px 16px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div style="font-weight:800;font-size:14px;color:var(--primary-dark);">Boys Membership Pass
+                        </div>
+                        <div
+                            style="font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--primary);">
+                            â‚¹49 <small style="font-size:12px;font-weight:600;color:var(--text-muted);">/ 30
+                                Days</small>
+                        </div>
+                    </div>
+                    <div style="font-size:11.5px;color:var(--text-muted);margin-top:4px;">30 Days Unlimited Full Access
+                    </div>
+                    <ul
+                        style="list-style:none;margin-top:10px;padding:0;font-size:12px;color:var(--text);line-height:1.8;">
+                        <li><i class="fa-solid fa-check" style="color:var(--success);margin-right:6px;"></i> View
+                            verified
+                            bride profiles and photos</li>
+                        <li><i class="fa-solid fa-check" style="color:var(--success);margin-right:6px;"></i> Send
+                            unlimited
+                            interest requests</li>
+                        <li><i class="fa-solid fa-check" style="color:var(--success);margin-right:6px;"></i> Direct
+                            WhatsApp &amp; Call to bride's father</li>
+                    </ul>
+                </div>
+                <button class="btn btn-gold" onclick="closeModal('modalBoyComplete'); openRazorpayCheckout();">
+                    <i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI &amp; Continue
+                </button>
+                <button class="btn btn-ghost" style="margin-top:8px;font-size:12.5px;color:var(--text-muted);"
+                    onclick="closeModal('modalBoyComplete'); go('scr-membership'); showToast('Please activate your â‚¹49 UPI pass to access home');">
+                    <i class="fa-solid fa-clock"></i> Pay Later (Limited Access)
+                </button>
+            </div>
+        </div>
+        <div class="modal-backdrop modal-center" id="modalPaywall" style="z-index:999;">
+            <div class="modal-card" style="border:1.5px solid var(--secondary);">
+                <div class="modal-icon-circle"
+                    style="background:var(--primary-light);color:var(--primary);font-size:32px;">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+                <div class="h-display h-lg">Access Pass Required</div>
+                <p class="p-muted" style="margin-top:8px;">To maintain a verified and safe environment for community
+                    families, male members require an active access pass.</p>
+
+                <div class="card"
+                    style="margin:16px 0;background:var(--primary-light);border:1.5px solid var(--secondary);text-align:left;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <div>
+                            <div
+                                style="font-size:11px;font-weight:800;color:var(--secondary-dark);text-transform:uppercase;letter-spacing:.05em;">
+                                Exclusive Community Plan</div>
+                            <div
+                                style="font-family:var(--font-display);font-size:19px;font-weight:700;color:var(--primary-dark);margin-top:2px;">
+                                30 Days Access Pass</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:24px;font-weight:800;color:var(--primary-dark);">â‚¹49</div>
+                            <div style="font-size:11px;color:var(--text-muted);text-decoration:line-through;">â‚¹149
+                            </div>
+                        </div>
+                    </div>
+                    <hr style="border:none;border-top:1px solid rgba(123,44,191,0.15);margin:12px 0;">
+                    <div style="font-size:12px;color:var(--text);display:flex;flex-direction:column;gap:7px;">
+                        <div><i class="fa-solid fa-circle-check" style="color:var(--success);margin-right:6px;"></i>
+                            Browse verified community brides</div>
+                        <div><i class="fa-solid fa-circle-check" style="color:var(--success);margin-right:6px;"></i>
+                            Direct Call &amp; WhatsApp to Father</div>
+                        <div><i class="fa-solid fa-circle-check" style="color:var(--success);margin-right:6px;"></i>
+                            Unlimited interest requests &amp; chats</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="openRazorpayCheckout()"><i class="fa-solid fa-lock"></i> Pay
+                    â‚¹49 via Razorpay</button>
+                <div
+                    style="text-align:center;margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.4;">
+                    <a href="legal/terms.html" target="_blank"
+                        style="color:var(--primary);font-weight:700;text-decoration:underline;">Terms &amp;
+                        Conditions</a> &bull;
+                    <a href="legal/privacy-policy.html" target="_blank"
+                        style="color:var(--primary);font-weight:700;text-decoration:underline;">Privacy Policy</a>
+                    &bull;
+                    <a href="legal/refund-policy.html" target="_blank"
+                        style="color:var(--primary);font-weight:700;text-decoration:underline;">Refund Policy</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ RAZORPAY CHECKOUT MODAL (MOCK) ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalRazorpayCheckout" style="z-index:1000;">
+            <div class="modal-card" style="max-width:380px;text-align:left;padding:22px;">
+                <div
+                    style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <div
+                            style="width:32px;height:32px;border-radius:8px;background:#0c2340;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;">
+                            R</div>
+                        <div>
+                            <div style="font-size:13px;font-weight:800;color:#0c2340;">Razorpay Trusted Business</div>
+                            <div style="font-size:10.5px;color:var(--text-muted);">Lagna Setu 30-Day Pass</div>
+                        </div>
+                    </div>
+                    <button class="icon-btn" onclick="closeModal('modalRazorpayCheckout')"
+                        style="width:32px;height:32px;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div
+                    style="background:#f4f6fa;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <span style="font-size:13px;color:#555;">Amount to Pay</span>
+                    <span style="font-size:20px;font-weight:800;color:#0c2340;">â‚¹49.00</span>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                    <div style="font-size:11.5px;font-weight:800;color:var(--text-muted);text-transform:uppercase;">
+                        Pay via UPI (Razorpay)
+                    </div>
+                    <span
+                        style="font-size:10.5px;font-weight:700;color:#059669;background:#ECFDF5;padding:2px 8px;border-radius:10px;">
+                        <i class="fa-solid fa-bolt"></i> Instant UPI
+                    </span>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+                    <!-- Option 1: Google Pay -->
+                    <div class="card upi-option active" onclick="selectUpiApp('Google Pay', this)"
+                        style="padding:11px 14px;box-shadow:none;border:1.5px solid var(--primary);background:var(--primary-light);cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-radius:12px;">
+                        <div style="display:flex;align-items:center;gap:11px;">
+                            <div
+                                style="width:32px;height:32px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                                <i class="fa-brands fa-google-pay" style="font-size:22px;color:#4285F4;"></i>
+                            </div>
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:var(--text);">Google Pay (UPI)</div>
+                                <div style="font-size:10.5px;color:var(--text-muted);">Fast &amp; 1-Click UPI Payment
+                                </div>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-circle-check upi-check" style="color:var(--primary);font-size:16px;"></i>
+                    </div>
+
+                    <!-- Option 2: PhonePe -->
+                    <div class="card upi-option" onclick="selectUpiApp('PhonePe', this)"
+                        style="padding:11px 14px;box-shadow:none;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-radius:12px;">
+                        <div style="display:flex;align-items:center;gap:11px;">
+                            <div
+                                style="width:32px;height:32px;border-radius:8px;background:#5f259f;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
+                                à¤ªà¥‡
+                            </div>
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:var(--text);">PhonePe (UPI)</div>
+                                <div style="font-size:10.5px;color:var(--text-muted);">Pay directly via PhonePe</div>
+                            </div>
+                        </div>
+                        <i class="fa-regular fa-circle upi-check" style="color:var(--text-faint);font-size:16px;"></i>
+                    </div>
+
+                    <!-- Option 3: Paytm / Any UPI App -->
+                    <div class="card upi-option" onclick="selectUpiApp('Paytm / Other UPI', this)"
+                        style="padding:11px 14px;box-shadow:none;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-radius:12px;">
+                        <div style="display:flex;align-items:center;gap:11px;">
+                            <div
+                                style="width:32px;height:32px;border-radius:8px;background:#00baf2;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;">
+                                Paytm
+                            </div>
+                            <div>
+                                <div style="font-size:13px;font-weight:700;color:var(--text);">Paytm / Any UPI ID / QR
+                                </div>
+                                <div style="font-size:10.5px;color:var(--text-muted);">BHIM, Cred, or scan QR</div>
+                            </div>
+                        </div>
+                        <i class="fa-regular fa-circle upi-check" style="color:var(--text-faint);font-size:16px;"></i>
+                    </div>
+                </div>
+
+                <!-- Custom UPI ID / VPA field -->
+                <div style="margin-bottom:12px;">
+                    <div
+                        style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;">
+                        Or Enter UPI ID / VPA
+                    </div>
+                    <div
+                        style="display:flex;align-items:center;background:#fff;border:1px solid var(--border);border-radius:10px;padding:2px 10px;">
+                        <i class="fa-solid fa-at" style="color:var(--text-faint);margin-right:8px;font-size:13px;"></i>
+                        <input type="text" id="upiCustomVpaInput" placeholder="mobile@upi / username@okhdfcbank"
+                            style="border:none;outline:none;background:transparent;width:100%;font-size:12px;padding:8px 0;font-family:inherit;">
+                    </div>
+                </div>
+
+                <!-- 100% UPI Mode Assurance Badge -->
+                <div
+                    style="background:#ECFDF5;border:1px solid #A7F3D0;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                    <i class="fa-solid fa-shield-halved" style="color:#059669;font-size:14px;"></i>
+                    <span style="font-size:11px;color:#065F46;font-weight:600;line-height:1.4;">
+                        <b>100% UPI Mode:</b> Cards &amp; Net Banking are permanently disabled.
+                    </span>
+                </div>
+
+                <!-- Non-Refundable Digital Pass & Platform Disclaimer Box -->
+                <div
+                    style="background:#FFF9EB;border:1.2px solid #FDE68A;border-radius:10px;padding:9px 12px;margin-bottom:14px;font-size:11px;color:#78350F;line-height:1.45;">
+                    <div
+                        style="font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:3px;color:#78350F;">
+                        <i class="fa-solid fa-shield-check"></i> Non-Refundable Digital Pass Agreement
+                    </div>
+                    By proceeding to pay â‚¹49, you accept our
+                    <a href="legal/terms.html" target="_blank"
+                        style="color:var(--primary);font-weight:700;text-decoration:underline;">Terms</a> &amp;
+                    <a href="legal/refund-policy.html" target="_blank"
+                        style="color:var(--primary);font-weight:700;text-decoration:underline;">Refund Policy</a>.
+                    30-Day digital pass activates immediately. Community profiles register voluntarily; platform does
+                    not guarantee matches, replies, or specific gender ratios.
+                </div>
+
+                <button class="btn btn-primary" style="background:#0c2340;border-color:#0c2340;color:#fff;width:100%;"
+                    onclick="processMockPayment()"><i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI
+                    (Razorpay)</button>
+                <div style="text-align:center;margin-top:10px;font-size:10.5px;color:var(--text-muted);"><i
+                        class="fa-solid fa-lock"></i> Secured 256-bit Razorpay UPI Gateway</div>
+            </div>
+        </div>
+
+        <!-- ============================================================ PHOTO CAROUSEL MODAL ============================================================ -->
+        <div class="carousel-overlay" id="modalPhotoCarousel" onclick="closeCarouselOnBackdrop(event)">
+            <div class="carousel-wrap">
+                <button class="carousel-close" onclick="closePhotoCarousel()"><i class="fa-solid fa-xmark"></i></button>
+                <div class="carousel-view">
+                    <img id="carouselImg" src="" alt="Profile Photo">
+                    <button class="carousel-btn prev" onclick="prevCarouselPhoto()"><i
+                            class="fa-solid fa-chevron-left"></i></button>
+                    <button class="carousel-btn next" onclick="nextCarouselPhoto()"><i
+                            class="fa-solid fa-chevron-right"></i></button>
+                    <div class="carousel-pill" id="carouselCounter">1 / 3</div>
+                </div>
+                <div id="carouselDots" style="display:flex;gap:8px;margin-top:14px;"></div>
+            </div>
+        </div>
+
+        <!-- ============================================================ CUSTOM DOB MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalDobPicker" style="z-index:998;">
+            <div class="dob-modal-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                        <div class="modal-icon-circle"
+                            style="width:36px;height:36px;font-size:16px;margin:0;background:var(--primary-light);color:var(--primary);">
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </div>
+                        <div style="font-weight:800;font-size:16px;">Select Date of Birth</div>
+                    </div>
+                    <button class="icon-btn" onclick="closeModal('modalDobPicker')" style="width:32px;height:32px;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div style="text-align:center;">
+                    <div class="dob-age-badge" id="dobModalLiveBadge">
+                        <i class="fa-solid fa-cake-candles"></i> Selected: <span id="dobModalLivePreview">14 Aug
+                            997</span> &nbsp;Â·&nbsp; <b><span id="dobModalLiveAge">29</span> Years</b>
+                    </div>
+                </div>
+
+                <div class="dob-picker-container">
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-calendar-day"></i> Day</div>
+                        <div class="dob-scroll-list" id="dobDayList"></div>
+                    </div>
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-calendar"></i> Month</div>
+                        <div class="dob-scroll-list" id="dobMonthList"></div>
+                    </div>
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-clock-rotate-left"></i> Year</div>
+                        <div class="dob-scroll-list" id="dobYearList"></div>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="confirmDobPicker()"><i class="fa-solid fa-check"></i> Set Date
+                    of Birth</button>
+            </div>
+        </div>
+
+        <!-- ============================================================ QUICK REPORT PROFILE MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalQuickReport" style="z-index:997;"
+            onclick="if(event.target===this) closeModal('modalQuickReport')">
+            <div class="modal-card" style="text-align:left;padding:22px;position:relative;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                        <div class="modal-icon-circle"
+                            style="width:36px;height:36px;font-size:16px;margin:0;background:rgba(214,69,69,0.15);color:var(--error);">
+                            <i class="fa-solid fa-flag"></i>
+                        </div>
+                        <div style="font-weight:800;font-size:16px;">Report Profile</div>
+                    </div>
+                    <button class="icon-btn modal-close-btn" onclick="closeModal('modalQuickReport')" title="Close"
+                        aria-label="Close"
+                        style="width:34px;height:34px;border-radius:10px;background:var(--surface-sunken);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <i class="fa-solid fa-xmark" style="font-size:16px;"></i>
+                    </button>
+                </div>
+                <p class="p-muted" style="font-size:12.5px;margin-bottom:14px;">Select the reason for reporting this
+                    profile. Lagna Setu admins review all reports within 24 hours.</p>
+                <div class="field">
+                    <label>Reason <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="ddReportReason">
+                        <div class="dd-trigger" onclick="ddOpen('ddReportReason')"><span id="reportReasonText">Fake
+                                profile or photos</span><i class="fa-solid fa-chevron-down"></i></div>
+                        <ul class="dd-menu">
+                            <li class="active" onclick="pickReportReason('Fake profile or photos', this)">Fake profile
+                                or photos</li>
+                            <li onclick="pickReportReason('Incorrect community/caste', this)">Incorrect community/caste
+                            </li>
+                            <li onclick="pickReportReason('Inappropriate behavior / harassment', this)">Inappropriate
+                                behavior / harassment</li>
+                            <li onclick="pickReportReason('Already married / wrong marital status', this)">Already
+                                married / wrong marital status</li>
+                            <li onclick="pickReportReason('Financial fraud / spam', this)">Financial fraud / spam</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="field"><label>Notes (Optional)</label><textarea class="textarea" id="reportNotes"
+                        placeholder="Additional details for admin review..." style="min-height:70px;"></textarea></div>
+                <div class="btn-row" style="margin-top:16px;display:flex;gap:10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modalQuickReport')"
+                        style="flex:1;">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitQuickReport()" style="flex:1.4;"><i
+                            class="fa-solid fa-flag"></i> Submit
+                        Report</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ DELETE ACCOUNT CONFIRMATION MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalDeleteAccount" style="z-index:998;"
+            onclick="if(event.target===this) closeModal('modalDeleteAccount')">
+            <div class="modal-card" style="text-align:left;padding:24px;max-width:420px;width:92%;position:relative;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="modal-icon-circle"
+                            style="width:40px;height:40px;font-size:18px;margin:0;background:rgba(214,69,69,0.15);color:var(--error);">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:800;font-size:16px;color:var(--text);">Delete Account</div>
+                            <div style="font-size:11.5px;color:var(--error);font-weight:600;">Permanent &amp;
+                                Irreversible</div>
+                        </div>
+                    </div>
+                    <button class="icon-btn modal-close-btn" onclick="closeModal('modalDeleteAccount')" title="Close"
+                        aria-label="Close"
+                        style="width:34px;height:34px;border-radius:10px;background:var(--surface-sunken);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;">
+                        <i class="fa-solid fa-xmark" style="font-size:16px;"></i>
+                    </button>
+                </div>
+
+                <p class="p-muted" style="font-size:12.5px;line-height:1.5;margin-bottom:16px;">
+                    Are you sure you want to delete your account? All your profile information, photos, shortlists, and
+                    chat conversations will be <strong>permanently erased</strong>.
+                </p>
+
+                <!-- Registered Email / Gmail ID -->
+                <div class="field" style="margin-bottom:14px;">
+                    <label
+                        style="font-size:12px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-envelope" style="color:var(--primary);"></i> Registered Email (Gmail ID)
+                    </label>
+                    <div class="input-icon-wrap" style="position:relative;">
+                        <i class="fa-brands fa-google leading" style="color:#EA4335;"></i>
+                        <input class="input" id="deleteAccountEmail" type="email" readonly
+                            style="background:var(--surface-sunken);color:var(--text);font-weight:600;cursor:not-allowed;opacity:0.9;"
+                            value="" placeholder="Your registered Gmail">
+                    </div>
+                    <span class="hint" style="font-size:11px;margin-top:4px;color:var(--text-faint);">
+                        <i class="fa-solid fa-shield-halved"></i> Associated with your registered profile
+                    </span>
+                </div>
+
+                <!-- Password Input with Show/Hide Toggle Eye -->
+                <div class="field" style="margin-bottom:20px;">
+                    <label
+                        style="font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-lock" style="color:var(--primary);"></i> Enter Password to Confirm <span
+                            style="color:var(--error);">*</span>
+                    </label>
+                    <div class="input-icon-wrap" style="position:relative;">
+                        <i class="fa-solid fa-key leading"></i>
+                        <input class="input" id="deleteAccountPassword" type="password"
+                            placeholder="Enter your current password" style="padding-right:42px;">
+                        <button type="button" class="pw-eye" onclick="togglePw('deleteAccountPassword', this)"
+                            title="Show/Hide password"
+                            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:transparent;color:var(--text-muted);cursor:pointer;font-size:15px;padding:4px;">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <span class="hint" style="font-size:11px;margin-top:4px;color:var(--text-muted);">
+                        Please enter your password to authorize permanent deletion.
+                    </span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="btn-row" style="display:flex;gap:10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeModal('modalDeleteAccount')"
+                        style="flex:1;">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount()"
+                        style="flex:1.4;background:var(--error);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;">
+                        <i class="fa-solid fa-trash-can"></i> Delete Account
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu -->
+        <div class="modal-backdrop" id="modalMenu" onclick="if(event.target===this) closeModal('modalMenu')">
+            <div class="modal-sheet" style="position:relative;">
+                <div class="modal-handle"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <img id="menuUserAvatar"
+                            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop"
+                            style="width:50px;height:50px;border-radius:16px;object-fit:cover;" alt="User Avatar">
+                        <div>
+                            <div id="menuUserName" style="font-weight:800;font-size:15.5px;color:var(--text);">Member
+                            </div>
+                            <div class="p-muted" style="font-size:11.5px;"><i class="fa-solid fa-circle-check"
+                                    style="color:var(--success);"></i> Verified Â· Gold member</div>
+                        </div>
+                    </div>
+                    <button class="icon-btn modal-close-btn" onclick="closeModal('modalMenu')" title="Close menu"
+                        aria-label="Close"
+                        style="width:36px;height:36px;border-radius:12px;background:var(--surface-sunken);color:var(--text);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;">
+                        <i class="fa-solid fa-xmark" style="font-size:17px;"></i>
+                    </button>
+                </div>
+                <div style="margin-top:10px;">
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-editprofile')">
+                        <div class="micon"><i class="fa-solid fa-user-pen"></i></div>
+                        <div class="mtxt">Edit profile</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" id="menuItemGirls"
+                        onclick="closeModal('modalMenu'); setTab('girls'); go('scr-browse')">
+                        <div class="micon"><i class="fa-solid fa-person-dress"></i></div>
+                        <div class="mtxt" id="menuTextGirls">Girls</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" id="menuItemBoys"
+                        onclick="closeModal('modalMenu'); setTab('boys'); go('scr-browse')">
+                        <div class="micon"><i class="fa-solid fa-person"></i></div>
+                        <div class="mtxt" id="menuTextBoys">Boys</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); setInboxTab('requests'); go('scr-inbox')">
+                        <div class="micon"><i class="fa-solid fa-heart-circle-check"></i></div>
+                        <div class="mtxt">Inbox</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-favorites')">
+                        <div class="micon"><i class="fa-solid fa-heart"></i></div>
+                        <div class="mtxt">Favorites</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-membership')">
+                        <div class="micon"><i class="fa-solid fa-crown"></i></div>
+                        <div class="mtxt">Membership</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-notifs')">
+                        <div class="micon"><i class="fa-solid fa-bell"></i></div>
+                        <div class="mtxt">Notifications</div>
+                        <span id="userMenuNotifBadge" class="home-inbox-badge"
+                            style="display:none;position:static;margin-left:auto;margin-right:8px;line-height:17px;">0</span>
+                        <i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-howitworks')">
+                        <div class="micon"><i class="fa-solid fa-circle-info"></i></div>
+                        <div class="mtxt">How it works</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" id="menuItemInstallApp" onclick="triggerPwaInstall()">
+                        <div class="micon" style="color:var(--primary);background:rgba(123,44,191,0.1);"><i
+                                class="fa-solid fa-mobile-screen-button"></i></div>
+                        <div class="mtxt">
+                            <span style="font-weight:700;">Install App</span>
+                            <div class="pwa-menu-subtext"
+                                style="font-size:11px;color:var(--text-muted);font-weight:400;">Add to Home Screen</div>
+                        </div>
+                        <span class="badge-new-install"
+                            style="font-size:10px;font-weight:700;background:var(--primary);color:#fff;padding:2px 8px;border-radius:12px;margin-left:auto;margin-right:6px;">FREE</span>
+                        <i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-help')">
+                        <div class="micon"><i class="fa-solid fa-headset"></i></div>
+                        <div class="mtxt">Help &amp; support</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); window.open('terms.html', '_blank')">
+                        <div class="micon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <div class="mtxt">Legal &amp; Policies</div><i
+                            class="fa-solid fa-arrow-up-right-from-square chev" style="font-size:12px;opacity:0.6;"></i>
+                    </div>
+                    <div class="menu-item danger" onclick="closeModal('modalMenu'); openModal('modalLogout')">
+                        <div class="micon"><i class="fa-solid fa-right-from-bracket"></i></div>
+                        <div class="mtxt">Log out</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ CROP & COMPRESS PHOTO MODAL ============ -->
+        <div class="modal-backdrop modal-center" id="modalCropAvatar" style="z-index: 350;">
+            <div class="modal-card" style="max-width: 420px; width: 92%; padding: 24px 20px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                    <div class="h-display h-md" style="text-align: left;">Crop &amp; Compress Photo</div>
+                    <button class="icon-btn" style="width: 34px; height: 34px;"
+                        onclick="closeModal('modalCropAvatar')"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="p-muted" style="font-size: 12px; text-align: left; margin-bottom: 14px;">
+                    Drag to adjust and zoom inside the circle. Any large photo (up to 10MB+) will be compressed
+                    into a lightweight web-friendly format automatically.
+                </p>
+
+                <!-- Circular Crop Container -->
+                <div class="crop-viewport-wrap" id="cropViewport"
+                    style="position: relative; width: 230px; height: 230px; margin: 0 auto; border-radius: 50%; overflow: hidden; background: #1a1524; box-shadow: 0 0 0 4px var(--primary), 0 12px 28px rgba(0,0,0,0.35); cursor: grab; user-select: none;">
+                    <img id="cropTargetImg" src=""
+                        style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(1); max-width: none; user-select: none; pointer-events: none; transition: transform 0.04s ease-out;"
+                        alt="Crop image">
+                    <!-- Overlay circular guideline -->
+                    <div
+                        style="position: absolute; inset: 0; border-radius: 50%; border: 1.5px dashed rgba(255,255,255,0.65); pointer-events: none;">
+                    </div>
+                </div>
+
+                <!-- Zoom & Control Bar -->
+                <div style="margin-top: 18px; display: flex; align-items: center; gap: 12px; padding: 0 8px;">
+                    <i class="fa-solid fa-magnifying-glass-minus"
+                        style="color: var(--text-faint); font-size: 14px;"></i>
+                    <input type="range" id="cropZoomSlider" min="1" max="3" step="0.02" value="1"
+                        style="flex: 1; accent-color: var(--primary); cursor: pointer;"
+                        oninput="onCropZoomChange(this.value)">
+                    <i class="fa-solid fa-magnifying-glass-plus" style="color: var(--primary); font-size: 14px;"></i>
+                    <button class="icon-btn" style="width: 34px; height: 34px; margin-left: 4px;"
+                        onclick="rotateCropImage()" title="Rotate 90Â°"><i
+                            class="fa-solid fa-rotate-right"></i></button>
+                </div>
+
+                <!-- Compression Info Strip -->
+                <div class="card"
+                    style="margin-top: 14px; padding: 10px 14px; background: var(--primary-light); box-shadow: none; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="font-size: 11.5px; color: var(--primary-dark); font-weight: 700;">
+                        <i class="fa-solid fa-bolt" style="color: var(--accent-deep);"></i> Auto-Compression
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                        <span id="cropOrigSize">10.0 MB</span> â†’ <span
+                            style="color: var(--success); font-weight: 800;">~55 KB (Web Ready)</span>
+                    </div>
+                </div>
+
+                <div class="btn-row" style="margin-top: 18px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalCropAvatar')">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmCropAndCompress()"><i class="fa-solid fa-check"></i>
+                        Crop &amp; Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ BROWSE FILTER MODAL ============ -->
+        <div class="modal-backdrop" id="modalFilter">
+            <div class="modal-sheet" style="max-width: 480px;">
+                <div class="modal-handle"></div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <div class="h-display h-lg">Filter Profiles</div>
+                    <button class="icon-btn" onclick="closeModal('modalFilter')"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="field" id="fltGenderField">
+                    <label>Looking For</label>
+                    <div class="seg-toggle" id="fltGenderToggle">
+                        <button type="button" id="fltGenderAll" class="active"
+                            onclick="setFilterGender('all')">All</button>
+                        <button type="button" id="fltGenderGirls" onclick="setFilterGender('girls')">Girls</button>
+                        <button type="button" id="fltGenderBoys" onclick="setFilterGender('boys')">Boys</button>
+                    </div>
+                    <div id="fltGenderLockedBadge"
+                        style="display:none;padding:10px 14px;border-radius:12px;background:var(--primary-light, #f5edfc);color:var(--primary, #7b2cbf);font-size:13px;font-weight:600;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-lock" style="font-size:12px;"></i> <span id="fltGenderLockedText">Showing
+                            Brides only</span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Community / Caste</label>
+                    <div class="dd" id="ddFilterCaste">
+                        <div class="dd-trigger" onclick="ddOpen('ddFilterCaste')">
+                            <span id="fltCasteText">My Community</span><i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div class="dd-menu filter-caste-dd-menu">
+                            <!-- Preset options: My Community & All Communities -->
+                            <div class="flt-caste-top-options">
+                                <div class="flt-caste-item active" id="fltItemMyCommunity"
+                                    onclick="pickFilterCaste('MY_COMMUNITY')">
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <i class="fa-solid fa-star" style="color:#D4A017;font-size:13px;"></i>
+                                        <div>
+                                            <div style="font-weight:700;font-size:13px;color:var(--text);">My Community
+                                            </div>
+                                            <div id="fltMyCommunitySub"
+                                                style="font-size:11px;color:var(--muted);font-weight:500;">Default</div>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-circle-check flt-check-icon"
+                                        style="color:var(--primary);"></i>
+                                </div>
+
+                                <div class="flt-caste-item" id="fltItemAllCommunities" onclick="pickFilterCaste('All')">
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <i class="fa-solid fa-globe" style="color:var(--primary);font-size:13px;"></i>
+                                        <div>
+                                            <div style="font-weight:700;font-size:13px;color:var(--text);">All
+                                                Communities</div>
+                                            <div style="font-size:11px;color:var(--muted);font-weight:500;">Show all
+                                                Gujarat Hindu castes</div>
+                                        </div>
+                                    </div>
+                                    <i class="fa-solid fa-circle-check flt-check-icon"
+                                        style="color:var(--primary);display:none;"></i>
+                                </div>
+                            </div>
+
+                            <!-- Custom Caste Search -->
+                            <div style="margin:4px 0 6px;padding-top:8px;border-top:1px solid var(--border);">
+                                <div
+                                    style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
+                                    Or Select Specific Community:
+                                </div>
+                                <div class="input-icon-wrap" style="margin-bottom:6px;">
+                                    <i class="fa-solid fa-magnifying-glass leading" style="font-size:11.5px;"></i>
+                                    <input class="input" id="fltCustomSearchInput"
+                                        placeholder="Search caste (e.g. Kadva, Brahmin...)"
+                                        style="padding:7px 10px 7px 32px !important;font-size:12px !important;"
+                                        oninput="filterCustomCasteList(this.value)" onclick="event.stopPropagation()">
+                                </div>
+                            </div>
+
+                            <!-- Scrollable custom caste list -->
+                            <div class="flt-caste-scroll-list" id="fltCustomCasteList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                        <label style="margin-bottom:0;">Age Range</label>
+                        <span id="fltAgeLiveText" style="font-size:12.5px;font-weight:700;color:var(--primary);">18 â€“
+                            50
+                            Years (All Ages)</span>
+                    </div>
+
+                    <!-- Dual Slider -->
+                    <div class="flt-age-slider-wrap">
+                        <div class="flt-age-track-bg"></div>
+                        <div class="flt-age-track-active" id="fltAgeTrackActive" style="left:0%;right:0%;"></div>
+                        <input type="range" id="fltAgeMinSlider" min="18" max="50" value="18" step="1"
+                            oninput="handleAgeSliderInput('min')">
+                        <input type="range" id="fltAgeMaxSlider" min="18" max="50" value="50" step="1"
+                            oninput="handleAgeSliderInput('max')">
+                    </div>
+
+                    <!-- Min / Max Display Cards -->
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 12px;">
+                        <div class="flt-age-val-box">
+                            <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">
+                                Min Age</div>
+                            <div id="fltAgeMinDisplay"
+                                style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">18 Yrs</div>
+                        </div>
+                        <div style="font-size:12px;color:var(--muted);font-weight:600;">to</div>
+                        <div class="flt-age-val-box">
+                            <div style="font-size:9.5px;color:var(--muted);text-transform:uppercase;font-weight:700;">
+                                Max Age</div>
+                            <div id="fltAgeMaxDisplay"
+                                style="font-size:14px;font-weight:800;color:var(--text);margin-top:2px;">50 Yrs</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Smart Presets -->
+                    <div class="flt-age-presets">
+                        <span class="chip filter-age-chip active" id="chipAgeAll"
+                            onclick="setFilterAgePreset('all')">All Ages</span>
+                        <span class="chip filter-age-chip" id="chipAge2125" onclick="setFilterAgePreset(21, 25)">21 â€“
+                            25</span>
+                        <span class="chip filter-age-chip" id="chipAge2428" onclick="setFilterAgePreset(24, 28)">24 â€“
+                            28</span>
+                        <span class="chip filter-age-chip" id="chipAge2630" onclick="setFilterAgePreset(26, 30)">26 â€“
+                            30</span>
+                        <span class="chip filter-age-chip" id="chipAge2835" onclick="setFilterAgePreset(28, 35)">28 â€“
+                            35</span>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>City / Location</label>
+                    <div class="dd" id="ddFilterCity">
+                        <div class="dd-trigger" onclick="ddOpen('ddFilterCity')">
+                            <span id="fltCityText">All Cities</span><i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <div class="dd-menu filter-city-dd-menu">
+                            <!-- Pinned: All Cities -->
+                            <div class="flt-city-item active" id="fltItemAllCities" onclick="pickFilterCity('All')">
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <i class="fa-solid fa-globe" style="color:var(--primary);font-size:13px;"></i>
+                                    <div>
+                                        <div style="font-weight:700;font-size:13px;color:var(--text);">All Cities &amp;
+                                            Villages</div>
+                                        <div style="font-size:11px;color:var(--muted);font-weight:500;">Show profiles
+                                            from any Gujarat location</div>
+                                    </div>
+                                </div>
+                                <i class="fa-solid fa-circle-check flt-city-check-icon"
+                                    style="color:var(--primary);"></i>
+                            </div>
+
+                            <!-- Search input for City / Village -->
+                            <div style="margin:4px 0 6px;padding-top:8px;border-top:1px solid var(--border);">
+                                <div class="input-icon-wrap" style="margin-bottom:6px;">
+                                    <i class="fa-solid fa-magnifying-glass leading" style="font-size:11.5px;"></i>
+                                    <input class="input" id="fltCitySearchInput"
+                                        placeholder="Search city or village (e.g. Rajkot, Surat...)"
+                                        style="padding:7px 10px 7px 32px !important;font-size:12px !important;"
+                                        oninput="filterCityDropdownList(this.value)" onclick="event.stopPropagation()">
+                                </div>
+                            </div>
+
+                            <!-- Scrollable dynamic city list -->
+                            <div class="flt-city-scroll-list" id="fltCityScrollList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Marital Status</label>
+                    <div class="dd" id="ddFilterMarital">
+                        <div class="dd-trigger" onclick="ddOpen('ddFilterMarital')">
+                            <span id="fltMaritalText">All Statuses</span><i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <ul class="dd-menu">
+                            <li class="active" onclick="pickFilterMarital('All', this)">All Statuses</li>
+                            <li onclick="pickFilterMarital('Unmarried', this)">Unmarried</li>
+                            <li onclick="pickFilterMarital('Divorced', this)">Divorced</li>
+                            <li onclick="pickFilterMarital('Widowed', this)">Widowed</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="btn-row" style="margin-top: 24px;">
+                    <button class="btn btn-outline" onclick="resetFilters()"><i class="fa-solid fa-rotate-left"></i>
+                        Reset</button>
+                    <button class="btn btn-primary" onclick="applyFilters()"><i class="fa-solid fa-check"></i>
+                        Apply Filters</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ LOGOUT CONFIRMATION MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalLogout">
+            <div class="modal-card" style="max-width:340px;">
+                <div class="modal-icon-circle" style="background:rgba(214,69,69,0.12);color:var(--error);"><i
+                        class="fa-solid fa-right-from-bracket"></i></div>
+                <div class="h-display h-lg">Log out?</div>
+                <p class="p-muted" style="margin-top:8px;margin-bottom:20px;">You'll need to sign in again to access
+                    your profile and browse matches.</p>
+                <div class="btn-row">
+                    <button class="btn btn-outline" onclick="closeModal('modalLogout')">Cancel</button>
+                    <button class="btn btn-danger" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>
+                        Log out</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ CHAT MESSAGE DELETE CONFIRMATION MODAL (WHATSAPP STYLE) ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalDeleteChatMsg" style="z-index: 1050;">
+            <div class="modal-card" style="max-width:350px;">
+                <div class="modal-icon-circle" style="background:rgba(214,69,69,0.12);color:var(--error);"><i
+                        class="fa-solid fa-trash-can"></i></div>
+                <div class="h-display h-lg" id="delModalTitle">Delete message?</div>
+                <p class="p-muted" id="delModalDesc"
+                    style="margin-top:8px;margin-bottom:18px;font-size:13px;line-height:1.5;">
+                    Choose whether to delete this message for everyone or only for yourself.
+                </p>
+                <div style="display:flex;flex-direction:column;gap:8px;" id="delModalActions">
+                    <button class="btn btn-danger" id="btnDelEveryone" onclick="confirmDeleteChatMessage('everyone')"
+                        style="justify-content:center;gap:8px;width:100%;">
+                        <i class="fa-solid fa-users"></i> Delete for everyone
+                    </button>
+                    <button class="btn btn-outline" id="btnDelForMe" onclick="confirmDeleteChatMessage('me')"
+                        style="justify-content:center;gap:8px;width:100%;">
+                        <i class="fa-solid fa-user"></i> Delete for me
+                    </button>
+                    <button class="btn btn-ghost" onclick="closeModal('modalDeleteChatMsg')"
+                        style="justify-content:center;color:var(--text-muted);font-weight:600;width:100%;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ CLEAR CHAT HISTORY MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalClearChat" style="z-index: 1050;">
+            <div class="modal-card" style="max-width:360px;">
+                <div class="modal-icon-circle" style="background:rgba(239,68,68,0.12);color:var(--error);"><i
+                        class="fa-solid fa-broom"></i></div>
+                <div class="h-display h-lg">Clear chat history?</div>
+                <p class="p-muted" style="margin-top:8px;margin-bottom:20px;font-size:13px;line-height:1.55;">
+                    Are you sure you want to clear this chat? Your sent messages will be deleted from the database to
+                    save storage space. The other member will still retain their messages.
+                </p>
+                <div class="btn-row">
+                    <button class="btn btn-outline" onclick="closeModal('modalClearChat')">Cancel</button>
+                    <button class="btn btn-danger" onclick="confirmClearChatHistory()"><i
+                            class="fa-solid fa-trash-can"></i> Clear Chat</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ PAYMENT & PASS HISTORY MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalPaymentHistory" style="z-index: 1040;">
+            <div class="modal-card" style="max-width:390px;width:92%;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="modal-icon-circle"
+                            style="width:40px;height:40px;background:rgba(217,119,6,0.12);color:var(--secondary);font-size:18px;margin:0;">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <div class="h-display h-md">Payment history</div>
+                    </div>
+                    <button class="icon-btn modal-close-btn" onclick="closeModal('modalPaymentHistory')"
+                        title="Close"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="p-muted" style="font-size:12.5px;margin-bottom:14px;">Your UPI transaction receipts and
+                    membership pass records.</p>
+                <div id="paymentHistoryList" style="max-height:300px;overflow-y:auto;padding-right:4px;"></div>
+                <button class="btn btn-outline" style="margin-top:16px;"
+                    onclick="closeModal('modalPaymentHistory')">Close</button>
+            </div>
+        </div>
+
+        <!-- ============================================================ MAINTENANCE MODE MODAL ============================================================ -->
+        <div class="modal-backdrop modal-center" id="modalMaintenance" style="z-index:999999;">
+            <div class="modal-card" style="max-width:390px;text-align:center;padding:30px 24px;">
+                <div class="modal-icon-circle"
+                    style="background:rgba(230,81,0,0.12);color:#E65100;width:66px;height:66px;font-size:26px;margin:0 auto 16px;box-shadow:0 6px 20px rgba(230,81,0,0.15);">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+                <div class="h-display h-lg" style="font-size:21px;color:var(--text);line-height:1.3;">Platform Under
+                    Maintenance</div>
+                <div
+                    style="display:inline-flex;align-items:center;gap:7px;background:rgba(230,81,0,0.1);color:#E65100;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;margin:12px auto 16px;">
+                    <i class="fa-solid fa-gear fa-spin"></i> Scheduled System Upgrades
+                </div>
+                <p class="p-muted" style="font-size:13px;line-height:1.65;margin-bottom:18px;">
+                    Lagna Setu is temporarily undergoing scheduled maintenance to upgrade database performance,
+                    stability, and speed. Member browsing and logins are temporarily paused.
+                </p>
+                <div class="card"
+                    style="background:var(--surface-sunken);box-shadow:none;border:1px solid var(--border);padding:14px;text-align:left;margin-bottom:20px;border-radius:14px;">
+                    <div
+                        style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+                        <i class="fa-solid fa-headset" style="color:var(--primary);"></i> Need urgent assistance?
+                    </div>
+                    <div style="font-size:12px;color:var(--text-muted);line-height:1.6;">
+                        Email: <b style="color:var(--text);">lagnasetu330@gmail.com</b><br>
+                        Phone / WhatsApp: <b style="color:var(--text);">+91 97263 62863</b>
+                    </div>
+                </div>
+                <button class="btn btn-primary" id="maintCheckBtn" onclick="checkMaintenanceStatusManual()"
+                    style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
+                    <i class="fa-solid fa-arrows-rotate" id="maintCheckIcon"></i> Check Status / Refresh
+                </button>
+                <!-- Inline status feedback â€” shown instead of toast so it appears above the modal overlay -->
+                <div id="maintStatusMsg"
+                    style="display:none;margin-top:14px;padding:12px 14px;border-radius:12px;font-size:12.5px;font-weight:700;line-height:1.5;text-align:left;">
+                </div>
+                <div style="margin-top:12px;font-size:11px;color:var(--text-faint);">
+                    We apologize for any inconvenience. We will be back online soon!
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ PWA APP INSTALL MODAL ============ -->
+        <div class="modal-backdrop modal-center" id="modalPwaInstall" style="z-index: 9999;">
+            <div class="modal-card"
+                style="max-width: 400px; width: 92%; padding: 26px 22px; text-align: center; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                <div
+                    style="width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 20px rgba(123,44,191,0.25); border: 2.5px solid #fff;">
+                    <img src="images/icon-192.png" alt="Lagna Setu Logo"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div
+                    style="display: inline-block; background: rgba(123,44,191,0.1); color: var(--primary); font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px;">
+                    Fast &amp; Seamless Experience
+                </div>
+                <h3 style="font-size: 20px; font-weight: 800; color: var(--text); margin: 0 0 8px;">
+                    Install Lagna Setu App
+                </h3>
+                <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 18px;">
+                    Add Lagna Setu to your home screen! Open with 1 tap in full-screen mode â€” no app store download
+                    required.
+                </p>
+
+                <div
+                    style="background: var(--surface-sunken, #f8f6f4); border-radius: 16px; padding: 14px 16px; text-align: left; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px;">
+                    <div
+                        style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text); font-weight: 600;">
+                        <i class="fa-solid fa-bolt"
+                            style="color: #f4a261; font-size: 14px; width: 16px; text-align: center;"></i>
+                        <span>Direct 1-tap access from your home screen</span>
+                    </div>
+                    <div
+                        style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text); font-weight: 600;">
+                        <i class="fa-solid fa-mobile-screen"
+                            style="color: var(--primary); font-size: 14px; width: 16px; text-align: center;"></i>
+                        <span>Clean, full-screen native app interface</span>
+                    </div>
+                    <div
+                        style="display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text); font-weight: 600;">
+                        <i class="fa-solid fa-shield-halved"
+                            style="color: var(--success, #2a9d8f); font-size: 14px; width: 16px; text-align: center;"></i>
+                        <span>Zero device storage &amp; instant automatic updates</span>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button class="btn btn-primary" onclick="triggerPwaInstall()"
+                        style="width: 100%; height: 46px; font-size: 15px; font-weight: 700; border-radius: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                        <i class="fa-solid fa-download"></i> Add to Home Screen
+                    </button>
+                    <button class="btn btn-outline" onclick="dismissPwaInstall()"
+                        style="width: 100%; height: 42px; font-size: 13.5px; font-weight: 600; border-radius: 14px; color: var(--text-muted); border-color: transparent;">
+                        Not Now
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ IOS SAFARI INSTALL GUIDE MODAL ============ -->
+        <div class="modal-backdrop modal-center" id="modalIosInstallGuide" style="z-index: 9999;">
+            <div class="modal-card"
+                style="max-width: 390px; width: 92%; padding: 26px 20px; text-align: center; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
+                <div
+                    style="width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 20px rgba(123,44,191,0.2); border: 2px solid #fff;">
+                    <img src="images/icon-192.png" alt="Lagna Setu Logo"
+                        style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <h3 style="font-size: 18px; font-weight: 800; color: var(--text); margin: 0 0 6px;">
+                    How to Install on iPhone (Safari)
+                </h3>
+                <p style="font-size: 12.5px; color: var(--text-muted); margin: 0 0 16px;">
+                    Follow these 3 quick steps in Apple Safari:
+                </p>
+
+                <div
+                    style="background: var(--surface-sunken, #f8f6f4); border-radius: 16px; padding: 14px 16px; text-align: left; margin-bottom: 18px; display: flex; flex-direction: column; gap: 12px;">
+                    <div
+                        style="display: flex; align-items: flex-start; gap: 12px; font-size: 12.5px; color: var(--text);">
+                        <span
+                            style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 11px;">1</span>
+                        <span>Tap the <b>Share</b> button (<i class="fa-solid fa-arrow-up-from-bracket"
+                                style="color:var(--primary);"></i>) in Safari toolbar.</span>
+                    </div>
+                    <div
+                        style="display: flex; align-items: flex-start; gap: 12px; font-size: 12.5px; color: var(--text);">
+                        <span
+                            style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 11px;">2</span>
+                        <span>Scroll down and select <b>'Add to Home Screen'</b> (<i
+                                class="fa-regular fa-square-plus"></i>).</span>
+                    </div>
+                    <div
+                        style="display: flex; align-items: flex-start; gap: 12px; font-size: 12.5px; color: var(--text);">
+                        <span
+                            style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 11px;">3</span>
+                        <span>Tap <b>'Add'</b> in the top right corner. Lagna Setu will be added to your home
+                            screen!</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="closeModal('modalIosInstallGuide')"
+                    style="width: 100%; height: 44px; font-size: 14px; font-weight: 700; border-radius: 14px;">
+                    Got It
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Core & State -->
+    <script src="js/core/state.js?v=3.5"></script>
+    <script src="js/core/supabase-client.js?v=3.6"></script>
+    <!-- EmailJS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="js/services/email-service.js?v=3.5"></script>
+    <script src="js/core/router.js?v=3.5"></script>
+    <!-- Data Modules -->
+    <script src="js/data/castes.js?v=3.5"></script>
+    <script src="js/data/help-content.js?v=3.5"></script>
+    <script src="js/data/profiles.js?v=3.5"></script>
+    <!-- Utilities -->
+    <script src="js/utils/helpers.js?v=3.5"></script>
+    <script src="js/utils/pwa.js?v=3.5"></script>
+    <script src="js/utils/cloudinary.js?v=3.6"></script>
+    <script src="js/utils/cropper.js?v=3.5"></script>
+    <script src="js/utils/datepicker.js?v=3.5"></script>
+    <!-- Application Modules -->
+    <script src="js/modules/auth.js?v=3.5"></script>
+    <script src="js/modules/browse.js?v=3.5"></script>
+    <script src="js/modules/chat.js?v=3.5"></script>
+    <script src="js/modules/profile.js?v=3.6"></script>
+    <script src="js/modules/notifications.js?v=3.5"></script>
+    <!-- Application Entrypoint -->
+    <script src="js/app.js?v=3.5"></script>
+
+</body>
+
+</html>

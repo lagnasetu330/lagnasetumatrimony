@@ -1,0 +1,1299 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Lagna Setu Admin — Control Center</title>
+    <link rel="icon" type="image/png" href="images/lagna_setu_logo.png">
+    <link rel="apple-touch-icon" href="images/lagna_setu_logo.png">
+    <script>
+        (function () {
+            try {
+                var loggedIn = sessionStorage.getItem('admin_isLoggedIn') === 'true' && !!sessionStorage.getItem('admin_session_token');
+                var saved = sessionStorage.getItem('admin_activeScreen');
+                var hash = window.location.hash.replace('#/', '');
+                var target = hash ? ('scr-' + hash) : (saved || (loggedIn ? 'scr-dashboard' : ''));
+                if (loggedIn && target && target !== 'scr-splash' && target !== 'scr-login') {
+                    document.documentElement.classList.add('bypassing-splash');
+                    var style = document.createElement('style');
+                    style.id = 'spa-preload-css';
+                    style.textContent = 'html.bypassing-splash #scr-splash{display:none!important;}' +
+                        'html.bypassing-splash #' + target + '{display:flex!important;animation:none!important;}' +
+                        'html.bypassing-splash #globalPageLoader{opacity:1!important;visibility:visible!important;pointer-events:all!important;transition:none!important;}';
+                    document.head.appendChild(style);
+                }
+            } catch (e) { }
+        })();
+    </script>
+    <!-- Offline Fonts & Icons Stylesheets -->
+    <link rel="stylesheet" href="css/fonts.css">
+    <link rel="stylesheet" href="css/fontawesome.css">
+    <!-- Admin Stylesheets -->
+    <link rel="stylesheet" href="css/tokens.css">
+    <link rel="stylesheet" href="css/admin.css?v=3.3">
+</head>
+
+<body>
+
+    <!-- ============================================================ GLOBAL PAGE LOADER ============================================================ -->
+    <div id="globalPageLoader" class="global-page-loader" role="status" aria-live="polite">
+        <div class="gloader-card">
+            <div class="gloader-logo-ring">
+                <div class="gloader-spin-arc"></div>
+                <div class="gloader-icon"><i class="fa-solid fa-user-shield"></i></div>
+            </div>
+            <div class="gloader-title">Lagna Setu</div>
+            <div class="gloader-subtitle">Admin Control Center</div>
+            <div class="gloader-status-wrap">
+                <div class="gloader-dots">
+                    <div class="gloader-dot"></div>
+                    <div class="gloader-dot"></div>
+                    <div class="gloader-dot"></div>
+                </div>
+                <span id="globalLoaderText" class="gloader-status">Loading Admin Console...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-bg"></div>
+
+    <!-- ============ DESKTOP SIDEBAR ============ -->
+    <nav class="desktop-sidebar" id="desktopSidebar">
+        <div class="ds-logo">
+            <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="21" cy="21" r="21" fill="url(#gside)" />
+                <path d="M21 30c-4.5-3.2-9-6.6-9-11.4A5.6 5.6 0 0 1 21 15a5.6 5.6 0 0 1 9 3.6C30 23.4 25.5 26.8 21 30Z"
+                    fill="#fff" fill-opacity=".95" />
+                <defs>
+                    <linearGradient id="gside" x1="0" y1="0" x2="42" y2="42">
+                        <stop stop-color="#7B2CBF" />
+                        <stop offset="1" stop-color="#F4B400" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <div class="ds-brand">Lagna Setu<br>Admin</div>
+        <div class="ds-nav">
+            <button class="ds-item" data-nav="scr-dashboard" onclick="go('scr-dashboard')"><i
+                    class="fa-solid fa-gauge-high"></i><span>Dashboard</span></button>
+            <button class="ds-item" data-nav="scr-users" onclick="go('scr-users')"><i
+                    class="fa-solid fa-users"></i><span>Users</span></button>
+            <button class="ds-item" data-nav="scr-interests" onclick="go('scr-interests')"><i
+                    class="fa-solid fa-heart-circle-check"></i><span>Matches</span></button>
+            <button class="ds-item" data-nav="scr-payments" onclick="go('scr-payments')"><i
+                    class="fa-solid fa-credit-card"></i><span>Payments</span></button>
+            <button class="ds-item" data-nav="scr-analytics" onclick="go('scr-analytics')"><i
+                    class="fa-solid fa-chart-line"></i><span>Analytics</span></button>
+            <button class="ds-item" data-nav="scr-profiles" onclick="go('scr-profiles')"><i
+                    class="fa-solid fa-id-card"></i><span>Profiles</span></button>
+            <button class="ds-item" data-nav="scr-castes" onclick="go('scr-castes')"><i
+                    class="fa-solid fa-layer-group"></i><span>Castes</span></button>
+            <button class="ds-item" data-nav="scr-reports" onclick="go('scr-reports')"><i
+                    class="fa-solid fa-flag"></i><span>Reports</span></button>
+            <button class="ds-item" data-nav="scr-notifs" onclick="go('scr-notifs')"><i
+                    class="fa-solid fa-bell"></i><span>Alerts</span></button>
+            <button class="ds-item" data-nav="scr-help" onclick="go('scr-help')"><i
+                    class="fa-solid fa-headset"></i><span>Support</span></button>
+        </div>
+        <div class="ds-bottom">
+            <button class="ds-item" data-nav="scr-settings" onclick="go('scr-settings')"><i
+                    class="fa-solid fa-gear"></i><span>Settings</span></button>
+            <button class="ds-item danger" onclick="confirmLogout()"><i
+                    class="fa-solid fa-right-from-bracket"></i><span>Log out</span></button>
+        </div>
+    </nav>
+
+    <div class="app-container" id="app">
+
+        <div class="toast" id="toast"><i class="fa-solid fa-circle-check"></i><span id="toastMsg">Saved</span></div>
+
+        <!-- ============================================================ SPLASH ============================================================ -->
+        <section class="screen active" id="scr-splash" style="align-items:center;justify-content:center;">
+            <div style="text-align:center;padding:20px;">
+                <div
+                    style="width:96px;height:96px;margin:0 auto 22px;filter:drop-shadow(0 14px 26px rgba(123,44,191,.4));">
+                    <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="21" cy="21" r="21" fill="url(#gsplash)" />
+                        <path
+                            d="M21 30c-4.5-3.2-9-6.6-9-11.4A5.6 5.6 0 0 1 21 15a5.6 5.6 0 0 1 9 3.6C30 23.4 25.5 26.8 21 30Z"
+                            fill="#fff" fill-opacity=".95" />
+                        <defs>
+                            <linearGradient id="gsplash" x1="0" y1="0" x2="42" y2="42">
+                                <stop stop-color="#7B2CBF" />
+                                <stop offset="1" stop-color="#F4B400" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="h-display h-xl" style="margin-bottom:6px;">Lagna Setu</div>
+                <div class="p-muted" style="font-weight:700;letter-spacing:.02em;color:var(--secondary);">Admin Control
+                    Center</div>
+                <div style="margin-top:34px;"><i class="fa-solid fa-circle-notch spin"
+                        style="color:var(--primary);font-size:20px;"></i></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ ADMIN LOGIN ============================================================ -->
+        <section class="screen auth-screen" id="scr-login">
+            <div class="topbar">
+                <div class="topbar-spacer"></div>
+            </div>
+            <div class="screen-pad no-tab">
+                <div
+                    style="width:64px;height:64px;border-radius:20px;background:var(--grad-primary);display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;box-shadow:var(--shadow-soft);margin-bottom:20px;">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <div class="h-display h-xl">Admin login</div>
+                <p class="p-muted" style="margin-top:6px;">Sign in to manage Lagna Setu members, verification and
+                    payments.</p>
+
+                <div style="margin-top:26px;">
+                    <div class="field"><label>Admin email</label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
+                                id="loginEmail" type="email" placeholder="admin@lagnasetu.app" autocomplete="username">
+                        </div>
+                    </div>
+                    <div class="field"><label>Password</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-lock leading"></i>
+                            <input class="input" id="loginPass" type="password" placeholder="........."
+                                autocomplete="current-password">
+                            <button class="trailing-btn" onclick="togglePw('loginPass',this)"><i
+                                    class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div style="text-align:right;margin:-6px 0 20px;"><span class="link-txt" style="font-size:12.5px;"
+                            onclick="go('scr-forgot')">Forgot password?</span></div>
+                    <button class="btn btn-primary" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Log
+                        in</button>
+                    <div class="center-txt p-muted" style="margin-top:20px;font-size:12px;"><i
+                            class="fa-solid fa-shield-halved"></i> Restricted access — authorized administrators only.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FORGOT PASSWORD FLOW -->
+        <section class="screen auth-screen" id="scr-forgot">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-login')"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab">
+                <div
+                    style="width:64px;height:64px;border-radius:20px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:24px;margin-bottom:20px;">
+                    <i class="fa-solid fa-key"></i>
+                </div>
+                <div class="h-display h-xl">Reset password</div>
+                <p class="p-muted" style="margin-top:6px;">Enter your admin email and we'll send a 6-digit code to
+                    verify it's you.</p>
+                <div style="margin-top:26px;">
+                    <div class="field"><label>Admin email</label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
+                                id="forgotAdminEmail" type="email" placeholder="admin@lagnasetu.app"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="go('scr-forgot-otp')"><i
+                            class="fa-solid fa-paper-plane"></i> Send code</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen auth-screen" id="scr-forgot-otp">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-forgot')"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab center-txt">
+                <div
+                    style="width:74px;height:74px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:28px;margin:10px auto 6px;">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                </div>
+                <div class="h-display h-lg">Verify your email</div>
+                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit code to <b>admin@lagnasetu.app</b></p>
+                <div class="otp-boxes">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                </div>
+                <div class="p-muted" style="margin-bottom:22px;">Didn't get it? <span class="link-txt"
+                        onclick="showToast('Code re-sent')">Resend code</span></div>
+                <button class="btn btn-primary" onclick="go('scr-newpass')"><i class="fa-solid fa-check"></i> Verify
+                    code</button>
+            </div>
+        </section>
+
+        <section class="screen auth-screen" id="scr-newpass">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-forgot-otp')"><i
+                        class="fa-solid fa-arrow-left"></i></button></div>
+            <div class="screen-pad no-tab">
+                <div class="h-display h-xl">Set new password</div>
+                <p class="p-muted" style="margin-top:6px;">Choose a strong password you haven't used before.</p>
+                <div style="margin-top:26px;">
+                    <div class="field"><label>New password</label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
+                                type="password" placeholder="••••••••"><button class="trailing-btn"><i
+                                    class="fa-solid fa-eye"></i></button></div>
+                        <span class="hint">Minimum 8 characters</span>
+                    </div>
+                    <div class="field"><label>Confirm password</label>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
+                                type="password" placeholder="••••••••"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="showToast('Password updated'); go('scr-login')"><i
+                            class="fa-solid fa-rotate"></i> Update &amp; log in</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================ DASHBOARD ============================================================ -->
+        <section class="screen" id="scr-dashboard">
+            <div class="topbar" style="padding-top:18px;">
+                <div>
+                    <div class="h-display h-lg">Dashboard</div>
+                    <div class="p-muted" style="font-size:12px;margin-top:2px;">Welcome back, here's what's happening
+                        today.</div>
+                </div>
+                <div class="topbar-spacer"></div>
+                <button class="icon-btn" onclick="go('scr-notifs')" id="adminNotifBellBtn" style="position:relative;"
+                    title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span id="adminNotifBadge" class="badge-dot"
+                        style="display:none;position:absolute;top:4px;right:4px;min-width:16px;height:16px;padding:0 4px;border-radius:10px;background:var(--accent,#E53E3E);color:#fff;font-size:10px;font-weight:800;align-items:center;justify-content:center;"></span>
+                </button>
+                <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <div class="screen-pad" style="padding-top:6px;padding-bottom:80px;">
+                <div id="dashStatsGrid"></div>
+
+                <div class="section-label">Quick actions</div>
+                <div class="quick-grid">
+                    <button class="qbtn" onclick="go('scr-users')"><i class="fa-solid fa-users"></i><span>Manage
+                            Users</span></button>
+                    <button class="qbtn" onclick="go('scr-castes')"><i
+                            class="fa-solid fa-layer-group"></i><span>Castes</span></button>
+                    <button class="qbtn" onclick="setPayTab('all');go('scr-payments')"><i
+                            class="fa-solid fa-credit-card"></i><span>Payments</span></button>
+                    <button class="qbtn" onclick="setInterestTab('pending');go('scr-interests')"><i
+                            class="fa-solid fa-heart-circle-check"></i><span>Matches</span></button>
+                    <button class="qbtn" onclick="go('scr-reports')"><i
+                            class="fa-solid fa-flag"></i><span>Reports</span></button>
+                </div>
+
+                <div class="section-label">Recent activity <span class="sl-action" onclick="go('scr-notifs')">See
+                        all</span></div>
+                <div id="dashActivity"></div>
+
+                <div class="section-label">Recently Registered Members <span class="sl-action"
+                        onclick="go('scr-users')">See all</span></div>
+                <div id="dashPending"></div>
+            </div>
+            <div class="tabbar" id="tabbarDash"></div>
+        </section>
+
+        <!-- ============================================================ ANALYTICS PAGE ============================================================ -->
+        <section class="screen" id="scr-analytics">
+            <div class="topbar" style="padding-top:18px;">
+                <div>
+                    <div class="h-display h-lg">Analytics</div>
+                    <div class="p-muted" style="font-size:12px;margin-top:2px;">Registrations &amp; Revenue — filter
+                        by period</div>
+                </div>
+                <div class="topbar-spacer"></div>
+                <button class="icon-btn" onclick="renderAnalyticsPage(true)" title="Refresh"><i
+                        class="fa-solid fa-rotate-right"></i></button>
+                <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+            </div>
+            <div class="screen-pad" style="padding-top:8px;padding-bottom:80px;">
+                <div id="analyticsPageContent"></div>
+            </div>
+            <div class="tabbar" id="tabbarAnalytics"></div>
+        </section>
+
+        <!-- ============================================================ USERS ============================================================ -->
+        <section class="screen" id="scr-users">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="h-display h-lg">User management</div>
+                    <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                </div>
+                <div class="seg-toggle" style="margin-top:16px;">
+                    <button id="userTabAll" class="active" onclick="setUserTab('all')">All</button>
+                    <button id="userTabBoys" onclick="setUserTab('boys')">Boys</button>
+                    <button id="userTabGirls" onclick="setUserTab('girls')">Girls</button>
+                    <button id="userTabSuspended" onclick="setUserTab('suspended')">Suspended</button>
+                </div>
+                <div class="search-bar" style="margin-top:16px;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input placeholder="Search by name, email, city..." id="userSearchInput"
+                        oninput="renderUsers(this.value)">
+                </div>
+                <div class="stat-strip" style="margin-top:16px;">
+                    <div class="s"><b id="uCountAll">0</b><small>TOTAL</small></div>
+                    <div class="s"><b id="uCountBoys">0</b><small>BOYS</small></div>
+                    <div class="s"><b id="uCountGirls">0</b><small>GIRLS</small></div>
+                    <div class="s"><b id="uCountSuspended">0</b><small>SUSPENDED</small></div>
+                </div>
+                <div style="margin-top:6px;" id="userList"></div>
+            </div>
+            <div class="tabbar" id="tabbarUsers"></div>
+        </section>
+
+        <!-- ============================================================ USER DETAIL ============================================================ -->
+        <section class="screen panel-screen" id="scr-userdetail">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Member profile</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap" id="userDetailContent"></div>
+        </section>
+
+        <!-- ============================================================ INTERESTS & MATCHES ============================================================ -->
+        <section class="screen" id="scr-interests">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="h-display h-lg">Interests &amp; matches</div>
+                    <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                </div>
+                <p class="p-muted" style="margin-top:4px;">Every interest request sent between members, and the
+                    matches (accepted requests) that unlocked a chat.</p>
+                <div class="stat-strip" style="margin-top:16px;">
+                    <div class="s"><b id="intCountPending">0</b><small>PENDING</small></div>
+                    <div class="s"><b id="intCountAccepted">0</b><small>MATCHES</small></div>
+                    <div class="s"><b id="intCountDeclined">0</b><small>DECLINED</small></div>
+                </div>
+                <div class="tab-scroll" id="interestTabs">
+                    <button data-i="pending" class="active" onclick="setInterestTab('pending')"><i
+                            class="fa-solid fa-hourglass-half"></i> Pending</button>
+                    <button data-i="accepted" onclick="setInterestTab('accepted')"><i
+                            class="fa-solid fa-heart-circle-check"></i> Matches</button>
+                    <button data-i="declined" onclick="setInterestTab('declined')"><i
+                            class="fa-solid fa-circle-xmark"></i> Declined</button>
+                </div>
+                <div id="interestList"></div>
+            </div>
+            <div class="tabbar" id="tabbarInterests"></div>
+        </section>
+
+        <!-- ============================================================ INTEREST / MATCH DETAIL ============================================================ -->
+        <section class="screen panel-screen" id="scr-interestdetail">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Request detail</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap" id="interestDetailContent"></div>
+        </section>
+
+        <!-- ============================================================ CHAT MONITOR (READ-ONLY) ============================================================ -->
+        <section class="screen panel-screen" id="scr-chatmonitor">
+            <div class="topbar"><button class="icon-btn" onclick="goBack()"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Conversation</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <div class="card" style="background:var(--info-bg);box-shadow:none;margin-bottom:16px;">
+                    <div style="font-size:12px;color:var(--info);font-weight:700;"><i class="fa-solid fa-eye"></i>
+                        Read-only view for safety &amp; moderation purposes. Members
+                        are not notified that admin viewed this chat.</div>
+                </div>
+                <div id="chatMonitorHeader" style="margin-bottom:14px;"></div>
+                <div id="chatMonitorMessages" style="display:flex;flex-direction:column;gap:10px;"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ PAYMENTS ============================================================ -->
+        <section class="screen" id="scr-payments">
+            <div class="screen-pad" style="padding-top:18px;padding-bottom:80px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div class="h-display h-lg">Payments</div>
+                    <button class="icon-btn" onclick="openMenu()"><i class="fa-solid fa-bars"></i></button>
+                </div>
+                <div class="stat-strip" style="margin-top:16px;">
+                    <div class="s"><b id="payTotalRevenue">₹0</b><small>REVENUE</small></div>
+                    <div class="s"><b id="payTotalTxns">0</b><small>TRANSACTIONS</small></div>
+                    <div class="s"><b id="payFailedCount">0</b><small>FAILED</small></div>
+                </div>
+                <div class="tab-scroll" id="payTabs">
+                    <button data-p="all" class="active" onclick="setPayTab('all')"><i class="fa-solid fa-list"></i>
+                        All</button>
+                    <button data-p="success" onclick="setPayTab('success')"><i class="fa-solid fa-circle-check"></i>
+                        Successful</button>
+                    <button data-p="failed" onclick="setPayTab('failed')"><i class="fa-solid fa-circle-xmark"></i>
+                        Failed</button>
+                </div>
+                <div id="payList"></div>
+            </div>
+            <div class="tabbar" id="tabbarPay"></div>
+        </section>
+
+        <!-- ============================================================ PROFILES (VISIBILITY MANAGEMENT) ============================================================ -->
+        <section class="screen panel-screen" id="scr-profiles">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-dashboard')"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Manage profiles</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <p class="p-muted">Control which approved profiles are visible in the live app, and feature top
+                    profiles.</p>
+                <div class="search-bar" style="margin-top:14px;"><i class="fa-solid fa-magnifying-glass"></i><input
+                        placeholder="Search live profiles..." id="profileMgmtSearch"
+                        oninput="renderProfileMgmt(this.value)"></div>
+                <div style="margin-top:16px;" id="profileMgmtList"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ CASTE & COMMUNITY MANAGEMENT ============================================================ -->
+        <section class="screen panel-screen" id="scr-castes">
+            <div class="topbar" style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;">
+                <button class="icon-btn" onclick="go('scr-dashboard')"><i class="fa-solid fa-arrow-left"></i></button>
+                <h1 style="margin:0;">Caste Management</h1>
+                <button class="btn btn-primary btn-sm" onclick="openCasteModal()"
+                    style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;"><i
+                        class="fa-solid fa-plus"></i> Add Caste</button>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <div style="margin-bottom:4px;">
+                    <div class="h-display h-md" style="font-size:18px;">Community Directory</div>
+                    <p class="p-muted" style="margin-top:2px;">Castes added here are instantly available in user
+                        registration and community search filters.</p>
+                </div>
+
+                <!-- Stats Grid -->
+                <div id="casteStatsGrid"
+                    style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:10px;margin-top:14px;">
+                    <div class="stat-card" style="margin:0;padding:12px 14px;">
+                        <div class="sc-top">
+                            <div class="sc-icon" style="background:var(--primary-light);color:var(--primary-dark);"><i
+                                    class="fa-solid fa-layer-group"></i></div>
+                            <div class="sc-delta up">Total</div>
+                        </div>
+                        <div class="sc-num" id="casteStatTotal" style="font-size:22px;">0</div>
+                        <div class="sc-label" style="font-size:11px;">Total Castes</div>
+                    </div>
+                    <div class="stat-card" style="margin:0;padding:12px 14px;">
+                        <div class="sc-top">
+                            <div class="sc-icon" style="background:var(--success-bg);color:var(--success);"><i
+                                    class="fa-solid fa-gear"></i></div>
+                            <div class="sc-delta up">Custom</div>
+                        </div>
+                        <div class="sc-num" id="casteStatCustom" style="font-size:22px;color:var(--success);">0</div>
+                        <div class="sc-label" style="font-size:11px;">Added by Admin</div>
+                    </div>
+                    <div class="stat-card" style="margin:0;padding:12px 14px;">
+                        <div class="sc-top">
+                            <div class="sc-icon" style="background:#EBF3FF;color:#2B6CB0;"><i
+                                    class="fa-solid fa-users-line"></i></div>
+                            <div class="sc-delta up">Groups</div>
+                        </div>
+                        <div class="sc-num" id="casteStatGroups" style="font-size:22px;color:#2B6CB0;">0</div>
+                        <div class="sc-label" style="font-size:11px;">Community Groups</div>
+                    </div>
+                </div>
+
+                <!-- Search -->
+                <div class="search-bar" style="margin-top:14px;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input placeholder="Search caste by English or Gujarati name..." id="casteSearchInput"
+                        oninput="renderCastes(this.value)">
+                </div>
+
+                <!-- Filter Scroll Tabs -->
+                <div class="tab-scroll" id="casteGroupTabs" style="margin:12px 0 14px;"></div>
+
+                <!-- Castes List Wrap -->
+                <div id="casteAdminList"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ REPORTS ============================================================ -->
+        <section class="screen panel-screen" id="scr-reports">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-dashboard')"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Reported profiles</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <div class="tab-scroll" id="reportTabs">
+                    <button data-r="open" class="active" onclick="setReportTab('open')"><i class="fa-solid fa-flag"></i>
+                        Open</button>
+                    <button data-r="resolved" onclick="setReportTab('resolved')"><i
+                            class="fa-solid fa-circle-check"></i> Resolved</button>
+                </div>
+                <div id="reportList"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ NOTIFICATIONS ============================================================ -->
+        <section class="screen panel-screen" id="scr-notifs">
+            <div class="topbar" style="display:flex;align-items:center;justify-content:space-between;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <button class="icon-btn" onclick="go('scr-dashboard')"><i
+                            class="fa-solid fa-arrow-left"></i></button>
+                    <h1>Notifications</h1>
+                </div>
+                <button class="btn btn-outline btn-sm" onclick="markAllAdminNotifsAsRead()"
+                    style="font-size:11.5px;padding:6px 12px;border-radius:20px;">
+                    <i class="fa-solid fa-check-double"></i> Mark read
+                </button>
+            </div>
+            <div class="screen-pad no-tab panel-wrap" id="notifList"></div>
+        </section>
+
+        <!-- ============================================================ HELP & SUPPORT (MANAGE) ============================================================ -->
+        <section class="screen panel-screen" id="scr-help">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-dashboard')"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Help &amp; support</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <div class="seg-toggle">
+                    <button id="helpTabFaq" class="active" onclick="setHelpTab('faq')">FAQ</button>
+                    <button id="helpTabGuide" onclick="setHelpTab('guide')">How it works</button>
+                    <button id="helpTabContact" onclick="setHelpTab('contact')">Contact</button>
+                </div>
+                <div id="helpContent" style="margin-top:16px;"></div>
+            </div>
+        </section>
+
+        <!-- ============================================================ SETTINGS ============================================================ -->
+        <section class="screen panel-screen" id="scr-settings">
+            <div class="topbar"><button class="icon-btn" onclick="go('scr-dashboard')"><i
+                        class="fa-solid fa-arrow-left"></i></button>
+                <h1>Settings</h1>
+            </div>
+            <div class="screen-pad no-tab panel-wrap">
+                <div class="center-txt" style="margin:6px 0 10px;">
+                    <div class="avatar-upload"><img src="https://i.pravatar.cc/200?img=12" alt=""></div>
+                    <div style="font-weight:800;font-size:14px;margin-top:6px;">Admin Team</div>
+                    <div class="p-muted" style="font-size:11.5px;" id="adminDisplayEmail">admin@lagnasetu.app</div>
+                </div>
+
+                <div class="section-label">Admin account email (Gmail ID)</div>
+                <div class="field"><label>Admin email address</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-envelope leading"></i>
+                        <input class="input" id="settingsAdminEmail" type="email" placeholder="admin@lagnasetu.app"
+                            value="admin@lagnasetu.app">
+                    </div>
+                </div>
+                <button class="btn btn-outline" type="button" onclick="updateAdminEmail()"><i
+                        class="fa-solid fa-floppy-disk"></i>
+                    Update email</button>
+
+                <div class="section-label">Change password</div>
+                <div class="field"><label>Current password</label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-lock leading"></i>
+                        <input class="input" id="settingsCurrentPass" type="password"
+                            placeholder="••••••••">
+                        <button class="trailing-btn" type="button" onclick="togglePw('settingsCurrentPass', this)"
+                            title="Show/Hide password"><i class="fa-solid fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="row-2">
+                    <div class="field"><label>New password</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-key leading"></i>
+                            <input class="input" id="settingsNewPass" type="password"
+                                placeholder="••••••••">
+                            <button class="trailing-btn" type="button" onclick="togglePw('settingsNewPass', this)"
+                                title="Show/Hide password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                    <div class="field"><label>Confirm password</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-circle-check leading"></i>
+                            <input class="input" id="settingsConfirmPass" type="password"
+                                placeholder="••••••••">
+                            <button class="trailing-btn" type="button" onclick="togglePw('settingsConfirmPass', this)"
+                                title="Show/Hide password"><i class="fa-solid fa-eye"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-outline" type="button" onclick="updateAdminPassword()"><i
+                        class="fa-solid fa-key"></i>
+                    Update password</button>
+
+                <div class="section-label">Privacy</div>
+                <div class="card" style="background:var(--info-bg);box-shadow:none;margin-bottom:16px;">
+                    <div style="display:flex;gap:12px;">
+                        <i class="fa-solid fa-shield-halved"
+                            style="color:var(--info);font-size:18px;margin-top:2px;"></i>
+                        <div style="font-size:12.5px;color:var(--info);line-height:1.7;">
+                            A member's personal mobile number is <b>never shown</b> on their public profile — other
+                            members only see the family's (father's) contact number. The member's own number stays
+                            visible to the admin team only, for verification and support purposes.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-label">Platform settings</div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="tlabel">Email notifications</div>
+                        <div class="tsub">Get emailed for new registrations &amp; reports</div>
+                    </div>
+                    <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                </div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="tlabel">Auto-approve new profiles</div>
+                        <div class="tsub">Instantly activate new member registrations</div>
+                    </div>
+                    <button class="toggle on" id="toggleAutoApprove" onclick="toggleAutoApprove(this)"></button>
+                </div>
+                <div class="toggle-row">
+                    <div>
+                        <div class="tlabel">Maintenance mode</div>
+                        <div class="tsub">Temporarily disable member logins &amp; lock app</div>
+                    </div>
+                    <button class="toggle" id="toggleMaintenance" onclick="toggleMaintenanceMode(this)"></button>
+                </div>
+
+                <div class="section-label">Membership pricing</div>
+                <div class="row-2">
+                    <div class="field"><label>Boys fee (₹) / 30 Days</label><input class="input" type="number"
+                            value="49"></div>
+                    <div class="field"><label>Girls fee (₹)</label><input class="input" type="text"
+                            value="0 (100% Free)" readonly
+                            style="background:var(--bg-card);color:var(--success);font-weight:700;"></div>
+                </div>
+                <button class="btn btn-primary" onclick="showToast('Settings saved')"><i
+                        class="fa-solid fa-floppy-disk"></i> Save settings</button>
+
+                <div class="section-label">Account</div>
+                <button class="btn btn-danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket"></i>
+                    Log out</button>
+            </div>
+        </section>
+
+        <!-- ============================================================ MODALS ============================================================ -->
+
+        <!-- Suspend / activate confirm -->
+        <div class="modal-backdrop modal-center" id="modalSuspend">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--error-bg);color:var(--error);"><i
+                        class="fa-solid fa-user-slash"></i></div>
+                <div class="h-display h-lg" id="suspendTitle">Suspend account?</div>
+                <p class="p-muted" style="margin-top:8px;" id="suspendText">This member will no longer be able to log in
+                    or appear in search.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalSuspend')">Cancel</button>
+                    <button class="btn btn-danger" onclick="doSuspendToggle()"><i class="fa-solid fa-power-off"></i>
+                        Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment / Transaction Details Modal -->
+        <div class="modal-backdrop modal-center" id="modalPayDetail">
+            <div class="modal-card" style="max-width:440px;text-align:left;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                    <div class="h-display h-lg" style="margin:0;">Transaction Details</div>
+                    <button class="icon-btn" onclick="closeModal('modalPayDetail')" style="width:32px;height:32px;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="payDetailBody" style="display:flex;flex-direction:column;gap:8px;"></div>
+                <div class="card"
+                    style="margin-top:14px;background:var(--primary-light);border:none;box-shadow:none;padding:12px 14px;">
+                    <div
+                        style="font-size:12px;color:var(--primary-dark);display:flex;align-items:center;gap:8px;font-weight:700;">
+                        <i class="fa-solid fa-shield-halved" style="font-size:14px;flex-shrink:0;"></i>
+                        <span>Non-refundable Policy: Community passes are 100% non-refundable.</span>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="closeModal('modalPayDetail')"
+                    style="margin-top:16px;width:100%;">Close</button>
+            </div>
+        </div>
+
+        <!-- Report resolve confirm -->
+        <div class="modal-backdrop modal-center" id="modalResolveReport">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--success-bg);color:var(--success);"><i
+                        class="fa-solid fa-circle-check"></i></div>
+                <div class="h-display h-lg">Mark as resolved?</div>
+                <p class="p-muted" style="margin-top:8px;">This report will be closed and archived.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalResolveReport')">Cancel</button>
+                    <button class="btn btn-primary" onclick="doResolveReport()"><i class="fa-solid fa-check"></i>
+                        Resolve</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete user confirm -->
+        <div class="modal-backdrop modal-center" id="modalDelete">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--error-bg);color:var(--error);"><i
+                        class="fa-solid fa-trash"></i></div>
+                <div class="h-display h-lg">Delete this account?</div>
+                <p class="p-muted" style="margin-top:8px;">This permanently removes the member's profile.
+                    This cannot be undone.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalDelete')">Cancel</button>
+                    <button class="btn btn-danger" onclick="doDeleteUser()"><i class="fa-solid fa-trash"></i>
+                        Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Logout confirm -->
+        <div class="modal-backdrop modal-center" id="modalLogout">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--primary-light);color:var(--primary);"><i
+                        class="fa-solid fa-right-from-bracket"></i></div>
+                <div class="h-display h-lg">Log out?</div>
+                <p class="p-muted" style="margin-top:8px;">You'll need to sign in again to access the admin panel.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalLogout')">Cancel</button>
+                    <button class="btn btn-danger" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i>
+                        Log out</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete confirmation modal (reusable for FAQ & Guide) -->
+        <div class="modal-backdrop modal-center" id="modalDeleteConfirm">
+            <div class="modal-card">
+                <div class="modal-icon-circle" style="background:var(--error-bg);color:var(--error);"><i
+                        class="fa-solid fa-trash"></i></div>
+                <div class="h-display h-lg" id="deleteConfirmTitle">Delete this?</div>
+                <p class="p-muted" style="margin-top:8px;" id="deleteConfirmText">This action cannot be undone.</p>
+                <div class="btn-row" style="margin-top:20px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalDeleteConfirm')">Cancel</button>
+                    <button class="btn btn-danger" id="deleteConfirmBtn" onclick="executeDelete()"><i
+                            class="fa-solid fa-trash"></i> Delete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Menu (mobile) with close X -->
+        <div class="modal-backdrop" id="modalMenu">
+            <div class="modal-sheet" style="position:relative;">
+                <button class="close-btn" onclick="closeModal('modalMenu')"><i class="fa-solid fa-xmark"></i></button>
+                <div class="modal-handle"></div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                    <img src="https://i.pravatar.cc/100?img=12"
+                        style="width:52px;height:52px;border-radius:16px;object-fit:cover;" alt="">
+                    <div>
+                        <div style="font-weight:800;font-size:15.5px;">Admin Team</div>
+                        <div class="p-muted" style="font-size:11.5px;"><i class="fa-solid fa-shield-halved"
+                                style="color:var(--primary);"></i> Super admin access</div>
+                    </div>
+                </div>
+                <div style="margin-top:10px;">
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-dashboard')">
+                        <div class="micon"><i class="fa-solid fa-gauge-high"></i></div>
+                        <div class="mtxt">Dashboard</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); setUserTab('all'); go('scr-users')">
+                        <div class="micon"><i class="fa-solid fa-users"></i></div>
+                        <div class="mtxt">User management</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item"
+                        onclick="closeModal('modalMenu'); setInterestTab('pending'); go('scr-interests')">
+                        <div class="micon"><i class="fa-solid fa-heart-circle-check"></i></div>
+                        <div class="mtxt">Interests &amp; matches</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); setPayTab('all'); go('scr-payments')">
+                        <div class="micon"><i class="fa-solid fa-credit-card"></i></div>
+                        <div class="mtxt">Payments</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-analytics')">
+                        <div class="micon" style="background:var(--primary-light);color:var(--primary);"><i
+                                class="fa-solid fa-chart-line"></i></div>
+                        <div class="mtxt">Analytics</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-profiles')">
+                        <div class="micon"><i class="fa-solid fa-id-card"></i></div>
+                        <div class="mtxt">Manage profiles</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-castes')">
+                        <div class="micon"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="mtxt">Caste management</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-reports')">
+                        <div class="micon"><i class="fa-solid fa-flag"></i></div>
+                        <div class="mtxt">Reports</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-notifs')">
+                        <div class="micon"><i class="fa-solid fa-bell"></i></div>
+                        <div class="mtxt">Notifications</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-help')">
+                        <div class="micon"><i class="fa-solid fa-headset"></i></div>
+                        <div class="mtxt">Help &amp; support</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item" onclick="closeModal('modalMenu'); go('scr-settings')">
+                        <div class="micon"><i class="fa-solid fa-gear"></i></div>
+                        <div class="mtxt">Settings</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                    <div class="menu-item danger" onclick="closeModal('modalMenu'); confirmLogout()">
+                        <div class="micon"><i class="fa-solid fa-right-from-bracket"></i></div>
+                        <div class="mtxt">Log out</div><i class="fa-solid fa-chevron-right chev"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ HELP MODALS ============================================================ -->
+
+        <!-- Add/Edit FAQ Modal -->
+        <div class="modal-backdrop modal-center" id="modalFaqForm">
+            <div class="modal-card" style="max-width:420px;text-align:left;">
+                <div class="h-display h-lg" id="faqFormTitle" style="margin-bottom:8px;">Add FAQ</div>
+                <div class="field">
+                    <label>Question</label>
+                    <input class="input" id="faqQuestion" placeholder="Enter question...">
+                </div>
+                <div class="field">
+                    <label>Answer</label>
+                    <textarea class="textarea" id="faqAnswer" placeholder="Enter answer..."
+                        style="min-height:80px;"></textarea>
+                </div>
+                <input type="hidden" id="faqEditIndex" value="-1">
+                <div class="btn-row">
+                    <button class="btn btn-outline" onclick="closeModal('modalFaqForm')">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveFaq()"><i class="fa-solid fa-check"></i> Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add/Edit Guide Step Modal -->
+        <div class="modal-backdrop modal-center" id="modalGuideForm">
+            <div class="modal-card" style="max-width:440px;text-align:left;">
+                <div class="h-display h-lg" id="guideFormTitle" style="margin-bottom:12px;">Add Step</div>
+                <div class="field">
+                    <label>Step Title <span style="color:var(--error);">*</span></label>
+                    <input class="input" id="guideStep" placeholder="e.g. Create account">
+                </div>
+                <div class="field">
+                    <label>Step Description / Paragraph</label>
+                    <textarea class="textarea" id="guideStepDesc"
+                        placeholder="Enter paragraph description for this step..." style="min-height:85px;"></textarea>
+                </div>
+                <input type="hidden" id="guideEditIndex" value="-1">
+                <div class="btn-row" style="margin-top:16px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalGuideForm')">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveGuideStep()"><i class="fa-solid fa-check"></i> Save
+                        Step</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Full Preview Modal -->
+        <div class="modal-backdrop modal-center" id="modalPhotoPreview"
+            onclick="if(event.target===this) closeModal('modalPhotoPreview')">
+            <div class="modal-card" style="max-width: 480px; padding: 20px; text-align: center; position: relative;">
+                <button class="icon-btn" onclick="closeModal('modalPhotoPreview')"
+                    style="position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.06); width: 34px; height: 34px; font-size: 14px; border-radius: 50%;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="h-display h-md" id="adminPhotoPreviewTitle"
+                    style="margin-bottom: 12px; text-align: left; padding-right: 36px; font-size: 16px;">Member Photo
+                    Preview</div>
+                <div
+                    style="border-radius: 16px; overflow: hidden; max-height: 68vh; background: #000; display: flex; align-items: center; justify-content: center;">
+                    <img id="adminPhotoPreviewImg" src=""
+                        style="width: 100%; max-height: 68vh; object-fit: contain; display: block;" alt="Member Photo">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 14px;">
+                    <span id="adminPhotoPreviewMeta"
+                        style="font-size: 12px; color: var(--text-muted); font-weight: 600;">Verified Profile
+                        Picture</span>
+                    <button class="btn btn-outline btn-sm" onclick="closeModal('modalPhotoPreview')">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit User Profile Modal (Admin) -->
+        <div class="modal-backdrop modal-center" id="modalAdminEditUser"
+            onclick="if(event.target===this) closeModal('modalAdminEditUser')">
+            <div class="modal-card"
+                style="max-width:560px;text-align:left;max-height:90vh;overflow-y:auto;padding:20px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                    <div class="h-display h-lg" style="font-size:18px;display:flex;align-items:center;gap:8px;">
+                        <i class="fa-solid fa-user-pen" style="color:var(--primary);"></i> Edit Member Profile
+                    </div>
+                    <button class="icon-btn" onclick="closeModal('modalAdminEditUser')"
+                        style="width:32px;height:32px;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="p-muted" style="font-size:12px;margin-bottom:14px;">
+                    Update member details directly. Changes are saved instantly and synchronized across the community.
+                </p>
+                <input type="hidden" id="adminEditUserId">
+
+                <!-- Personal Information -->
+                <div class="section-label" style="margin-top:4px;">Personal Information</div>
+                <div class="row-2">
+                    <div class="field">
+                        <label>Full Name <span style="color:var(--error);">*</span></label>
+                        <input class="input" id="adminEditName" placeholder="Full Name">
+                    </div>
+                    <div class="field">
+                        <label>Gender <span style="color:var(--error);">*</span></label>
+                        <div class="dd" id="adminEditDdGender">
+                            <div class="dd-trigger" onclick="ddOpen('adminEditDdGender')">
+                                <span id="adminEditGenderText" style="display:inline-flex;align-items:center;gap:8px;">
+                                    <i class="fa-solid fa-mars" style="color:var(--primary);font-size:14px;"></i> Boy
+                                </span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <ul class="dd-menu">
+                                <li onclick="pickAdminEditDropdown('adminEditDdGender', 'adminEditGender', 'boys', '<i class=\'fa-solid fa-mars\' style=\'color:var(--primary);font-size:14px;\'></i> Boy', this)"
+                                    style="justify-content:flex-start;gap:8px;">
+                                    <i class="fa-solid fa-mars" style="color:var(--primary);font-size:14px;"></i> Boy
+                                </li>
+                                <li onclick="pickAdminEditDropdown('adminEditDdGender', 'adminEditGender', 'girls', '<i class=\'fa-solid fa-venus\' style=\'color:#E91E63;font-size:14px;\'></i> Girl (100% Free)', this)"
+                                    style="justify-content:flex-start;gap:8px;">
+                                    <i class="fa-solid fa-venus" style="color:#E91E63;font-size:14px;"></i> Girl (100%
+                                    Free)
+                                </li>
+                            </ul>
+                        </div>
+                        <input type="hidden" id="adminEditGender" value="boys">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Date of Birth &amp; Age <span style="color:var(--error);">*</span></label>
+                    <div class="input-icon-wrap" style="cursor:pointer;" onclick="openAdminDobModal()">
+                        <i class="fa-solid fa-calendar-days leading"></i>
+                        <input class="input" id="adminEditDob" placeholder="DD / MM / YYYY" readonly
+                            style="cursor:pointer;" value="">
+                    </div>
+                    <div style="margin-top:6px;display:flex;align-items:center;gap:6px;">
+                        <span class="dob-age-badge" id="adminEditAgeBadge"
+                            style="margin:0;padding:4px 10px;font-size:11.5px;cursor:pointer;"
+                            onclick="openAdminDobModal()">
+                            <i class="fa-solid fa-cake-candles"></i> Age: <b id="adminEditAgeNum">25</b> Years
+                        </span>
+                    </div>
+                    <input type="hidden" id="adminEditAge" value="25">
+                </div>
+
+                <div class="field" id="adminEditCasteGroupField">
+                    <label>Caste / Community <span style="color:var(--error);">*</span></label>
+                    <!-- Selected Caste Tag with 'X' -->
+                    <div class="caste-chip-box" id="adminEditCasteChip" style="display:none;margin-bottom:8px;">
+                        <span id="adminEditCasteChipText"><i class="fa-solid fa-users"
+                                style="margin-right:8px;color:var(--primary);"></i></span>
+                        <div class="caste-remove-btn" onclick="removeAdminEditCaste()"><i class="fa-solid fa-xmark"></i>
+                        </div>
+                    </div>
+
+                    <div id="adminEditCasteSearchWrap">
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-magnifying-glass leading"></i>
+                            <input class="input" id="adminEditCommunity"
+                                placeholder="Search in English or ગુજરાતી (e.g. Kadva, બ્રાહ્મણ, Suthar...)"
+                                autocomplete="off" onfocus="filterAdminEditCaste(this.value)"
+                                oninput="filterAdminEditCaste(this.value)">
+                        </div>
+                        <div class="caste-dropdown-menu" id="adminEditCasteDropdown"></div>
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Education</label>
+                        <input class="input" id="adminEditEducation" placeholder="e.g. B.Tech IT, MBA">
+                    </div>
+                    <div class="field">
+                        <label>Occupation</label>
+                        <input class="input" id="adminEditOccupation" placeholder="e.g. Software Engineer, Business">
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Monthly Income</label>
+                        <div class="dd" id="adminEditDdIncome">
+                            <div class="dd-trigger" onclick="ddOpen('adminEditDdIncome')">
+                                <span id="adminEditIncomeText">₹40K â€“ ₹75K</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <ul class="dd-menu">
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', 'No income (N/A)', 'No income (N/A)', this)">
+                                    No income (N/A)</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', 'Below ₹20K', 'Below ₹20K', this)">
+                                    Below ₹20K</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', '₹20K â€“ ₹40K', '₹20K â€“ ₹40K', this)">
+                                    ₹20K â€“ ₹40K</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', '₹40K â€“ ₹75K', '₹40K â€“ ₹75K', this)">
+                                    ₹40K â€“ ₹75K</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', '₹75K â€“ ₹1L', '₹75K â€“ ₹1L', this)">
+                                    ₹75K â€“ ₹1L</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdIncome', 'adminEditIncome', 'Above ₹1L', 'Above ₹1L', this)">
+                                    Above ₹1L</li>
+                            </ul>
+                        </div>
+                        <input type="hidden" id="adminEditIncome" value="">
+                    </div>
+                    <div class="field">
+                        <label>Marital Status <span style="color:var(--error);">*</span></label>
+                        <div class="dd" id="adminEditDdMarital">
+                            <div class="dd-trigger" onclick="ddOpen('adminEditDdMarital')">
+                                <span id="adminEditMaritalText">Unmarried</span>
+                                <i class="fa-solid fa-chevron-down"></i>
+                            </div>
+                            <ul class="dd-menu">
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdMarital', 'adminEditMarital', 'Unmarried', 'Unmarried', this)">
+                                    Unmarried</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdMarital', 'adminEditMarital', 'Divorced', 'Divorced', this)">
+                                    Divorced</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdMarital', 'adminEditMarital', 'Widowed', 'Widowed', this)">
+                                    Widowed</li>
+                                <li
+                                    onclick="pickAdminEditDropdown('adminEditDdMarital', 'adminEditMarital', 'Awaiting Divorce', 'Awaiting Divorce', this)">
+                                    Awaiting Divorce</li>
+                            </ul>
+                        </div>
+                        <input type="hidden" id="adminEditMarital" value="Unmarried">
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Height</label>
+                        <input class="input" id="adminEditHeight" placeholder="e.g. 172 cm or 5'8&quot;">
+                    </div>
+                    <div class="field">
+                        <label>Weight</label>
+                        <input class="input" id="adminEditWeight" placeholder="e.g. 68 kg">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>Physical Status <span style="color:var(--error);">*</span></label>
+                    <div class="dd" id="adminEditDdPhysical">
+                        <div class="dd-trigger" onclick="ddOpen('adminEditDdPhysical')">
+                            <span id="adminEditPhysicalText">Normal</span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <ul class="dd-menu">
+                            <li
+                                onclick="pickAdminEditDropdown('adminEditDdPhysical', 'adminEditPhysical', 'Normal', 'Normal', this)">
+                                Normal</li>
+                            <li
+                                onclick="pickAdminEditDropdown('adminEditDdPhysical', 'adminEditPhysical', 'Physically Challenged', 'Physically Challenged', this)">
+                                Physically Challenged</li>
+                        </ul>
+                    </div>
+                    <input type="hidden" id="adminEditPhysical" value="Normal">
+                </div>
+
+                <!-- Contact Details -->
+                <div class="section-label">Contact Details</div>
+                <div class="row-2">
+                    <div class="field">
+                        <label>Member's Own Mobile <span class="privacy-tag"><i class="fa-solid fa-eye-slash"></i> Admin
+                                only</span></label>
+                        <input class="input" id="adminEditOwnMobile" placeholder="+91 98765 43210">
+                    </div>
+                    <div class="field">
+                        <label>Father's Mobile <span class="privacy-tag"
+                                style="background:var(--success-bg);color:var(--success);"><i
+                                    class="fa-solid fa-eye"></i> Public Contact</span></label>
+                        <input class="input" id="adminEditFatherMobile" placeholder="+91 98765 00000">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Email Address</label>
+                    <input class="input" id="adminEditEmail" type="email" placeholder="example@gmail.com">
+                </div>
+
+                <!-- Family Details -->
+                <div class="section-label">Family Details</div>
+                <div class="row-2">
+                    <div class="field">
+                        <label>Father's Name</label>
+                        <input class="input" id="adminEditFather" placeholder="Father's Name">
+                    </div>
+                    <div class="field">
+                        <label>Father's Occupation</label>
+                        <input class="input" id="adminEditFatherOcc" placeholder="Business, Farmer, Job...">
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Mother's Name</label>
+                        <input class="input" id="adminEditMother" placeholder="Mother's Name">
+                    </div>
+                    <div class="field">
+                        <label>Mother's Occupation</label>
+                        <input class="input" id="adminEditMotherOcc" placeholder="Homemaker, Teacher...">
+                    </div>
+                </div>
+
+                <div class="row-2">
+                    <div class="field">
+                        <label>Sister(s)</label>
+                        <input class="input" id="adminEditSister" placeholder="Names or None">
+                    </div>
+                    <div class="field">
+                        <label>Brother(s)</label>
+                        <input class="input" id="adminEditBrother" placeholder="Names or None">
+                    </div>
+                </div>
+
+                <!-- Residential Location -->
+                <div class="section-label">Residential Location</div>
+                <div class="row-2">
+                    <div class="field">
+                        <label>Village / City</label>
+                        <input class="input" id="adminEditVillage" placeholder="e.g. Rajkot">
+                    </div>
+                    <div class="field">
+                        <label>Taluka</label>
+                        <input class="input" id="adminEditTaluka" placeholder="e.g. Rajkot">
+                    </div>
+                </div>
+
+                <div class="field">
+                    <label>District</label>
+                    <input class="input" id="adminEditDistrict" placeholder="e.g. Rajkot">
+                </div>
+
+                <div class="field">
+                    <label>Full Address</label>
+                    <textarea class="textarea" id="adminEditAddress"
+                        placeholder="House / street / landmark / pincode..." style="min-height:75px;"></textarea>
+                </div>
+
+                <div class="btn-row"
+                    style="margin-top:20px;position:sticky;bottom:0;background:var(--bg-card);padding-top:10px;border-top:1px solid var(--border);">
+                    <button class="btn btn-outline" style="flex:1;"
+                        onclick="closeModal('modalAdminEditUser')">Cancel</button>
+                    <button class="btn btn-primary" style="flex:1;" onclick="saveAdminUserEdit()"><i
+                            class="fa-solid fa-floppy-disk"></i> Save Profile Details</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Admin DOB Datepicker Modal -->
+        <div class="modal-backdrop modal-center" id="modalAdminDobPicker" style="z-index:999;">
+            <div class="dob-modal-card">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;align-items:center;gap:9px;">
+                        <div class="modal-icon-circle"
+                            style="width:36px;height:36px;font-size:16px;margin:0;background:var(--primary-light);color:var(--primary);">
+                            <i class="fa-solid fa-calendar-days"></i>
+                        </div>
+                        <div style="font-weight:800;font-size:16px;">Select Date of Birth</div>
+                    </div>
+                    <button class="icon-btn" onclick="closeModal('modalAdminDobPicker')"
+                        style="width:32px;height:32px;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div style="text-align:center;">
+                    <div class="dob-age-badge" id="adminDobLiveBadge" style="margin:10px 0 14px;">
+                        <i class="fa-solid fa-cake-candles"></i> Selected: <span id="adminDobLivePreview">12 Jul
+                            2001</span> &nbsp;·&nbsp; <b><span id="adminDobLiveAge">25</span> Years</b>
+                    </div>
+                </div>
+                <div class="dob-picker-container">
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-calendar-day"></i> Day</div>
+                        <div class="dob-scroll-list" id="adminDobDayList"></div>
+                    </div>
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-calendar"></i> Month</div>
+                        <div class="dob-scroll-list" id="adminDobMonthList"></div>
+                    </div>
+                    <div class="dob-col">
+                        <div class="dob-col-header"><i class="fa-solid fa-clock-rotate-left"></i> Year</div>
+                        <div class="dob-scroll-list" id="adminDobYearList"></div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="confirmAdminDobPicker()"><i class="fa-solid fa-check"></i> Set
+                    Date of Birth</button>
+            </div>
+        </div>
+
+        <!-- Add/Edit Community / Caste Modal -->
+        <div class="modal-backdrop modal-center" id="modalCasteForm"
+            onclick="if(event.target===this) closeModal('modalCasteForm')">
+            <div class="modal-card" style="max-width:440px;text-align:left;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div class="h-display h-lg" id="casteFormTitle" style="font-size:17px;">Add New Caste</div>
+                    <button class="icon-btn" onclick="closeModal('modalCasteForm')" style="width:32px;height:32px;"><i
+                            class="fa-solid fa-xmark"></i></button>
+                </div>
+                <p class="p-muted" style="font-size:12px;margin-bottom:14px;">
+                    Enter the caste name in English and Gujarati. Once saved, it will be immediately available in the
+                    user registration and search dropdowns.
+                </p>
+                <div class="field">
+                    <label>Caste Name in English <span style="color:var(--error);">*</span></label>
+                    <input class="input" id="casteNameInput" placeholder="e.g. Kadia or Luhar Suthar">
+                </div>
+                <div class="field">
+                    <label>Caste Name in Gujarati <span style="color:var(--error);">*</span></label>
+                    <input class="input" id="casteGujInput" placeholder="દા.ત. કડિયા અથવા લુહાર સુથાર">
+                </div>
+                <div class="field">
+                    <label>Community Group <span style="color:var(--error);">*</span></label>
+                    <div class="input-icon-wrap">
+                        <i class="fa-solid fa-layer-group leading"></i>
+                        <input class="input" id="casteGroupInput" placeholder="e.g. Vishwakarma, Patidar, Brahmin..."
+                            list="casteGroupDatalist">
+                    </div>
+                    <datalist id="casteGroupDatalist">
+                        <option value="Patidar / Patel"></option>
+                        <option value="Brahmin"></option>
+                        <option value="Kshatriya / Rajput"></option>
+                        <option value="Vishwakarma / Suthar"></option>
+                        <option value="Prajapati / Kumbhar"></option>
+                        <option value="Vanik / Vaishnav"></option>
+                        <option value="Lohana"></option>
+                        <option value="Jain"></option>
+                        <option value="Koli / Thakor"></option>
+                        <option value="Ahir / Bharwad / Rabari"></option>
+                        <option value="Charan / Gadhvi"></option>
+                        <option value="Scheduled Communities"></option>
+                        <option value="Traditional Communities"></option>
+                        <option value="Other Communities"></option>
+                    </datalist>
+                </div>
+                <div class="field">
+                    <label>Search Keywords (Optional)</label>
+                    <input class="input" id="casteKeywordsInput" placeholder="aliases, keywords, sub-castes...">
+                </div>
+                <input type="hidden" id="casteEditIndex" value="-1">
+                <div class="btn-row" style="margin-top:16px;">
+                    <button class="btn btn-outline" onclick="closeModal('modalCasteForm')">Cancel</button>
+                    <button class="btn btn-primary" onclick="saveCasteForm()"><i class="fa-solid fa-check"></i> Save
+                        Caste</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Supabase JS SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Cloudinary Image CDN -->
+    <script src="js/utils/cloudinary.js?v=3.6"></script>
+    <!-- Admin Modular Scripts -->
+    <script src="js/core/supabase-client.js?v=3.6"></script>
+    <script src="js/admin/admin-security.js?v=3.6"></script>
+    <script src="js/admin/admin-data.js?v=3.6"></script>
+    <script src="js/admin/admin-charts.js?v=3.6"></script>
+    <script src="js/admin/admin-actions.js?v=3.6"></script>
+    <script src="js/admin/admin-analytics.js?v=4.6"></script>
+    <script src="js/admin/admin-ui.js?v=3.6"></script>
+
+</body>
+
+</html>

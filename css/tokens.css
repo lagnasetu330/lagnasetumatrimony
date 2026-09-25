@@ -1,0 +1,34 @@
+/* ============ DESIGN SYSTEM TOKENS ============ */
+:root {
+            --primary: #7B2CBF;
+            --primary-dark: #5A189A;
+            --primary-light: #F0E4FA;
+            --secondary: #9D4EDD;
+            --accent: #F4B400;
+            --accent-deep: #DDA200;
+            --bg: #FAF8FC;
+            --surface: #FFFFFF;
+            --text: #202124;
+            --text-muted: #726E7A;
+            --text-faint: #A29DAF;
+            --success: #2E9D62;
+            --success-bg: #E7F5EC;
+            --error: #D64545;
+            --error-bg: #FBEAEA;
+            --pending: #B8790A;
+            --pending-bg: #FDF1DA;
+            --border: #ECE5F5;
+            --grad-primary: linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);
+            --grad-gold: linear-gradient(135deg, #F4B400 0%, #F7CA4D 100%);
+            --shadow-soft: 0 10px 30px -12px rgba(123, 44, 191, 0.18);
+            --shadow-card: 0 4px 18px -6px rgba(123, 44, 191, 0.14);
+            --shadow-pop: 0 24px 60px -18px rgba(90, 24, 154, 0.35);
+            --radius-lg: 26px;
+            --radius-md: 18px;
+            --radius-sm: 12px;
+            --font-display: 'Fraunces', serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --scrollbar-width: 4px;
+            --scrollbar-track: #F0E4FA;
+            --scrollbar-thumb: #7B2CBF;
+        }
