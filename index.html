@@ -804,47 +804,211 @@
         }
 
         /* ============================================================
-           INTERACTIVE APP SCREEN SIMULATOR (HOW IT WORKS SECTION)
+           INTERACTIVE APP SCREEN WALKTHROUGH (HOW IT WORKS SECTION)
            ============================================================ */
-        /* Base / Mobile layout: Column */
-        .hiw-interactive-wrap {
+        .hiw-section {
+            background: var(--surface);
+            padding: clamp(3rem, 6vw, 5.5rem) 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 3-Column Desktop Grid: Left Info | Center Phone | Right Features */
+        .hiw-walkthrough-grid {
+            display: grid;
+            grid-template-columns: 1fr 310px 1fr;
+            gap: clamp(1.5rem, 3vw, 3rem);
+            align-items: center;
+            margin-top: 2rem;
+            position: relative;
+        }
+
+        /* Column Containers */
+        .hiw-info-col,
+        .hiw-features-col {
+            position: relative;
+            min-height: 480px;
             display: flex;
             flex-direction: column;
-            gap: 28px;
+            justify-content: center;
+        }
+
+        /* Slide Cards (Left & Right) with Cross-Fade Transition */
+        .hiw-info-slide,
+        .hiw-feature-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .hiw-info-slide.active,
+        .hiw-feature-slide.active {
+            position: relative;
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        /* Left Card Styling */
+        .hiw-left-card {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 20px;
+            padding: 28px 24px;
+            box-shadow: 0 10px 30px -10px rgba(90, 24, 154, 0.08);
+            position: relative;
+        }
+
+        .hiw-step-tag {
+            display: inline-flex;
             align-items: center;
+            gap: 7px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        .hiw-title {
+            font-size: clamp(20px, 2.2vw, 24px);
+            font-weight: 800;
+            color: var(--text);
+            margin-bottom: 5px;
+            line-height: 1.25;
+            font-family: var(--font-display);
+        }
+
+        .hiw-guj-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hiw-desc {
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+        }
+
+        .hiw-benefit-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            background: #FAF5FF;
+            border: 1px solid #E9D5FF;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin-bottom: 18px;
+        }
+
+        .hiw-benefit-box i {
+            font-size: 18px;
+            color: var(--primary);
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .hiw-benefit-box strong {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #4C1D95;
+            margin-bottom: 2px;
+        }
+
+        .hiw-benefit-box span {
+            font-size: 12px;
+            color: #6B21A8;
+            line-height: 1.4;
+        }
+
+        /* Quick Navigation Pills */
+        .hiw-step-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .hiw-pill-btn {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hiw-pill-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .hiw-pill-btn.active {
+            background: var(--grad-primary);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.25);
+        }
+
+        /* Center Column: Mobile Phone Mockup */
+        .hiw-mockup-col {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
             width: 100%;
         }
 
         .phone-mockup-wrapper {
             position: relative;
+            width: 100%;
+            max-width: 310px;
             display: flex;
             justify-content: center;
-            align-items: center;
-            width: 100%;
-            max-width: 360px;
-            margin: 0 auto;
         }
 
-        .phone-mockup-wrapper::before {
-            content: '';
+        .phone-ambient-glow {
             position: absolute;
-            width: 320px;
-            height: 320px;
+            width: 300px;
+            height: 380px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             border-radius: 50%;
-            background: radial-gradient(circle, rgba(123, 44, 191, 0.18) 0%, rgba(244, 180, 0, 0.15) 60%, transparent 80%);
-            filter: blur(28px);
+            background: radial-gradient(circle, rgba(123, 44, 191, 0.22) 0%, rgba(244, 180, 0, 0.12) 60%, transparent 80%);
+            filter: blur(35px);
             z-index: 0;
             pointer-events: none;
         }
 
         .phone-device {
             width: 100%;
-            max-width: 340px;
-            height: 610px;
-            background: #FAF8FD;
+            max-width: 300px;
+            height: 590px;
+            background: #110D1A;
             border: 9px solid #1E172B;
             border-radius: 40px;
-            box-shadow: 0 24px 60px -15px rgba(90, 24, 154, 0.32), 0 0 0 1px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 24px 60px -15px rgba(90, 24, 154, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.25);
             position: relative;
             overflow: hidden;
             display: flex;
@@ -853,10 +1017,10 @@
         }
 
         .phone-notch {
-            width: 96px;
-            height: 20px;
+            width: 90px;
+            height: 18px;
             background: #1E172B;
-            border-radius: 0 0 13px 13px;
+            border-radius: 0 0 12px 12px;
             margin: 0 auto;
             display: flex;
             align-items: center;
@@ -867,16 +1031,16 @@
         }
 
         .phone-speaker {
-            width: 34px;
+            width: 32px;
             height: 3px;
-            background: #372E47;
+            background: #3B3349;
             border-radius: 2px;
         }
 
         .phone-lens {
             width: 6px;
             height: 6px;
-            background: #0D2140;
+            background: #0E223D;
             border-radius: 50%;
         }
 
@@ -884,317 +1048,341 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 3px 18px 6px;
+            padding: 3px 16px 4px;
             font-size: 11px;
             font-weight: 700;
-            color: #2D233D;
+            color: #fff;
+            background: #110D1A;
             flex-shrink: 0;
         }
 
-        .phone-status .icons {
+        .phone-status-icons {
             display: flex;
             gap: 5px;
             font-size: 10px;
         }
 
-        .mockup-app-bar {
+        .phone-screen-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 8px 14px;
-            background: #fff;
-            border-bottom: 1px solid #EFE8F6;
+            padding: 7px 12px;
+            background: #FAF8FD;
+            border-bottom: 1px solid #ECE5F5;
             flex-shrink: 0;
         }
 
-        .mockup-app-bar .m-brand {
+        .phone-brand-mini {
             display: flex;
             align-items: center;
-            gap: 7px;
+            gap: 6px;
         }
 
-        .mockup-app-bar img {
-            width: 22px;
-            height: 22px;
-            border-radius: 6px;
+        .phone-brand-mini img {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
         }
 
-        .mockup-app-bar b {
-            font-size: 13.5px;
+        .phone-brand-mini span {
+            font-size: 12px;
+            font-weight: 800;
             color: var(--primary-dark);
             font-family: var(--font-display);
         }
 
-        .mockup-step-pill {
-            font-size: 10.5px;
+        .phone-step-pill {
+            font-size: 10px;
             font-weight: 800;
             background: var(--primary-light);
             color: var(--primary);
-            padding: 3px 9px;
-            border-radius: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
         }
 
-        .mockup-viewport {
+        /* Phone Viewport */
+        .phone-viewport {
             flex-grow: 1;
             position: relative;
+            background: #FDFBFE;
             overflow: hidden;
-            background: #FAF8FD;
         }
 
-        .screen-slide {
+        .phone-slide {
             position: absolute;
             inset: 0;
-            padding: 14px 14px 18px;
-            overflow-y: auto;
             opacity: 0;
-            transform: translateY(12px) scale(0.98);
-            transition: opacity .35s cubic-bezier(.2, .8, .2, 1), transform .35s cubic-bezier(.2, .8, .2, 1);
+            transform: scale(0.97);
+            transition: opacity 0.35s ease, transform 0.35s ease;
             pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            gap: 11px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(123, 44, 191, 0.3) transparent;
         }
 
-        .screen-slide.active {
+        .phone-slide::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .phone-slide::-webkit-scrollbar-thumb {
+            background: rgba(123, 44, 191, 0.3);
+            border-radius: 4px;
+        }
+
+        .phone-slide.active {
             opacity: 1;
-            transform: translateY(0) scale(1);
+            transform: scale(1);
             pointer-events: auto;
         }
 
-        /* Micro UI components inside phone */
-        .m-card {
-            background: #fff;
-            border: 1px solid #ECE5F5;
-            border-radius: 14px;
-            padding: 12px;
-            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.04);
-        }
-
-        .m-title {
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--text);
-            margin-bottom: 3px;
-        }
-
-        .m-sub {
-            font-size: 11px;
-            color: var(--text-muted);
-            margin-bottom: 8px;
-            line-height: 1.35;
-        }
-
-        .m-input {
+        .phone-screen-img {
             width: 100%;
-            background: #FAF8FD;
-            border: 1px solid #E5DCF0;
-            border-radius: 8px;
-            padding: 8px 10px;
-            font-size: 11.5px;
-            color: #2D233D;
-            margin-bottom: 7px;
+            height: auto;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .scroll-prompt-badge {
+            position: sticky;
+            top: 6px;
+            margin: 6px auto 0;
+            width: fit-content;
+            background: rgba(30, 23, 43, 0.85);
+            backdrop-filter: blur(4px);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 9px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            pointer-events: none;
+            animation: bounceUpDown 2s infinite ease-in-out;
+        }
+
+        @keyframes bounceUpDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(3px); }
+        }
+
+        .phone-home-indicator {
+            width: 90px;
+            height: 4px;
+            background: #3B3349;
+            border-radius: 3px;
+            margin: 6px auto;
+            flex-shrink: 0;
+        }
+
+        /* Slider Controls: Arrows + Dots */
+        .hiw-slider-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 16px;
+            width: 100%;
+            z-index: 5;
+        }
+
+        .hiw-nav-arrow {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: #fff;
+            border: 1.5px solid var(--border);
+            color: var(--primary-dark);
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(90, 24, 154, 0.1);
+            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .hiw-nav-arrow:hover {
+            background: var(--grad-primary);
+            color: #fff;
+            border-color: transparent;
+            transform: scale(1.08);
+            box-shadow: 0 6px 18px rgba(123, 44, 191, 0.35);
+        }
+
+        .hiw-nav-arrow:active {
+            transform: scale(0.95);
+        }
+
+        .hiw-dots-wrap {
             display: flex;
             align-items: center;
             gap: 7px;
         }
 
-        .m-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            padding: 9px 12px;
-            border-radius: 9px;
-            font-size: 12px;
-            font-weight: 700;
+        .hiw-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 5px;
+            background: #D8CCE8;
             border: none;
             cursor: pointer;
-            width: 100%;
-            text-align: center;
+            padding: 0;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
-        .m-btn-purple {
+        .hiw-dot:hover {
+            background: #B584E3;
+        }
+
+        .hiw-dot.active {
+            width: 26px;
             background: var(--grad-primary);
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(123, 44, 191, 0.3);
+            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.3);
         }
 
-        .m-btn-green {
-            background: #25D366;
-            color: #fff;
-            box-shadow: 0 4px 10px rgba(37, 211, 102, 0.25);
-        }
-
-        .m-btn-outline {
+        /* Right Column: Features Card */
+        .hiw-right-card {
             background: #fff;
-            color: var(--primary);
-            border: 1px solid var(--border);
-        }
-
-        .m-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 3px 8px;
-            border-radius: 6px;
-            background: var(--primary-light);
-            color: var(--primary-dark);
-        }
-
-        .m-tag.green {
-            background: #E7F7ED;
-            color: #1F924D;
-        }
-
-        .m-tag.gold {
-            background: #FFF8E5;
-            color: #B28300;
-        }
-
-        .m-grid-2 {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 6px;
-        }
-
-        .m-field-box {
-            background: #F9F7FC;
-            border-radius: 7px;
-            padding: 5px 8px;
-        }
-
-        .m-field-box label {
-            font-size: 9.5px;
-            color: #797385;
-            display: block;
-            margin-bottom: 1px;
-            font-weight: 700;
-        }
-
-        .m-field-box span {
-            font-size: 11px;
-            font-weight: 700;
-            color: #2D233D;
-        }
-
-        /* Step rows on right with active indicators */
-        .interactive-steps-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .step-row-interactive {
-            display: grid;
-            grid-template-columns: 46px 1fr;
-            gap: 16px;
-            align-items: flex-start;
-            background: var(--surface);
             border: 1.5px solid var(--border);
-            border-radius: 18px;
-            padding: 16px 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-            cursor: pointer;
+            border-radius: 20px;
+            padding: 28px 24px;
+            box-shadow: 0 10px 30px -10px rgba(90, 24, 154, 0.08);
             position: relative;
-            overflow: hidden;
-            transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
         }
 
-        .step-row-interactive:hover {
-            transform: translateX(4px);
-            border-color: #B584E3;
-        }
-
-        .step-row-interactive.active {
-            border-color: var(--primary);
-            background: linear-gradient(135deg, rgba(123, 44, 191, 0.04) 0%, rgba(244, 180, 0, 0.04) 100%);
-            box-shadow: 0 10px 26px -6px rgba(123, 44, 191, 0.18);
-        }
-
-        .step-row-interactive.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: var(--grad-primary);
-        }
-
-        .step-row-interactive .step-num {
-            width: 42px;
-            height: 42px;
-            border-radius: 12px;
-            background: var(--primary-light);
-            color: var(--primary-dark);
-            font-weight: 800;
+        .hiw-card-header {
             font-size: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: background .2s ease, color .2s ease, transform .2s ease;
-        }
-
-        .step-row-interactive.active .step-num {
-            background: var(--grad-primary);
-            color: #fff;
-            transform: scale(1.05);
-            box-shadow: 0 4px 14px rgba(123, 44, 191, 0.35);
-        }
-
-        .step-row-interactive .step-body h3 {
-            font-size: 16px;
-            margin-bottom: 4px;
+            font-weight: 800;
             color: var(--text);
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .step-row-interactive .active-tag {
-            display: none;
-            font-size: 10.5px;
-            font-weight: 800;
-            color: var(--primary);
-            background: var(--primary-light);
-            padding: 2px 8px;
-            border-radius: 10px;
+        .hiw-card-header i {
+            color: var(--accent-deep);
         }
 
-        .step-row-interactive.active .active-tag {
-            display: inline-flex;
+        .hiw-feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .hiw-feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13.5px;
+            color: var(--text);
+            line-height: 1.45;
+        }
+
+        .hiw-feature-list li i {
+            font-size: 15px;
+            color: #2E9D62;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .hiw-trust-chip {
+            display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 10px;
+            background: #F0FDF4;
+            border: 1px solid #BBF7D0;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 18px;
         }
 
-        .step-row-interactive .step-body p {
-            font-size: 13px;
-            line-height: 1.5;
-            color: var(--text-muted);
+        .hiw-trust-chip i {
+            font-size: 18px;
+            color: #16A34A;
+            flex-shrink: 0;
         }
 
-        /* Progress indicator bar on active card */
-        .step-progress-track {
-            height: 2.5px;
-            background: #ECE5F5;
-            border-radius: 2px;
-            margin-top: 10px;
-            overflow: hidden;
-            display: none;
+        .hiw-trust-chip span {
+            font-size: 12px;
+            font-weight: 700;
+            color: #166534;
+            line-height: 1.35;
         }
 
-        .step-row-interactive.active .step-progress-track {
-            display: block;
+        .hiw-cta-btn {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
-        .step-progress-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--grad-primary);
+        /* Mobile / Tablet Responsive Walkthrough */
+        @media (max-width: 959px) {
+            .hiw-walkthrough-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+                align-items: center;
+            }
+
+            /* 1. Mobile Phone Mockup on Top */
+            .hiw-mockup-col {
+                order: 1;
+            }
+
+            .phone-device {
+                max-width: 290px;
+                height: 520px;
+            }
+
+            /* 2. Middle: Info Card (Title & Paragraph) */
+            .hiw-info-col {
+                order: 2;
+                width: 100%;
+                max-width: 520px;
+                min-height: auto;
+            }
+
+            .hiw-features-col {
+                order: 3;
+                width: 100%;
+                max-width: 520px;
+                min-height: auto;
+            }
+
+            /* 3. Bottom: Left and Right navigation arrows + dots */
+            .hiw-slider-controls {
+                order: 4;
+                margin-top: 6px;
+            }
+
+            .hiw-left-card,
+            .hiw-right-card {
+                padding: 20px 18px;
+            }
+
+            .hiw-info-slide,
+            .hiw-feature-slide {
+                position: relative;
+                display: none;
+            }
+
+            .hiw-info-slide.active,
+            .hiw-feature-slide.active {
+                display: flex;
+            }
         }
 
         /* ============================================================
@@ -1826,14 +2014,6 @@
                 grid-template-columns: 0.9fr 1.1fr;
             }
 
-            /* Single ROW on desktop: Screen on left, Steps on right */
-            .hiw-interactive-wrap {
-                display: grid;
-                grid-template-columns: 0.95fr 1.05fr;
-                gap: clamp(2rem, 3.5vw, 4rem);
-                align-items: center;
-            }
-
             .feature-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
@@ -1846,21 +2026,6 @@
                 flex-direction: row;
                 align-items: center;
                 justify-content: space-between;
-            }
-        }
-
-        /* Mobile Responsive: Column layout */
-        @media (max-width: 859px) {
-            .hiw-interactive-wrap {
-                display: flex;
-                flex-direction: column;
-                gap: 24px;
-                align-items: center;
-            }
-
-            .phone-device {
-                max-width: 320px;
-                height: 560px;
             }
         }
     </style>
@@ -2034,376 +2199,380 @@
             </div>
         </section>
 
-        <!-- ============================================================ HOW IT WORKS (INTERACTIVE SCREEN SIMULATOR) ============================================================ -->
-        <section id="how-it-works" aria-labelledby="hiwHeading" style="background:var(--surface);">
+        <!-- ============================================================ HOW IT WORKS (INTERACTIVE SCREEN WALKTHROUGH) ============================================================ -->
+        <section id="how-it-works" class="hiw-section" aria-labelledby="hiwHeading">
             <div class="container">
                 <div class="section-head center">
                     <span class="kicker"><i class="fa-solid fa-route"></i> Interactive App Walkthrough</span>
                     <h2 id="hiwHeading">From Registration to Your First Conversation</h2>
-                    <p>Click on any step below to preview the actual Lagna Setu web app screens and see how fast and
-                        simple it is to get started.</p>
+                    <p>Explore all 6 real app screens below to see how fast, private, and family-friendly our matchmaking process is.</p>
                 </div>
 
-                <div class="hiw-interactive-wrap">
-                    <!-- Smartphone Device Simulator (Left Column on Desktop, Top on Mobile) -->
-                    <div class="phone-mockup-wrapper">
-                        <div class="phone-device" aria-label="Live Lagna Setu Screen Simulator">
-                            <!-- Notch & Speaker -->
-                            <div class="phone-notch">
-                                <div class="phone-speaker"></div>
-                                <div class="phone-lens"></div>
-                            </div>
-
-                            <!-- Status Bar -->
-                            <div class="phone-status">
-                                <span>9:41 AM</span>
-                                <div class="icons">
-                                    <i class="fa-solid fa-signal"></i>
-                                    <i class="fa-solid fa-wifi"></i>
-                                    <i class="fa-solid fa-battery-full"></i>
+                <div class="hiw-walkthrough-grid">
+                    <!-- LEFT COLUMN: Screen Title & Description Slides -->
+                    <div class="hiw-info-col" id="hiwInfoCol">
+                        <!-- Slide 1 Info -->
+                        <div class="hiw-info-slide active" data-slide="1">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-mobile-screen"></i> Step 1 of 6 • Welcome</span>
+                                <h3 class="hiw-title">Find Your Match, Rooted in Family</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-om"></i> પરિવાર અને પરંપરા સાથે યોગ્ય સંબંધની શરૂઆત</div>
+                                <p class="hiw-desc">Experience a warm, family-focused welcome designed specifically for Gujarat's Hindu communities. Verified profiles, clean aesthetic, and zero spam.</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-shield-heart"></i>
+                                    <div>
+                                        <strong>100% Verified Hindu Profiles</strong>
+                                        <span>Direct community authentication with genuine family backgrounds.</span>
+                                    </div>
+                                </div>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn active" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn" data-step="6">6. Address</button>
                                 </div>
                             </div>
+                        </div>
 
-                            <!-- App Bar -->
-                            <div class="mockup-app-bar">
-                                <div class="m-brand">
-                                    <img src="images/lagna_setu_logo.png" alt="Logo">
-                                    <b>Lagna Setu</b>
+                        <!-- Slide 2 Info -->
+                        <div class="hiw-info-slide" data-slide="2">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-user-plus"></i> Step 2 of 6 • Account Setup</span>
+                                <h3 class="hiw-title">Quick &amp; Secure Gmail Registration</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-lock"></i> ઝડપી જીમેઇલ અને પાસવર્ડ વડે સુરક્ષિત નોંધણી</div>
+                                <p class="hiw-desc">Create your account in under 30 seconds using your regular Gmail address and a secure password. Your credentials are encrypted with bank-grade safety standards.</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-envelope-circle-check"></i>
+                                    <div>
+                                        <strong>Zero Spam &amp; Hassle-Free</strong>
+                                        <span>Single secure login credential with instant password visibility toggle.</span>
+                                    </div>
                                 </div>
-                                <span class="mockup-step-pill" id="mockupStepIndicator">Step 1 of 5</span>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn active" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn" data-step="6">6. Address</button>
+                                </div>
                             </div>
+                        </div>
 
-                            <!-- Viewport with 5 interactive screens -->
-                            <div class="mockup-viewport">
-
-                                <!-- Screen 1: Registration -->
-                                <div class="screen-slide active" data-screen="1">
-                                    <div class="m-card" style="text-align:center;padding:16px 12px;">
-                                        <div
-                                            style="width:40px;height:40px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:18px;">
-                                            <i class="fa-solid fa-user-plus"></i>
-                                        </div>
-                                        <div class="m-title" style="font-size:14.5px;">Create Your Account</div>
-                                        <div class="m-sub">Join thousands of verified Gujarati Hindu families</div>
-
-                                        <div style="display:flex;gap:6px;margin-bottom:10px;">
-                                            <div
-                                                style="flex:1;background:var(--primary);color:#fff;font-size:11px;font-weight:700;padding:6px;border-radius:7px;">
-                                                <i class="fa-solid fa-mars"></i> Groom (વર)
-                                            </div>
-                                            <div
-                                                style="flex:1;background:#F1EBF7;color:#5A189A;font-size:11px;font-weight:700;padding:6px;border-radius:7px;">
-                                                <i class="fa-solid fa-venus"></i> Bride (કન્યા)
-                                            </div>
-                                        </div>
-
-                                        <div class="m-input"><i class="fa-solid fa-envelope" style="color:#A29DAF;"></i>
-                                            rahul.patel@gmail.com</div>
-                                        <div class="m-input"><i class="fa-solid fa-lock" style="color:#A29DAF;"></i>
-                                            ••••••••••••</div>
-
-                                        <button class="m-btn m-btn-purple" style="margin-top:4px;">
-                                            <span>Continue to Profile</span> <i class="fa-solid fa-arrow-right"></i>
-                                        </button>
-                                        <div style="font-size:10px;color:#8F8A99;margin-top:8px;">
-                                            <i class="fa-solid fa-shield-check" style="color:#2E9D62;"></i> Free &amp;
-                                            Confidential
-                                        </div>
-                                    </div>
-
-                                    <div class="m-card"
-                                        style="background:#FAF5FF;border-color:#E9D5FF;display:flex;align-items:center;gap:10px;">
-                                        <i class="fa-solid fa-gift" style="font-size:20px;color:#7B2CBF;"></i>
-                                        <div style="font-size:11px;color:#4C1D95;line-height:1.35;">
-                                            <b>Special Community Privilege:</b><br>100% Free Lifetime Access for all
-                                            Brides (Girls)!
-                                        </div>
+                        <!-- Slide 3 Info -->
+                        <div class="hiw-info-slide" data-slide="3">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-shield-check"></i> Step 3 of 6 • OTP Verification</span>
+                                <h3 class="hiw-title">Instant 6-Digit Email OTP Verification</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-circle-check"></i> 6-અંકનો ઇમેઇલ OTP (૧૦૦% અસલી પ્રોફાઇલ્સ)</div>
+                                <p class="hiw-desc">We send an instant 6-digit verification code to your registered Gmail address. This mandatory security check guarantees that every member is authentic and completely eliminates bots or fake profiles.</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-user-shield"></i>
+                                    <div>
+                                        <strong>Real Families Only</strong>
+                                        <span>Mandatory email OTP eliminates fake matrimonial profiles and fraud.</span>
                                     </div>
                                 </div>
-
-                                <!-- Screen 2: Biodata & Family -->
-                                <div class="screen-slide" data-screen="2">
-                                    <div class="m-card">
-                                        <div class="m-title"><i class="fa-solid fa-user-pen"
-                                                style="color:var(--primary);margin-right:5px;"></i> Personal &amp;
-                                            Family Biodata</div>
-                                        <div class="m-sub">Help matching families know you better</div>
-
-                                        <div class="m-grid-2" style="margin-bottom:6px;">
-                                            <div class="m-field-box"><label>Full Name</label><span>Rahul Patel</span>
-                                            </div>
-                                            <div class="m-field-box"><label>Date of Birth</label><span>14 Aug 1998 (27
-                                                    Yrs)</span></div>
-                                        </div>
-                                        <div class="m-grid-2" style="margin-bottom:6px;">
-                                            <div class="m-field-box"><label>Height</label><span>5 ft 10 in</span></div>
-                                            <div class="m-field-box"><label>Education</label><span>B.Tech /
-                                                    M.Tech</span></div>
-                                        </div>
-                                        <div class="m-field-box" style="margin-bottom:6px;">
-                                            <label>Profession / Job</label>
-                                            <span>Senior Software Engineer (Ahmedabad)</span>
-                                        </div>
-                                        <div class="m-grid-2" style="margin-bottom:6px;">
-                                            <div class="m-field-box"><label>Father's Name</label><span>Rameshbhai
-                                                    Patel</span></div>
-                                            <div class="m-field-box"><label>Mother's Name</label><span>Gitaben
-                                                    Patel</span></div>
-                                        </div>
-                                        <div class="m-grid-2">
-                                            <div class="m-field-box"><label>Native (વતન)</label><span>Visnagar,
-                                                    Mehsana</span></div>
-                                            <div class="m-field-box"><label>Mosal (મોસાળ)</label><span>Unjha</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button class="m-btn m-btn-purple">
-                                        <span>Save &amp; Select Samaj</span> <i class="fa-solid fa-arrow-right"></i>
-                                    </button>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn active" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn" data-step="6">6. Address</button>
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Screen 3: Samaj Selection -->
-                                <div class="screen-slide" data-screen="3">
-                                    <div class="m-card">
-                                        <div class="m-title"><i class="fa-solid fa-om"
-                                                style="color:var(--accent-deep);margin-right:5px;"></i> Select Hindu
-                                            Samaj</div>
-                                        <div class="m-sub">Filtered across 50+ Hindu communities in Gujarat</div>
-
-                                        <div class="m-input" style="background:#fff;border-color:var(--primary);">
-                                            <i class="fa-solid fa-magnifying-glass" style="color:var(--primary);"></i>
-                                            <span style="font-weight:700;color:var(--text);">Patidar</span>
-                                        </div>
-
-                                        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:8px;">
-                                            <div
-                                                style="background:var(--primary-light);border:1px solid #D6C2EA;border-radius:8px;padding:7px 10px;display:flex;justify-content:space-between;align-items:center;">
-                                                <span
-                                                    style="font-size:12px;font-weight:700;color:var(--primary-dark);">Kadva
-                                                    Patidar (કડવા પાટીદાર)</span>
-                                                <i class="fa-solid fa-circle-check" style="color:var(--primary);"></i>
-                                            </div>
-                                            <div
-                                                style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:8px;padding:7px 10px;font-size:12px;color:#555;">
-                                                Leva Patidar (લેવા પાટીદાર)
-                                            </div>
-                                            <div
-                                                style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:8px;padding:7px 10px;font-size:12px;color:#555;">
-                                                Kshatriya / Karadia Rajput
-                                            </div>
-                                            <div
-                                                style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:8px;padding:7px 10px;font-size:12px;color:#555;">
-                                                Audichya Sahastra Brahmin
-                                            </div>
-                                            <div
-                                                style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:8px;padding:7px 10px;font-size:12px;color:#555;">
-                                                Gurjar / Luhar Suthar
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            style="background:#FFF9E6;border:1px dashed #E5B338;border-radius:8px;padding:6px 9px;font-size:10px;color:#785200;display:flex;align-items:center;gap:6px;">
-                                            <i class="fa-brands fa-whatsapp" style="font-size:14px;color:#25D366;"></i>
-                                            <span>Missing caste? Message admin to add in 2 hours!</span>
-                                        </div>
-                                    </div>
-                                    <button class="m-btn m-btn-purple">
-                                        <span>Confirm Samaj &amp; Proceed</span> <i class="fa-solid fa-arrow-right"></i>
-                                    </button>
-                                </div>
-
-                                <!-- Screen 4: Photo & Privacy -->
-                                <div class="screen-slide" data-screen="4">
-                                    <div class="m-card" style="text-align:center;">
-                                        <div class="m-title">Profile Photo &amp; Preview</div>
-                                        <div class="m-sub">Your biodata is ready for community viewing</div>
-
-                                        <div
-                                            style="width:96px;height:96px;border-radius:50%;border:3px solid var(--primary);margin:0 auto 10px;overflow:hidden;box-shadow:0 6px 18px rgba(123,44,191,0.25);position:relative;">
-                                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop"
-                                                style="width:100%;height:100%;object-fit:cover;" alt="Groom Photo">
-                                            <div
-                                                style="position:absolute;bottom:0;right:0;left:0;background:rgba(46,157,98,0.9);color:#fff;font-size:8px;font-weight:700;padding:1px 0;">
-                                                <i class="fa-solid fa-check"></i> VERIFIED
-                                            </div>
-                                        </div>
-
-                                        <div style="font-size:14px;font-weight:800;color:var(--text);">Rahul Patel, 27
-                                        </div>
-                                        <div
-                                            style="font-size:11.5px;color:var(--primary);font-weight:700;margin-bottom:8px;">
-                                            Kadva Patidar • Ahmedabad</div>
-
-                                        <div style="display:flex;justify-content:center;gap:5px;margin-bottom:12px;">
-                                            <span class="m-tag green"><i class="fa-solid fa-shield-heart"></i>
-                                                Genuine</span>
-                                            <span class="m-tag gold"><i class="fa-solid fa-graduation-cap"></i>
-                                                M.Tech</span>
-                                            <span class="m-tag"><i class="fa-solid fa-briefcase"></i> IT Lead</span>
-                                        </div>
-
-                                        <div
-                                            style="background:#FAF8FD;border:1px solid #ECE5F5;border-radius:8px;padding:8px 10px;font-size:11px;color:#555;text-align:left;display:flex;justify-content:space-between;align-items:center;">
-                                            <span><i class="fa-solid fa-lock"
-                                                    style="color:var(--primary);margin-right:4px;"></i> Visibility:
-                                                Community Only</span>
-                                            <i class="fa-solid fa-toggle-on" style="font-size:18px;color:#2E9D62;"></i>
-                                        </div>
-                                    </div>
-                                    <button class="m-btn m-btn-purple">
-                                        <span>Start Discovering Matches</span> <i class="fa-solid fa-sparkles"></i>
-                                    </button>
-                                </div>
-
-                                <!-- Screen 5: Match Explorer & Direct Contact -->
-                                <div class="screen-slide" data-screen="5">
-                                    <div class="m-card" style="padding:10px;">
-                                        <div
-                                            style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                                            <span class="m-tag"
-                                                style="background:#FAF5FF;color:#6B21A8;font-size:10px;"><i
-                                                    class="fa-solid fa-sparkles"></i> Best Match (98%)</span>
-                                            <span style="font-size:10px;font-weight:700;color:#2E9D62;"><i
-                                                    class="fa-solid fa-circle" style="font-size:7px;"></i> Active
-                                                Now</span>
-                                        </div>
-
-                                        <div style="display:flex;gap:10px;margin-bottom:8px;align-items:center;">
-                                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=200&auto=format&fit=crop"
-                                                style="width:58px;height:58px;border-radius:12px;object-fit:cover;border:2px solid #E9D5FF;"
-                                                alt="Candidate">
-                                            <div>
-                                                <div style="font-size:13.5px;font-weight:800;color:var(--text);">Pooja
-                                                    Patel, 25</div>
-                                                <div style="font-size:11px;color:#7B2CBF;font-weight:700;">Kadva Patidar
-                                                    • 5'4"</div>
-                                                <div style="font-size:10.5px;color:#666;">M.Sc IT (Prof.) • Ahmedabad
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div
-                                            style="background:#FAF8FD;border-radius:7px;padding:6px 8px;font-size:10.5px;color:#444;margin-bottom:9px;line-height:1.4;">
-                                            <b>Family:</b> Father: Jayantibhai Patel (Govt. Officer) • Native: Mehsana
-                                        </div>
-
-                                        <!-- Direct Communication Action Buttons -->
-                                        <div
-                                            style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px;">
-                                            <a href="https://wa.me/919726362863" target="_blank"
-                                                class="m-btn m-btn-green" style="text-decoration:none;">
-                                                <i class="fa-brands fa-whatsapp"></i> WhatsApp
-                                            </a>
-                                            <a href="tel:+919726362863" class="m-btn m-btn-outline"
-                                                style="text-decoration:none;border-color:#2563EB;color:#2563EB;">
-                                                <i class="fa-solid fa-phone"></i> Call Parents
-                                            </a>
-                                        </div>
-                                        <button class="m-btn m-btn-purple" style="font-size:11.5px;padding:7px;">
-                                            <i class="fa-solid fa-heart"></i> Express Interest
-                                        </button>
-                                    </div>
-
-                                    <div
-                                        style="text-align:center;font-size:10.5px;color:#6B21A8;background:#F3E8FF;padding:6px;border-radius:8px;font-weight:700;">
-                                        ⚡ Direct Family Contact — Zero Middlemen!
+                        <!-- Slide 4 Info -->
+                        <div class="hiw-info-slide" data-slide="4">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-om"></i> Step 4 of 6 • Samaj Selection</span>
+                                <h3 class="hiw-title">Select Your Hindu Samaj &amp; Caste</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-leaf"></i> તમારી જ્ઞાતિ / સમાજ પસંદ કરો (50+ જાતિઓ)</div>
+                                <p class="hiw-desc">Tailor your match recommendations by searching and selecting your specific Samaj — including Kadva &amp; Leva Patidar, Rajput, Brahmin, Suthar, Lohana, Prajapati and 50+ Hindu communities across Gujarat.</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-hand-holding-heart"></i>
+                                    <div>
+                                        <strong>Respecting Community Traditions</strong>
+                                        <span>Matches are curated specifically according to your caste and cultural customs.</span>
                                     </div>
                                 </div>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn active" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn" data-step="6">6. Address</button>
+                                </div>
+                            </div>
+                        </div>
 
+                        <!-- Slide 5 Info -->
+                        <div class="hiw-info-slide" data-slide="5">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-address-card"></i> Step 5 of 6 • Biodata &amp; Photos</span>
+                                <h3 class="hiw-title">Complete Biodata &amp; 3 Photo Uploads</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-camera"></i> સંપૂર્ણ પારિવારિક બાયોડેટા અને ૩ ફોટો અપલોડ</div>
+                                <p class="hiw-desc">Present your profile with confidence. Upload up to 3 photos (1 main verified photo + 2 gallery slots). Fill in education degree, profession, monthly income, height, hobbies, and detailed family roots (father &amp; mother).</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-user-lock"></i>
+                                    <div>
+                                        <strong>Personal Number Kept Private</strong>
+                                        <span>Your registration mobile number is never public; used strictly for admin verification.</span>
+                                    </div>
+                                </div>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn active" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn" data-step="6">6. Address</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Slide 6 Info -->
+                        <div class="hiw-info-slide" data-slide="6">
+                            <div class="hiw-left-card">
+                                <span class="hiw-step-tag"><i class="fa-solid fa-map-location-dot"></i> Step 6 of 6 • Location &amp; Privacy</span>
+                                <h3 class="hiw-title">Native Location &amp; Protected Privacy</h3>
+                                <div class="hiw-guj-title"><i class="fa-solid fa-house-chimney"></i> વતનનું સરનામું, જિલ્લો અને સુરક્ષિત પૂર્ણતા</div>
+                                <p class="hiw-desc">Specify your native village, taluka, and current district for geo-filtered matches across Gujarat. Your profile is instantly submitted with direct parent-to-parent contact access.</p>
+                                <div class="hiw-benefit-box">
+                                    <i class="fa-solid fa-comments"></i>
+                                    <div>
+                                        <strong>Direct Family Connection</strong>
+                                        <span>Direct WhatsApp &amp; Call options for parents with zero broker commissions.</span>
+                                    </div>
+                                </div>
+                                <div class="hiw-step-pills">
+                                    <button class="hiw-pill-btn" data-step="1">1. Welcome</button>
+                                    <button class="hiw-pill-btn" data-step="2">2. Register</button>
+                                    <button class="hiw-pill-btn" data-step="3">3. OTP</button>
+                                    <button class="hiw-pill-btn" data-step="4">4. Samaj</button>
+                                    <button class="hiw-pill-btn" data-step="5">5. Biodata</button>
+                                    <button class="hiw-pill-btn active" data-step="6">6. Address</button>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Step Cards List (Right Column on Desktop, Bottom on Mobile) -->
-                    <div class="interactive-steps-list" id="stepsList">
-
-                        <!-- Step 1 -->
-                        <div class="step-row-interactive active" data-step="1" role="button" tabindex="0"
-                            aria-label="Step 1: Create Your Account">
-                            <div class="step-num">1</div>
-                            <div class="step-body">
-                                <h3>
-                                    <span>Create Your Account</span>
-                                    <span class="active-tag"><i class="fa-solid fa-eye"></i> Viewing Screen</span>
-                                </h3>
-                                <p>Sign up in seconds using your email address and create a password for easy access
-                                    anytime.</p>
-                                <div class="step-progress-track">
-                                    <div class="step-progress-bar" id="progressBar"></div>
+                    <!-- CENTER COLUMN: Smartphone Device Mockup with Real App Screenshots -->
+                    <div class="hiw-mockup-col">
+                        <div class="phone-mockup-wrapper">
+                            <div class="phone-ambient-glow"></div>
+                            <div class="phone-device" id="phoneDevice" aria-label="Lagna Setu Screen Walkthrough">
+                                <!-- Top Notch & Camera -->
+                                <div class="phone-notch">
+                                    <div class="phone-speaker"></div>
+                                    <div class="phone-lens"></div>
                                 </div>
+
+                                <!-- Status Bar -->
+                                <div class="phone-status">
+                                    <span>9:41 AM</span>
+                                    <div class="phone-status-icons">
+                                        <i class="fa-solid fa-signal"></i>
+                                        <i class="fa-solid fa-wifi"></i>
+                                        <i class="fa-solid fa-battery-full"></i>
+                                    </div>
+                                </div>
+
+                                <!-- Top Screen Header Identifier -->
+                                <div class="phone-screen-header">
+                                    <div class="phone-brand-mini">
+                                        <img src="images/lagna_setu_logo.png" alt="Lagna Setu">
+                                        <span>Lagna Setu</span>
+                                    </div>
+                                    <span class="phone-step-pill" id="phoneStepBadge">Screen 1 of 6</span>
+                                </div>
+
+                                <!-- Viewport holding real screenshots -->
+                                <div class="phone-viewport" id="phoneViewport">
+                                    <!-- Screen 1: Welcome -->
+                                    <div class="phone-slide active" data-slide="1">
+                                        <img src="images/screen-one.jpeg" alt="Lagna Setu Screen 1 - Welcome Onboarding" loading="eager" class="phone-screen-img">
+                                    </div>
+
+                                    <!-- Screen 2: Account Details -->
+                                    <div class="phone-slide" data-slide="2">
+                                        <img src="images/screen-two.jpeg" alt="Lagna Setu Screen 2 - Account Details & Password" loading="lazy" class="phone-screen-img">
+                                    </div>
+
+                                    <!-- Screen 3: Email OTP Verification -->
+                                    <div class="phone-slide" data-slide="3">
+                                        <img src="images/screen-three.jpeg" alt="Lagna Setu Screen 3 - Email OTP Verification" loading="lazy" class="phone-screen-img">
+                                    </div>
+
+                                    <!-- Screen 4: Samaj Selection -->
+                                    <div class="phone-slide" data-slide="4">
+                                        <img src="images/screen-four.jpeg" alt="Lagna Setu Screen 4 - Samaj & Caste Selection" loading="lazy" class="phone-screen-img">
+                                    </div>
+
+                                    <!-- Screen 5: Personal & Family Biodata -->
+                                    <div class="phone-slide" data-slide="5">
+                                        <div class="scroll-prompt-badge"><i class="fa-solid fa-arrows-up-down"></i> Scroll to view full form</div>
+                                        <img src="images/screen-five.jpeg" alt="Lagna Setu Screen 5 - Personal & Family Biodata" loading="lazy" class="phone-screen-img">
+                                    </div>
+
+                                    <!-- Screen 6: Native Address & Verification -->
+                                    <div class="phone-slide" data-slide="6">
+                                        <div class="scroll-prompt-badge"><i class="fa-solid fa-arrows-up-down"></i> Scroll to view full form</div>
+                                        <img src="images/screen-six.jpeg" alt="Lagna Setu Screen 6 - Native Address & Verification" loading="lazy" class="phone-screen-img">
+                                    </div>
+                                </div>
+
+                                <!-- Phone Home Indicator -->
+                                <div class="phone-home-indicator"></div>
                             </div>
                         </div>
 
-                        <!-- Step 2 -->
-                        <div class="step-row-interactive" data-step="2" role="button" tabindex="0"
-                            aria-label="Step 2: Complete Personal & Family Biodata">
-                            <div class="step-num">2</div>
-                            <div class="step-body">
-                                <h3>
-                                    <span>Complete Personal &amp; Family Biodata</span>
-                                    <span class="active-tag"><i class="fa-solid fa-eye"></i> Viewing Screen</span>
-                                </h3>
-                                <p>Enter education, height, occupation, city, and family background (parents' names,
-                                    native place &amp; mosal).</p>
-                                <div class="step-progress-track">
-                                    <div class="step-progress-bar"></div>
-                                </div>
+                        <!-- Slider Controls Below Phone: Left/Right Arrows + Indicator Dots -->
+                        <div class="hiw-slider-controls">
+                            <button class="hiw-nav-arrow prev" id="hiwPrevBtn" aria-label="Previous Slide">
+                                <i class="fa-solid fa-arrow-left"></i>
+                            </button>
+                            <div class="hiw-dots-wrap" id="hiwDotsWrap">
+                                <button class="hiw-dot active" aria-label="Go to screen 1"></button>
+                                <button class="hiw-dot" aria-label="Go to screen 2"></button>
+                                <button class="hiw-dot" aria-label="Go to screen 3"></button>
+                                <button class="hiw-dot" aria-label="Go to screen 4"></button>
+                                <button class="hiw-dot" aria-label="Go to screen 5"></button>
+                                <button class="hiw-dot" aria-label="Go to screen 6"></button>
                             </div>
+                            <button class="hiw-nav-arrow next" id="hiwNextBtn" aria-label="Next Slide">
+                                <i class="fa-solid fa-arrow-right"></i>
+                            </button>
                         </div>
-
-                        <!-- Step 3 -->
-                        <div class="step-row-interactive" data-step="3" role="button" tabindex="0"
-                            aria-label="Step 3: Select Your Samaj & Native Place">
-                            <div class="step-num">3</div>
-                            <div class="step-body">
-                                <h3>
-                                    <span>Select Your Samaj &amp; Native Place</span>
-                                    <span class="active-tag"><i class="fa-solid fa-eye"></i> Viewing Screen</span>
-                                </h3>
-                                <p>Search and select from 50+ Hindu castes (Patidar, Rajput, Brahmin, Suthar, etc.) with
-                                    custom addition helpline.</p>
-                                <div class="step-progress-track">
-                                    <div class="step-progress-bar"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 4 -->
-                        <div class="step-row-interactive" data-step="4" role="button" tabindex="0"
-                            aria-label="Step 4: Upload Your Best Photos">
-                            <div class="step-num">4</div>
-                            <div class="step-body">
-                                <h3>
-                                    <span>Upload Your Best Photos</span>
-                                    <span class="active-tag"><i class="fa-solid fa-eye"></i> Viewing Screen</span>
-                                </h3>
-                                <p>Add clear recent photographs with privacy controls so compatible community members
-                                    can view your profile.</p>
-                                <div class="step-progress-track">
-                                    <div class="step-progress-bar"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Step 5 -->
-                        <div class="step-row-interactive" data-step="5" role="button" tabindex="0"
-                            aria-label="Step 5: Explore Matches & Connect Directly">
-                            <div class="step-num">5</div>
-                            <div class="step-body">
-                                <h3>
-                                    <span>Explore Matches &amp; Connect Directly</span>
-                                    <span class="active-tag"><i class="fa-solid fa-eye"></i> Viewing Screen</span>
-                                </h3>
-                                <p>Girls connect 100% free! Boys can unlock direct WhatsApp &amp; phone calling with
-                                    parents for just ₹49 / 30-day pass.</p>
-                                <div class="step-progress-track">
-                                    <div class="step-progress-bar"></div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
 
+                    <!-- RIGHT COLUMN: Highlights, Trust Badge & Action CTA -->
+                    <div class="hiw-features-col" id="hiwFeaturesCol">
+                        <!-- Slide 1 Features -->
+                        <div class="hiw-feature-slide active" data-slide="1">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-circle-check"></i> <span>Community-verified profiles for real families</span></li>
+                                    <li><i class="fa-solid fa-gift"></i> <span>100% Free lifetime access for brides (કન્યા)</span></li>
+                                    <li><i class="fa-solid fa-shield-halved"></i> <span>Clean, cultural, and dignified matrimonial environment</span></li>
+                                    <li><i class="fa-solid fa-bolt"></i> <span>Instant one-click access to registration &amp; login</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-shield-heart"></i>
+                                    <span>100% Gujarati Hindu Community Security &amp; Zero Spam</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-user-plus"></i> Open Web App &amp; Register Free
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 2 Features -->
+                        <div class="hiw-feature-slide" data-slide="2">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-envelope"></i> <span>Fast sign-up with regular Gmail address</span></li>
+                                    <li><i class="fa-solid fa-lock"></i> <span>Secure 6+ character password with show/hide toggle</span></li>
+                                    <li><i class="fa-solid fa-file-shield"></i> <span>Full compliance with Terms of Service &amp; Privacy Policy</span></li>
+                                    <li><i class="fa-solid fa-right-to-bracket"></i> <span>One-click login link for returning family members</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-key"></i>
+                                    <span>Bank-Grade Encryption for All Member Passwords</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-arrow-right"></i> Continue to Registration
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 3 Features -->
+                        <div class="hiw-feature-slide" data-slide="3">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-envelope-circle-check"></i> <span>Instant 6-digit security code sent straight to Gmail</span></li>
+                                    <li><i class="fa-solid fa-shield-halved"></i> <span>Guarantees 100% authentic, bot-free profiles</span></li>
+                                    <li><i class="fa-solid fa-clock-rotate-left"></i> <span>Simple 'Resend OTP' option with countdown timer</span></li>
+                                    <li><i class="fa-solid fa-unlock-keyhole"></i> <span>Instant verification to unlock full biodata creation</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-user-check"></i>
+                                    <span>Verified Families Only — Zero Spam or Bots</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-shield-check"></i> Verify &amp; Complete Profile
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 4 Features -->
+                        <div class="hiw-feature-slide" data-slide="4">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-magnifying-glass"></i> <span>Instant live search across 50+ Hindu communities</span></li>
+                                    <li><i class="fa-solid fa-om"></i> <span>Supports Kadva/Leva Patidar, Rajput, Brahmin, etc.</span></li>
+                                    <li><i class="fa-brands fa-whatsapp"></i> <span>Dedicated 2-hour WhatsApp helpline for unlisted castes</span></li>
+                                    <li><i class="fa-solid fa-sliders"></i> <span>Curated recommendations strictly within your Samaj</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-building-columns"></i>
+                                    <span>Serving All Hindu Castes Across 33 Districts</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-om"></i> Select Your Community
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 5 Features -->
+                        <div class="hiw-feature-slide" data-slide="5">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-camera"></i> <span>3 High-resolution photo upload slots (Main + 2 Gallery)</span></li>
+                                    <li><i class="fa-solid fa-graduation-cap"></i> <span>Transparent education, occupation &amp; monthly income</span></li>
+                                    <li><i class="fa-solid fa-users-line"></i> <span>Family roots: parents' details, native &amp; mosal</span></li>
+                                    <li><i class="fa-solid fa-user-lock"></i> <span>Personal phone number kept 100% private for admin only</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-lock"></i>
+                                    <span>Private Phone Kept Confidential for Verification</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-address-card"></i> Fill Your Biodata
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Slide 6 Features -->
+                        <div class="hiw-feature-slide" data-slide="6">
+                            <div class="hiw-right-card">
+                                <div class="hiw-card-header"><i class="fa-solid fa-sparkles"></i> Screen Highlights / વિશેષતાઓ</div>
+                                <ul class="hiw-feature-list">
+                                    <li><i class="fa-solid fa-location-dot"></i> <span>Village, Taluka &amp; District precision location matching</span></li>
+                                    <li><i class="fa-solid fa-shield-halved"></i> <span>Strict privacy: personal number never leaked to public</span></li>
+                                    <li><i class="fa-solid fa-phone-volume"></i> <span>Direct WhatsApp &amp; Call to father/parents for inquiry</span></li>
+                                    <li><i class="fa-solid fa-circle-check"></i> <span>Single-tap profile submission &amp; instant approval</span></li>
+                                </ul>
+                                <div class="hiw-trust-chip">
+                                    <i class="fa-solid fa-handshake"></i>
+                                    <span>Direct Family Contact — Zero Middlemen or Brokerage</span>
+                                </div>
+                                <a href="app.html#register" class="btn btn-primary hiw-cta-btn">
+                                    <i class="fa-solid fa-sparkles"></i> Complete &amp; Find Matches
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -2840,98 +3009,179 @@
     </script>
     <script>
         // ============================================================
-        // INTERACTIVE SCREEN SWITCHER (HOW IT WORKS SECTION)
+        // INTERACTIVE APP SCREEN WALKTHROUGH CONTROLLER
         // ============================================================
-        const stepRows = document.querySelectorAll('.step-row-interactive');
-        const screenSlides = document.querySelectorAll('.screen-slide');
-        const stepIndicator = document.getElementById('mockupStepIndicator');
-        let currentStep = 1;
-        const totalSteps = stepRows.length;
-        let autoPlayTimer = null;
-        let progressInterval = null;
-        const slideDuration = 4500; // 4.5 seconds per slide
-        let progressStart = 0;
+        (function () {
+            const totalSlides = 6;
+            let currentSlide = 1;
+            let autoSlideTimer = null;
+            let isPaused = false;
+            const slideDuration = 5000; // 5 seconds per slide
 
-        function setStep(stepNum) {
-            currentStep = stepNum;
-            // Update active step row
-            stepRows.forEach(row => {
-                const step = parseInt(row.getAttribute('data-step'), 10);
-                row.classList.toggle('active', step === stepNum);
+            const phoneSlides = document.querySelectorAll('.phone-slide');
+            const infoSlides = document.querySelectorAll('.hiw-info-slide');
+            const featureSlides = document.querySelectorAll('.hiw-feature-slide');
+            const pillButtons = document.querySelectorAll('.hiw-pill-btn');
+            const phoneStepBadge = document.getElementById('phoneStepBadge');
+            const prevBtn = document.getElementById('hiwPrevBtn');
+            const nextBtn = document.getElementById('hiwNextBtn');
+            const dotsWrap = document.getElementById('hiwDotsWrap');
+            const phoneViewport = document.getElementById('phoneViewport');
+            const section = document.getElementById('how-it-works');
+
+            // Wire up dots
+            const dots = dotsWrap ? dotsWrap.querySelectorAll('.hiw-dot') : [];
+            dots.forEach((dot, index) => {
+                dot.addEventListener('click', () => {
+                    goToSlide(index + 1);
+                    resetAutoSlide();
+                });
             });
 
-            // Update active screen slide
-            screenSlides.forEach(slide => {
-                const screen = parseInt(slide.getAttribute('data-screen'), 10);
-                slide.classList.toggle('active', screen === stepNum);
-            });
+            function goToSlide(slideNum) {
+                if (slideNum < 1) slideNum = totalSlides;
+                if (slideNum > totalSlides) slideNum = 1;
+                currentSlide = slideNum;
 
-            // Update step indicator pill
-            if (stepIndicator) {
-                stepIndicator.textContent = 'Step ' + stepNum + ' of ' + totalSteps;
+                // Update Phone Mockup Screens
+                phoneSlides.forEach(slide => {
+                    const s = parseInt(slide.getAttribute('data-slide'), 10);
+                    const isActive = s === currentSlide;
+                    slide.classList.toggle('active', isActive);
+                    if (isActive) {
+                        slide.scrollTop = 0; // Reset scroll to top
+                    }
+                });
+
+                // Update Info Slides (Left Column / Top on Mobile)
+                infoSlides.forEach(slide => {
+                    const s = parseInt(slide.getAttribute('data-slide'), 10);
+                    slide.classList.toggle('active', s === currentSlide);
+                });
+
+                // Update Feature Slides (Right Column)
+                featureSlides.forEach(slide => {
+                    const s = parseInt(slide.getAttribute('data-slide'), 10);
+                    slide.classList.toggle('active', s === currentSlide);
+                });
+
+                // Update Step Pills
+                pillButtons.forEach(pill => {
+                    const s = parseInt(pill.getAttribute('data-step'), 10);
+                    pill.classList.toggle('active', s === currentSlide);
+                });
+
+                // Update Indicator Dots
+                dots.forEach((dot, index) => {
+                    dot.classList.toggle('active', index + 1 === currentSlide);
+                });
+
+                // Update Step Badge inside Phone Header
+                if (phoneStepBadge) {
+                    phoneStepBadge.textContent = 'Screen ' + currentSlide + ' of ' + totalSlides;
+                }
             }
 
-            // Reset and animate progress bar
-            resetProgressBar();
-        }
+            function nextSlide() {
+                goToSlide(currentSlide + 1);
+            }
 
-        function resetProgressBar() {
-            clearInterval(progressInterval);
-            const activeBar = document.querySelector('.step-row-interactive.active .step-progress-bar');
-            if (!activeBar) return;
-            activeBar.style.width = '0%';
-            progressStart = performance.now();
+            function prevSlide() {
+                goToSlide(currentSlide - 1);
+            }
 
-            progressInterval = setInterval(() => {
-                const elapsed = performance.now() - progressStart;
-                const pct = Math.min((elapsed / slideDuration) * 100, 100);
-                activeBar.style.width = pct + '%';
-                if (elapsed >= slideDuration) {
-                    clearInterval(progressInterval);
+            function startAutoSlide() {
+                stopAutoSlide();
+                autoSlideTimer = setInterval(() => {
+                    if (!isPaused) {
+                        nextSlide();
+                    }
+                }, slideDuration);
+            }
+
+            function stopAutoSlide() {
+                if (autoSlideTimer) {
+                    clearInterval(autoSlideTimer);
+                    autoSlideTimer = null;
                 }
-            }, 50);
-        }
+            }
 
-        function startAutoPlay() {
-            stopAutoPlay();
-            resetProgressBar();
-            autoPlayTimer = setInterval(() => {
-                let nextStep = currentStep + 1;
-                if (nextStep > totalSteps) nextStep = 1;
-                setStep(nextStep);
-            }, slideDuration);
-        }
+            function resetAutoSlide() {
+                stopAutoSlide();
+                startAutoSlide();
+            }
 
-        function stopAutoPlay() {
-            if (autoPlayTimer) clearInterval(autoPlayTimer);
-            if (progressInterval) clearInterval(progressInterval);
-        }
+            // Arrow button clicks
+            if (prevBtn) {
+                prevBtn.addEventListener('click', () => {
+                    prevSlide();
+                    resetAutoSlide();
+                });
+            }
 
-        // Attach click listeners to all step rows
-        stepRows.forEach(row => {
-            row.addEventListener('click', () => {
-                const step = parseInt(row.getAttribute('data-step'), 10);
-                setStep(step);
-                startAutoPlay(); // Restart timer from this step
+            if (nextBtn) {
+                nextBtn.addEventListener('click', () => {
+                    nextSlide();
+                    resetAutoSlide();
+                });
+            }
+
+            // Quick navigation pill buttons
+            pillButtons.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    const step = parseInt(pill.getAttribute('data-step'), 10);
+                    goToSlide(step);
+                    resetAutoSlide();
+                });
             });
-            row.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    row.click();
+
+            // Pause on hover
+            if (section) {
+                section.addEventListener('mouseenter', () => { isPaused = true; });
+                section.addEventListener('mouseleave', () => { isPaused = false; });
+            }
+
+            // Touch Swipe Support on Mobile Screens
+            if (phoneViewport) {
+                let touchStartX = 0;
+                let touchEndX = 0;
+                let touchStartY = 0;
+                let touchEndY = 0;
+
+                phoneViewport.addEventListener('touchstart', (e) => {
+                    if (e.changedTouches && e.changedTouches[0]) {
+                        touchStartX = e.changedTouches[0].screenX;
+                        touchStartY = e.changedTouches[0].screenY;
+                    }
+                }, { passive: true });
+
+                phoneViewport.addEventListener('touchend', (e) => {
+                    if (e.changedTouches && e.changedTouches[0]) {
+                        touchEndX = e.changedTouches[0].screenX;
+                        touchEndY = e.changedTouches[0].screenY;
+                        handleSwipe();
+                    }
+                }, { passive: true });
+
+                function handleSwipe() {
+                    const diffX = touchEndX - touchStartX;
+                    const diffY = touchEndY - touchStartY;
+                    // Horizontal swipe must be distinct from vertical scroll
+                    if (Math.abs(diffX) > 40 && Math.abs(diffX) > Math.abs(diffY)) {
+                        if (diffX < 0) {
+                            nextSlide();
+                        } else {
+                            prevSlide();
+                        }
+                        resetAutoSlide();
+                    }
                 }
-            });
-        });
+            }
 
-        // Pause autoplay on mouse enter, resume on mouse leave
-        const hiwSection = document.getElementById('how-it-works');
-        if (hiwSection) {
-            hiwSection.addEventListener('mouseenter', stopAutoPlay);
-            hiwSection.addEventListener('mouseleave', startAutoPlay);
-        }
-
-        // Initialize on load
-        setStep(1);
-        startAutoPlay();
+            // Initialize
+            goToSlide(1);
+            startAutoSlide();
+        })();
     </script>
 </body>
 
