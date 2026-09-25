@@ -267,7 +267,7 @@
                         <label>Password</label>
                         <div class="input-icon-wrap">
                             <i class="fa-solid fa-lock leading"></i>
-                            <input class="input" id="loginPass" type="password" placeholder="........." value=""
+                            <input class="input" id="loginPass" type="password" placeholder="••••••••" value=""
                                 autocomplete="current-password">
                             <button class="trailing-btn" type="button" onclick="togglePw('loginPass',this)"
                                 aria-label="Show or hide password"><i class="fa-solid fa-eye"></i></button>
@@ -354,7 +354,7 @@
                 <div style="margin-top:26px;">
                     <div class="field"><label>New password <span style="color:var(--error);">*</span></label>
                         <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
-                                id="newPassInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                id="newPassInput" type="password" placeholder="••••••••"
                                 autocomplete="new-password">
                             <button class="trailing-btn" type="button" onclick="togglePw('newPassInput',this)"
                                 aria-label="Show or hide password"><i class="fa-solid fa-eye"></i></button>
@@ -363,7 +363,7 @@
                     </div>
                     <div class="field"><label>Confirm password <span style="color:var(--error);">*</span></label>
                         <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
-                                id="confirmPassInput" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                id="confirmPassInput" type="password" placeholder="••••••••"
                                 autocomplete="new-password">
                             <button class="trailing-btn" type="button" onclick="togglePw('confirmPassInput',this)"
                                 aria-label="Show or hide confirm password"><i class="fa-solid fa-eye"></i></button>
@@ -471,7 +471,7 @@
                     <div class="seg"><i></i></div>
                     <div class="seg"><i></i></div>
                 </div>
-                <div class="eyebrow">STEP 1 OF 3 Â· 33%</div>
+                <div class="eyebrow">STEP 1 OF 3 • 33%</div>
                 <div class="h-display h-lg" style="margin-top:4px;">Select your community</div>
                 <p class="p-muted" style="margin-top:4px;">Search and pick your caste. Matches will be curated based on
                     your community.</p>
@@ -488,7 +488,7 @@
                         <div class="input-icon-wrap">
                             <i class="fa-solid fa-magnifying-glass leading"></i>
                             <input class="input" id="regCasteInput"
-                                placeholder="Search in English or àª—à«àªœàª°àª¾àª¤à«€ (e.g. Kadva, àª¬à«àª°àª¾àª¹à«àª®àª£, Suthar...)"
+                                placeholder="Search caste or community (e.g. Kadva Patidar, Brahmin, Rajput, Suthar...)"
                                 autocomplete="off" onfocus="filterRegCaste(this.value)"
                                 oninput="filterRegCaste(this.value)">
                         </div>
@@ -513,7 +513,7 @@
                     <div class="seg current"><i></i></div>
                     <div class="seg"><i></i></div>
                 </div>
-                <div class="eyebrow">STEP 2 OF 3 Â· 66%</div>
+                <div class="eyebrow">STEP 2 OF 3 • 66%</div>
 
                 <!-- 3-SLOT PROFILE PHOTO UPLOAD (1 REQUIRED, 2 OPTIONAL) -->
                 <div class="section-label" style="margin-top:2px;">Upload Profile Photos (Up to 3 Photos)</div>
@@ -677,18 +677,18 @@
                             <li
                                 onclick="ddPick('ddIncome',this,'No income (N/A)'); state.regData.income='No income (N/A)';">
                                 No income (N/A)</li>
-                            <li onclick="ddPick('ddIncome',this,'Below â‚¹20K'); state.regData.income='Below â‚¹20K';">
+                            <li onclick="ddPick('ddIncome',this,'Below ₹20K'); state.regData.income='Below ₹20K';">
                                 Below
-                                â‚¹20K</li>
+                                ₹20K</li>
                             <li
-                                onclick="ddPick('ddIncome',this,'â‚¹20K â€“ â‚¹40K'); state.regData.income='â‚¹20K â€“ â‚¹40K';">
-                                â‚¹20K â€“ â‚¹40K</li>
+                                onclick="ddPick('ddIncome',this,'₹20K – ₹40K'); state.regData.income='₹20K – ₹40K';">
+                                ₹20K – ₹40K</li>
                             <li
-                                onclick="ddPick('ddIncome',this,'â‚¹40K â€“ â‚¹75K'); state.regData.income='â‚¹40K â€“ â‚¹75K';">
-                                â‚¹40K â€“ â‚¹75K</li>
-                            <li onclick="ddPick('ddIncome',this,'Above â‚¹75K'); state.regData.income='Above â‚¹75K';">
+                                onclick="ddPick('ddIncome',this,'₹40K – ₹75K'); state.regData.income='₹40K – ₹75K';">
+                                ₹40K – ₹75K</li>
+                            <li onclick="ddPick('ddIncome',this,'Above ₹75K'); state.regData.income='Above ₹75K';">
                                 Above
-                                â‚¹75K</li>
+                                ₹75K</li>
                         </ul>
                     </div>
                 </div>
@@ -782,7 +782,7 @@
                     <div class="seg done"><i></i></div>
                     <div class="seg done"><i></i></div>
                 </div>
-                <div class="eyebrow">STEP 3 OF 3 Â· 100% Â· FINAL STEP</div>
+                <div class="eyebrow">STEP 3 OF 3 • 100% • FINAL STEP</div>
                 <div class="h-display h-lg" style="margin-top:4px;">Where are you based?</div>
                 <p class="p-muted" style="margin-top:4px;">This helps us match you with nearby verified families.</p>
 
@@ -861,7 +861,7 @@
                             <div style="font-weight:800;font-size:13px;color:var(--pending);">Your profile is
                                 incomplete</div>
                             <div class="p-muted" style="font-size:11.5px;margin-top:3px;">Add your details so families
-                                can discover you â€” and unlock everyone else's profiles too.</div>
+                                can discover you — and unlock everyone else's profiles too.</div>
                             <button class="btn btn-sm btn-primary" style="margin-top:10px;" onclick="go('scr-reg2')"><i
                                     class="fa-solid fa-arrow-right"></i> Complete profile
                                 now</button>
@@ -1012,7 +1012,7 @@
                 <div class="chat-messages-inner">
                     <div class="chat-security-badge">
                         <i class="fa-solid fa-shield-halved"></i>
-                        <span>Strictly Text-Only Safe Matrimonial Chat â€¢ End-to-End Privacy</span>
+                        <span>Strictly Text-Only Safe Matrimonial Chat • End-to-End Privacy</span>
                     </div>
                     <div id="chatMessages" class="chat-messages-list"></div>
                 </div>
@@ -1155,14 +1155,14 @@
                             placeholder="e.g. Software Engineer, Business" value=""></div>
                     <div class="field"><label>Monthly income</label>
                         <div class="dd" id="ddIncomeEdit">
-                            <div class="dd-trigger" onclick="ddOpen('ddIncomeEdit')"><span>â‚¹40K â€“ â‚¹75K</span><i
+                            <div class="dd-trigger" onclick="ddOpen('ddIncomeEdit')"><span>₹40K – ₹75K</span><i
                                     class="fa-solid fa-chevron-down"></i></div>
                             <ul class="dd-menu">
                                 <li onclick="ddPick('ddIncomeEdit',this,'No income (N/A)')">No income (N/A)</li>
-                                <li onclick="ddPick('ddIncomeEdit',this,'Below â‚¹20K')">Below â‚¹20K</li>
-                                <li onclick="ddPick('ddIncomeEdit',this,'â‚¹20K â€“ â‚¹40K')">â‚¹20K â€“ â‚¹40K</li>
-                                <li onclick="ddPick('ddIncomeEdit',this,'â‚¹40K â€“ â‚¹75K')">â‚¹40K â€“ â‚¹75K</li>
-                                <li onclick="ddPick('ddIncomeEdit',this,'Above â‚¹75K')">Above â‚¹75K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'Below ₹20K')">Below ₹20K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'₹20K – ₹40K')">₹20K – ₹40K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'₹40K – ₹75K')">₹40K – ₹75K</li>
+                                <li onclick="ddPick('ddIncomeEdit',this,'Above ₹75K')">Above ₹75K</li>
                             </ul>
                         </div>
                     </div>
@@ -1214,7 +1214,7 @@
                 <div class="field"><label>Your mobile number (private)</label>
                     <div class="input-icon-wrap"><i class="fa-solid fa-phone leading"></i><input class="input"
                             id="editOwnMobile" placeholder="+91 98765 43210" value=""></div>
-                    <span class="hint"><i class="fa-solid fa-eye-slash"></i> Hidden from other members â€” admin
+                    <span class="hint"><i class="fa-solid fa-eye-slash"></i> Hidden from other members — admin
                         use only</span>
                 </div>
 
@@ -1274,7 +1274,7 @@
                 <div class="card" style="border:1.4px solid var(--border);box-shadow:none;">
                     <div class="detail-row">
                         <div class="dlabel"><i class="fa-solid fa-person"></i> Boys (30 Days Pass)</div>
-                        <div class="dval" style="color:var(--primary);font-size:18px;font-weight:800;">â‚¹49</div>
+                        <div class="dval" style="color:var(--primary);font-size:18px;font-weight:800;">₹49</div>
                     </div>
                     <div class="detail-row">
                         <div class="dlabel"><i class="fa-solid fa-person-dress"></i> Girls</div>
@@ -1309,7 +1309,7 @@
                 <div style="margin-top:24px;">
                     <button class="btn btn-gold" id="btnMembershipPayAction"
                         style="display:none;margin-bottom:12px;font-size:15.5px;padding:14px;box-shadow:0 6px 20px rgba(217,119,6,0.3);"
-                        onclick="payNow()"><i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI (30 Days Pass)</button>
+                        onclick="payNow()"><i class="fa-solid fa-bolt"></i> Pay ₹49 via UPI (30 Days Pass)</button>
                     <button class="btn btn-outline" onclick="openPaymentHistoryModal()"><i
                             class="fa-solid fa-receipt"></i> View payment history</button>
                     <div class="center-txt p-muted" style="margin-top:18px;font-size:13px;">
@@ -1505,12 +1505,12 @@
                         class="fa-solid fa-crown"></i></div>
                 <div class="h-display h-lg">Membership</div>
                 <p class="p-muted" style="margin-top:8px;">Welcome! Your account is approved. Boys enjoy 30 Days Full
-                    Access for â‚¹49, and Girls enjoy 100% Lifetime Free access.</p>
+                    Access for ₹49, and Girls enjoy 100% Lifetime Free access.</p>
                 <div class="card"
                     style="margin:18px 0;box-shadow:none;border:1.4px solid var(--border);text-align:left;">
                     <div class="detail-row">
                         <div class="dlabel"><i class="fa-solid fa-person"></i> Boys (30 Days Pass)</div>
-                        <div class="dval" style="color:var(--primary);font-weight:800;font-size:17px;">â‚¹49</div>
+                        <div class="dval" style="color:var(--primary);font-weight:800;font-size:17px;">₹49</div>
                     </div>
                     <div class="detail-row">
                         <div class="dlabel"><i class="fa-solid fa-person-dress"></i> Girls</div>
@@ -1576,7 +1576,7 @@
                         class="fa-solid fa-user-lock"></i></div>
                 <div class="h-display h-lg">Complete your profile first</div>
                 <p class="p-muted" style="margin-top:8px;">Add your personal, family, address and community details to
-                    unlock the app. Once submitted, Boys get 30 Days Full Access for just â‚¹49, and Girls enjoy 100%
+                    unlock the app. Once submitted, Boys get 30 Days Full Access for just ₹49, and Girls enjoy 100%
                     Lifetime Free access.</p>
                 <button class="btn btn-primary" style="margin-top:20px;" onclick="goToCompleteProfile()"><i
                         class="fa-solid fa-arrow-right"></i> Complete profile now</button>
@@ -1613,7 +1613,7 @@
             </div>
         </div>
 
-        <!-- ============================================================ GENDER PAYWALL MODAL (BOYS: â‚¹49 FOR 30 DAYS) ============================================================ -->
+        <!-- ============================================================ GENDER PAYWALL MODAL (BOYS: ₹49 FOR 30 DAYS) ============================================================ -->
 
         <!-- Profile Complete Modal for Girls (100% Lifetime Free) -->
         <div class="modal-backdrop modal-center" id="modalGirlComplete" style="z-index:999;">
@@ -1635,7 +1635,7 @@
                         <i class="fa-solid fa-heart"></i> 100% Lifetime Free for Girls
                     </div>
                     <p style="font-size:12px;color:var(--text);margin-top:4px;line-height:1.5;">
-                        There are no membership charges for female members â€” access is 100% Lifetime Free! You can
+                        There are no membership charges for female members — access is 100% Lifetime Free! You can
                         directly explore and connect with all verified community groom profiles.
                     </p>
                 </div>
@@ -1645,7 +1645,7 @@
             </div>
         </div>
 
-        <!-- Profile Complete Modal for Boys (â‚¹49 / 30 Days Membership Prompt) -->
+        <!-- Profile Complete Modal for Boys (₹49 / 30 Days Membership Prompt) -->
         <div class="modal-backdrop modal-center" id="modalBoyComplete" style="z-index:999;">
             <div class="modal-card" style="border:1.5px solid var(--secondary);text-align:center;position:relative;">
                 <button class="icon-btn" onclick="closeModal('modalBoyComplete'); go('scr-membership');"
@@ -1665,7 +1665,7 @@
                         </div>
                         <div
                             style="font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--primary);">
-                            â‚¹49 <small style="font-size:12px;font-weight:600;color:var(--text-muted);">/ 30
+                            ₹49 <small style="font-size:12px;font-weight:600;color:var(--text-muted);">/ 30
                                 Days</small>
                         </div>
                     </div>
@@ -1684,10 +1684,10 @@
                     </ul>
                 </div>
                 <button class="btn btn-gold" onclick="closeModal('modalBoyComplete'); openRazorpayCheckout();">
-                    <i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI &amp; Continue
+                    <i class="fa-solid fa-bolt"></i> Pay ₹49 via UPI &amp; Continue
                 </button>
                 <button class="btn btn-ghost" style="margin-top:8px;font-size:12.5px;color:var(--text-muted);"
-                    onclick="closeModal('modalBoyComplete'); go('scr-membership'); showToast('Please activate your â‚¹49 UPI pass to access home');">
+                    onclick="closeModal('modalBoyComplete'); go('scr-membership'); showToast('Please activate your ₹49 UPI pass to access home');">
                     <i class="fa-solid fa-clock"></i> Pay Later (Limited Access)
                 </button>
             </div>
@@ -1714,8 +1714,8 @@
                                 30 Days Access Pass</div>
                         </div>
                         <div style="text-align:right;">
-                            <div style="font-size:24px;font-weight:800;color:var(--primary-dark);">â‚¹49</div>
-                            <div style="font-size:11px;color:var(--text-muted);text-decoration:line-through;">â‚¹149
+                            <div style="font-size:24px;font-weight:800;color:var(--primary-dark);">₹49</div>
+                            <div style="font-size:11px;color:var(--text-muted);text-decoration:line-through;">₹149
                             </div>
                         </div>
                     </div>
@@ -1731,7 +1731,7 @@
                 </div>
 
                 <button class="btn btn-primary" onclick="openRazorpayCheckout()"><i class="fa-solid fa-lock"></i> Pay
-                    â‚¹49 via Razorpay</button>
+                    ₹49 via Razorpay</button>
                 <div
                     style="text-align:center;margin-top:14px;font-size:11.5px;color:var(--text-muted);line-height:1.4;">
                     <a href="legal/terms.html" target="_blank"
@@ -1767,7 +1767,7 @@
                 <div
                     style="background:#f4f6fa;border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
                     <span style="font-size:13px;color:#555;">Amount to Pay</span>
-                    <span style="font-size:20px;font-weight:800;color:#0c2340;">â‚¹49.00</span>
+                    <span style="font-size:20px;font-weight:800;color:#0c2340;">₹49.00</span>
                 </div>
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
@@ -1804,7 +1804,7 @@
                         <div style="display:flex;align-items:center;gap:11px;">
                             <div
                                 style="width:32px;height:32px;border-radius:8px;background:#5f259f;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;">
-                                à¤ªà¥‡
+                                पे
                             </div>
                             <div>
                                 <div style="font-size:13px;font-weight:700;color:var(--text);">PhonePe (UPI)</div>
@@ -1862,7 +1862,7 @@
                         style="font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:3px;color:#78350F;">
                         <i class="fa-solid fa-shield-check"></i> Non-Refundable Digital Pass Agreement
                     </div>
-                    By proceeding to pay â‚¹49, you accept our
+                    By proceeding to pay ₹49, you accept our
                     <a href="legal/terms.html" target="_blank"
                         style="color:var(--primary);font-weight:700;text-decoration:underline;">Terms</a> &amp;
                     <a href="legal/refund-policy.html" target="_blank"
@@ -1872,7 +1872,7 @@
                 </div>
 
                 <button class="btn btn-primary" style="background:#0c2340;border-color:#0c2340;color:#fff;width:100%;"
-                    onclick="processMockPayment()"><i class="fa-solid fa-bolt"></i> Pay â‚¹49 via UPI
+                    onclick="processMockPayment()"><i class="fa-solid fa-bolt"></i> Pay ₹49 via UPI
                     (Razorpay)</button>
                 <div style="text-align:center;margin-top:10px;font-size:10.5px;color:var(--text-muted);"><i
                         class="fa-solid fa-lock"></i> Secured 256-bit Razorpay UPI Gateway</div>
@@ -1913,7 +1913,7 @@
                 <div style="text-align:center;">
                     <div class="dob-age-badge" id="dobModalLiveBadge">
                         <i class="fa-solid fa-cake-candles"></i> Selected: <span id="dobModalLivePreview">14 Aug
-                            997</span> &nbsp;Â·&nbsp; <b><span id="dobModalLiveAge">29</span> Years</b>
+                            997</span> &nbsp;•&nbsp; <b><span id="dobModalLiveAge">29</span> Years</b>
                     </div>
                 </div>
 
@@ -2079,7 +2079,7 @@
                             <div id="menuUserName" style="font-weight:800;font-size:15.5px;color:var(--text);">Member
                             </div>
                             <div class="p-muted" style="font-size:11.5px;"><i class="fa-solid fa-circle-check"
-                                    style="color:var(--success);"></i> Verified Â· Gold member</div>
+                                    style="color:var(--success);"></i> Verified • Gold member</div>
                         </div>
                     </div>
                     <button class="icon-btn modal-close-btn" onclick="closeModal('modalMenu')" title="Close menu"
@@ -2189,7 +2189,7 @@
                         oninput="onCropZoomChange(this.value)">
                     <i class="fa-solid fa-magnifying-glass-plus" style="color: var(--primary); font-size: 14px;"></i>
                     <button class="icon-btn" style="width: 34px; height: 34px; margin-left: 4px;"
-                        onclick="rotateCropImage()" title="Rotate 90Â°"><i
+                        onclick="rotateCropImage()" title="Rotate 90°"><i
                             class="fa-solid fa-rotate-right"></i></button>
                 </div>
 
@@ -2200,7 +2200,7 @@
                         <i class="fa-solid fa-bolt" style="color: var(--accent-deep);"></i> Auto-Compression
                     </div>
                     <div style="font-size: 11px; color: var(--text-muted); font-weight: 600;">
-                        <span id="cropOrigSize">10.0 MB</span> â†’ <span
+                        <span id="cropOrigSize">10.0 MB</span> → <span
                             style="color: var(--success); font-weight: 800;">~55 KB (Web Ready)</span>
                     </div>
                 </div>
@@ -2301,7 +2301,7 @@
                 <div class="field">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                         <label style="margin-bottom:0;">Age Range</label>
-                        <span id="fltAgeLiveText" style="font-size:12.5px;font-weight:700;color:var(--primary);">18 â€“
+                        <span id="fltAgeLiveText" style="font-size:12.5px;font-weight:700;color:var(--primary);">18 –
                             50
                             Years (All Ages)</span>
                     </div>
@@ -2337,13 +2337,13 @@
                     <div class="flt-age-presets">
                         <span class="chip filter-age-chip active" id="chipAgeAll"
                             onclick="setFilterAgePreset('all')">All Ages</span>
-                        <span class="chip filter-age-chip" id="chipAge2125" onclick="setFilterAgePreset(21, 25)">21 â€“
+                        <span class="chip filter-age-chip" id="chipAge2125" onclick="setFilterAgePreset(21, 25)">21 –
                             25</span>
-                        <span class="chip filter-age-chip" id="chipAge2428" onclick="setFilterAgePreset(24, 28)">24 â€“
+                        <span class="chip filter-age-chip" id="chipAge2428" onclick="setFilterAgePreset(24, 28)">24 –
                             28</span>
-                        <span class="chip filter-age-chip" id="chipAge2630" onclick="setFilterAgePreset(26, 30)">26 â€“
+                        <span class="chip filter-age-chip" id="chipAge2630" onclick="setFilterAgePreset(26, 30)">26 –
                             30</span>
-                        <span class="chip filter-age-chip" id="chipAge2835" onclick="setFilterAgePreset(28, 35)">28 â€“
+                        <span class="chip filter-age-chip" id="chipAge2835" onclick="setFilterAgePreset(28, 35)">28 –
                             35</span>
                     </div>
                 </div>
@@ -2526,7 +2526,7 @@
                     style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;">
                     <i class="fa-solid fa-arrows-rotate" id="maintCheckIcon"></i> Check Status / Refresh
                 </button>
-                <!-- Inline status feedback â€” shown instead of toast so it appears above the modal overlay -->
+                <!-- Inline status feedback — shown instead of toast so it appears above the modal overlay -->
                 <div id="maintStatusMsg"
                     style="display:none;margin-top:14px;padding:12px 14px;border-radius:12px;font-size:12.5px;font-weight:700;line-height:1.5;text-align:left;">
                 </div>
@@ -2553,7 +2553,7 @@
                     Install Lagna Setu App
                 </h3>
                 <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 18px;">
-                    Add Lagna Setu to your home screen! Open with 1 tap in full-screen mode â€” no app store download
+                    Add Lagna Setu to your home screen! Open with 1 tap in full-screen mode — no app store download
                     required.
                 </p>
 
