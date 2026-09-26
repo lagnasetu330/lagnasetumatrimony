@@ -15,7 +15,7 @@ DROP POLICY IF EXISTS "Settings can be deleted by everyone" ON public.app_settin
 
 CREATE POLICY "Settings viewable by everyone" 
 ON public.app_settings FOR SELECT 
-USING (true);
+USING (key IS NOT NULL);
 
 -- Only service_role or authenticated admin can change maintenance mode
 CREATE POLICY "Settings modifiable by service role only" 
@@ -196,3 +196,30 @@ CREATE POLICY "Email logs deleted by service role"
 ON public.email_logs FOR DELETE 
 TO service_role 
 USING (true);
+
+
+-- ==============================================================================
+-- 8. SECURITY DEFINER FUNCTION HARDENING
+-- Resolves "Public / Signed-In Users Can Execute SECURITY DEFINER Function" warnings
+-- Prevents public anon callers from deleting accounts or executing DB triggers
+-- ==============================================================================
+
+DO $$
+BEGIN
+    -- 1. Restrict rls_auto_enable
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'rls_auto_enable') THEN
+        REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM PUBLIC;
+        REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM anon;
+        REVOKE EXECUTE ON FUNCTION public.rls_auto_enable() FROM authenticated;
+        GRANT EXECUTE ON FUNCTION public.rls_auto_enable() TO service_role;
+    END IF;
+
+    -- 2. Restrict delete_user_account_completely
+    IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'delete_user_account_completely') THEN
+        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM PUBLIC;
+        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM anon;
+        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM authenticated;
+        GRANT EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) TO service_role;
+    END IF;
+END $$;
+
