@@ -1011,7 +1011,7 @@
         .phone-device {
             width: 100%;
             max-width: 300px;
-            height: 605px;
+            height: 555px;
             background: #1E172B;
             border: 9px solid #1E172B;
             border-radius: 40px;
@@ -1104,35 +1104,12 @@
         .phone-screen-img {
             width: 100%;
             height: auto;
+            min-height: 100%;
+            object-fit: cover;
+            object-position: top;
             display: block;
             user-select: none;
             -webkit-user-drag: none;
-        }
-
-        .scroll-prompt-badge {
-            position: sticky;
-            top: 6px;
-            margin: 6px auto 0;
-            width: fit-content;
-            background: rgba(30, 23, 43, 0.85);
-            backdrop-filter: blur(4px);
-            color: #fff;
-            font-size: 10px;
-            font-weight: 700;
-            padding: 3px 9px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-            pointer-events: none;
-            animation: bounceUpDown 2s infinite ease-in-out;
-        }
-
-        @keyframes bounceUpDown {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(3px); }
         }
 
 
@@ -1303,7 +1280,7 @@
 
             .phone-device {
                 max-width: 280px;
-                height: 550px;
+                height: 555px;
                 border: 8px solid #1E172B;
                 border-radius: 38px;
             }
@@ -2561,13 +2538,11 @@
 
                                     <!-- Screen 5: Personal & Family Biodata -->
                                     <div class="phone-slide" data-slide="5">
-                                        <div class="scroll-prompt-badge"><i class="fa-solid fa-arrows-up-down"></i> Scroll to view full form</div>
                                         <img src="images/screen-five.jpeg" alt="Lagna Setu Screen 5 - Personal & Family Biodata" loading="lazy" class="phone-screen-img">
                                     </div>
 
                                     <!-- Screen 6: Native Address & Verification -->
                                     <div class="phone-slide" data-slide="6">
-                                        <div class="scroll-prompt-badge"><i class="fa-solid fa-arrows-up-down"></i> Scroll to view full form</div>
                                         <img src="images/screen-six.jpeg" alt="Lagna Setu Screen 6 - Native Address & Verification" loading="lazy" class="phone-screen-img">
                                     </div>
                                 </div>
