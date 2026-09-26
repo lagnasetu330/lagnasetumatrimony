@@ -415,11 +415,17 @@
             gap: 16px;
         }
 
+        .site-header .container {
+            padding-left: clamp(20px, 4vw, 48px);
+            padding-right: clamp(20px, 4vw, 48px);
+        }
+
         .brand {
             display: flex;
             align-items: center;
             gap: 10px;
             text-decoration: none;
+            flex-shrink: 0;
         }
 
         .brand img {
@@ -475,6 +481,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-shrink: 0;
         }
 
         .nav-toggle {
@@ -2028,6 +2035,207 @@
                 justify-content: space-between;
             }
         }
+
+        /* ============================================================
+           MOBILE & TABLET HEADER & RESPONSIVE POLISH (< 860px)
+           ============================================================ */
+        @media (max-width: 859px) {
+            .site-header {
+                padding-top: env(safe-area-inset-top, 0);
+            }
+
+            .site-header .container {
+                /* Ample, comfortable side padding so logo & menu do not touch screen edges */
+                padding-left: clamp(18px, 5.5vw, 28px);
+                padding-right: clamp(18px, 5.5vw, 28px);
+            }
+
+            .nav-row {
+                padding: 12px 0;
+                gap: 10px;
+            }
+
+            .brand {
+                gap: 8px;
+            }
+
+            .brand img {
+                width: 32px;
+                height: 32px;
+                border-radius: 9px;
+            }
+
+            .brand b {
+                /* Reduced font-size on mobile screen for cleaner balance */
+                font-size: 17px;
+                letter-spacing: -0.01em;
+            }
+
+            .nav-actions {
+                gap: 8px;
+            }
+
+            .nav-actions .btn-sm {
+                padding: 7px 13px;
+                font-size: 12.5px;
+                font-weight: 700;
+                border-radius: 10px;
+                gap: 5px;
+            }
+
+            .nav-toggle {
+                width: 38px;
+                height: 38px;
+                font-size: 15px;
+                border-radius: 10px;
+                flex-shrink: 0;
+            }
+
+            .mobile-nav {
+                padding: 12px 2px 20px;
+                animation: mobileNavDown .24s cubic-bezier(.16, 1, .3, 1) forwards;
+            }
+
+            .mobile-nav a {
+                padding: 10px 14px;
+                font-size: 14.5px;
+                border-radius: 10px;
+            }
+        }
+
+        @keyframes mobileNavDown {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .hero {
+                padding: 22px 0 34px;
+            }
+
+            .trust-line {
+                font-size: 11.5px;
+                padding: 6px 12px 6px 6px;
+                gap: 7px;
+                margin-bottom: 18px;
+                max-width: 100%;
+            }
+
+            .trust-line .dot-icon {
+                width: 22px;
+                height: 22px;
+                font-size: 10px;
+            }
+
+            .hero h1 {
+                font-size: clamp(1.85rem, 7.8vw, 2.3rem);
+                line-height: 1.18;
+                margin-bottom: 14px;
+            }
+
+            .hero .lead {
+                font-size: 0.94rem;
+                line-height: 1.55;
+                margin-bottom: 22px;
+            }
+
+            .hero-cta-row {
+                gap: 10px;
+                margin-bottom: 26px;
+            }
+
+            .hero-cta-row .btn {
+                width: 100%;
+                justify-content: center;
+                padding: 13px 20px;
+                font-size: 14.5px;
+            }
+
+            .hero-stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                text-align: center;
+            }
+
+            .hero-stats .stat b {
+                font-size: 1.35rem;
+            }
+
+            .hero-stats .stat span {
+                font-size: 10.5px;
+                line-height: 1.25;
+            }
+
+            .hero-badge-card.b1 {
+                left: 8px;
+                top: 10px;
+                padding: 8px 12px;
+                gap: 8px;
+            }
+
+            .hero-badge-card.b2 {
+                right: 8px;
+                bottom: 10px;
+                padding: 8px 12px;
+                gap: 8px;
+            }
+
+            .hero-badge-card .hb-icon {
+                width: 32px;
+                height: 32px;
+                font-size: 13px;
+            }
+
+            .hb-title {
+                font-size: 12px;
+            }
+
+            .hb-sub {
+                font-size: 10px;
+            }
+        }
+
+        /* Extra compact mobile devices (<= 380px) */
+        @media (max-width: 380px) {
+            .site-header .container {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .brand {
+                gap: 7px;
+            }
+
+            .brand img {
+                width: 30px;
+                height: 30px;
+            }
+
+            .brand b {
+                font-size: 15.5px;
+            }
+
+            .nav-actions {
+                gap: 6px;
+            }
+
+            .nav-actions .btn-sm {
+                padding: 6px 10px;
+                font-size: 11.5px;
+            }
+
+            .nav-toggle {
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 
@@ -2955,6 +3163,13 @@
             navToggle.setAttribute('aria-expanded', 'false');
             navToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
         }));
+        document.addEventListener('click', (e) => {
+            if (mobileNav.classList.contains('open') && !mobileNav.contains(e.target) && !navToggle.contains(e.target)) {
+                mobileNav.classList.remove('open');
+                navToggle.setAttribute('aria-expanded', 'false');
+                navToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
+            }
+        });
 
         // FAQ accordion
         document.querySelectorAll('.faq-item').forEach(item => {
