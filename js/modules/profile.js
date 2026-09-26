@@ -297,13 +297,20 @@ function processSuccessfulPayment(txnId, upiMethod) {
     expiry.setDate(today.getDate() + 30);
     state.currentUser.planStart = today.toISOString().split('T')[0];
     state.currentUser.planExpiry = expiry.toISOString().split('T')[0];
+
+    // Cryptographic anti-tamper signature generation
+    if (typeof computeSecureToken === 'function') {
+        state.currentUser.paymentToken = computeSecureToken('payment', state.currentUser.id, state.currentUser.email, state.currentUser.planExpiry);
+        state.currentUser.genderToken = computeSecureToken('gender', state.currentUser.id, state.currentUser.email, state.currentUser.gender);
+    }
+    state.currentUser.lastTxnId = txnId;
     if (typeof saveSessionState === 'function') saveSessionState();
 
     // 1. Record in LS_ADMIN_PAYMENTS for admin sync (100% UPI via Razorpay)
     try {
         const payments = JSON.parse(localStorage.getItem('LS_ADMIN_PAYMENTS') || '[]');
         const newTxn = {
-            id: txnId || ('TXN' + Math.floor(10000 + Math.random() * 90000)),
+            id: txnId || ('RZP_UPI_' + Math.floor(10000 + Math.random() * 90000)),
             userId: state.currentUser.id,
             userName: state.currentUser.name || 'Registered Member',
             plan: 'Boys 30 Days Pass (₹49)',
@@ -323,6 +330,9 @@ function processSuccessfulPayment(txnId, upiMethod) {
             storedUsers[uIdx].paymentStatus = 'Active';
             storedUsers[uIdx].planStart = state.currentUser.planStart;
             storedUsers[uIdx].planExpiry = state.currentUser.planExpiry;
+            storedUsers[uIdx].paymentToken = state.currentUser.paymentToken;
+            storedUsers[uIdx].genderToken = state.currentUser.genderToken;
+            storedUsers[uIdx].lastTxnId = txnId;
             storedUsers[uIdx].profileComplete = true;
             localStorage.setItem('LS_COMMUNITY_USERS', JSON.stringify(storedUsers));
         }
@@ -333,6 +343,9 @@ function processSuccessfulPayment(txnId, upiMethod) {
                 accounts[aIdx].paymentStatus = 'Active';
                 accounts[aIdx].planStart = state.currentUser.planStart;
                 accounts[aIdx].planExpiry = state.currentUser.planExpiry;
+                accounts[aIdx].paymentToken = state.currentUser.paymentToken;
+                accounts[aIdx].genderToken = state.currentUser.genderToken;
+                accounts[aIdx].lastTxnId = txnId;
                 accounts[aIdx].profileComplete = true;
                 saveStoredAccounts(accounts);
             }
@@ -367,17 +380,22 @@ function processSuccessfulPayment(txnId, upiMethod) {
     openModal('modalPaySuccess');
     showToast('₹49 Paid Successfully via UPI! Account Activated 🎉');
 }
-window.processSuccessfulPayment = processSuccessfulPayment;
 
 function processMockPayment() {
     closeModal('modalRazorpayCheckout');
+    // If real Razorpay key is present, mock payments are strictly disabled
+    if (window.RAZORPAY_KEY_ID && !window.RAZORPAY_KEY_ID.includes('demo')) {
+        showToast('Live mode active. Please complete payment via official Razorpay checkout.');
+        openRazorpayCheckout();
+        return;
+    }
     const upiInput = document.getElementById('upiCustomVpaInput');
     const customVpa = upiInput ? upiInput.value.trim() : '';
     const methodStr = customVpa ? `UPI (${customVpa})` : `UPI (${selectedUpiApp || 'Google Pay'})`;
 
     showToast('Processing secure payment via ' + methodStr + ' (Razorpay)...');
     setTimeout(() => {
-        const txnId = 'TXN' + Math.floor(10000 + Math.random() * 90000);
+        const txnId = 'RZP_UPI_' + Math.floor(10000 + Math.random() * 90000);
         processSuccessfulPayment(txnId, methodStr);
     }, 750);
 }

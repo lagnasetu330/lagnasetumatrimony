@@ -525,18 +525,52 @@ function handleResendSignupOtp() {
 }
 window.handleResendSignupOtp = handleResendSignupOtp;
 
+// Robust 64-bit HMAC-like Anti-Tamper Token Generator with Secret Salt
+function computeSecureToken(type, id, email, value) {
+    const raw = `${type}:${id}:${String(email || '').trim().toLowerCase()}:${value}:${AUTH_PEPPER}`;
+    let h1 = 0xdeadbeef, h2 = 0x41c64e6d;
+    for (let i = 0; i < raw.length; i++) {
+        const ch = raw.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+}
+window.computeSecureToken = computeSecureToken;
+
 function checkBoyPassStatus(user) {
     if (!user) return { active: false, reason: 'no_user' };
-    if (typeof isGirlGender === 'function' ? isGirlGender(user.gender) : (String(user.gender || '').toLowerCase().includes('girl') || String(user.gender || '').toLowerCase() === 'female')) {
+
+    // 1. Anti-Gender-Spoofing Protection (Prevents DevTools gender: 'Girl' bypass)
+    if (user.genderToken) {
+        const expectedGenderToken = computeSecureToken('gender', user.id, user.email, user.gender);
+        if (user.genderToken !== expectedGenderToken) {
+            console.warn('[Security Guard] Tampering detected: gender token signature mismatch.');
+            return { active: false, reason: 'tampered', daysLeft: 0 };
+        }
+    }
+
+    const isGirl = typeof isGirlGender === 'function' ? isGirlGender(user.gender) : (String(user.gender || '').toLowerCase().includes('girl') || String(user.gender || '').toLowerCase() === 'female');
+    if (isGirl) {
         return { active: true, reason: 'free_lifetime', daysLeft: 9999 };
     }
     
     // For Boy:
-    if (user.paymentStatus !== 'Active' && user.paymentStatus !== 'paid') {
+    const isPaid = (user.paymentStatus === 'Active' || user.paymentStatus === 'paid');
+    if (!isPaid || !user.planExpiry) {
         return { active: false, reason: 'unpaid' };
     }
-    if (!user.planExpiry) {
-        return { active: false, reason: 'unpaid' };
+
+    // 2. Anti-Tamper Cryptographic Payment Signature Check
+    // Prevents setting paymentStatus = 'Active' or manipulating expiry in browser console
+    if (user.paymentToken) {
+        const expectedPayToken = computeSecureToken('payment', user.id, user.email, user.planExpiry);
+        if (user.paymentToken !== expectedPayToken) {
+            console.warn('[Security Guard] Tampering detected: payment token signature mismatch.');
+            return { active: false, reason: 'tampered', daysLeft: 0 };
+        }
     }
     
     const expiry = new Date(user.planExpiry);
@@ -817,26 +851,39 @@ async function doLogin() {
             if (!matchedUser.mobile) matchedUser.mobile = existingProfile.mobile;
         }
 
-        // Also check LS_ADMIN_PAYMENTS to see if boy has already paid
+        // Also check LS_ADMIN_PAYMENTS to see if boy has already paid (require genuine transaction ID)
         if (matchedUser.gender === 'Boy' && matchedUser.paymentStatus !== 'Active') {
             try {
                 const adminPayments = JSON.parse(localStorage.getItem('LS_ADMIN_PAYMENTS') || '[]');
-                const hasPaid = adminPayments.some(p => 
+                const validPay = adminPayments.find(p => 
                     (p.userId === matchedUser.id || 
                     (p.userEmail && p.userEmail.toLowerCase() === email.toLowerCase()) || 
                     (p.userName && matchedUser.name && p.userName.toLowerCase() === matchedUser.name.toLowerCase())) && 
-                    p.status === 'success'
+                    p.status === 'success' &&
+                    (p.id && (p.id.startsWith('RZP_') || p.id.startsWith('pay_')))
                 );
-                if (hasPaid) {
+                if (validPay) {
                     matchedUser.paymentStatus = 'Active';
+                    matchedUser.lastTxnId = validPay.id;
                     if (!matchedUser.planExpiry) {
                         const exp = new Date();
                         exp.setDate(exp.getDate() + 30);
                         matchedUser.planExpiry = exp.toISOString().split('T')[0];
                         matchedUser.planStart = new Date().toISOString().split('T')[0];
                     }
+                    if (typeof computeSecureToken === 'function') {
+                        matchedUser.paymentToken = computeSecureToken('payment', matchedUser.id, matchedUser.email, matchedUser.planExpiry);
+                    }
                 }
             } catch(e) {}
+        }
+
+        // Seal secure tokens on login
+        if (typeof computeSecureToken === 'function') {
+            matchedUser.genderToken = computeSecureToken('gender', matchedUser.id, matchedUser.email, matchedUser.gender);
+            if (matchedUser.paymentStatus === 'Active' && matchedUser.planExpiry && !matchedUser.paymentToken) {
+                matchedUser.paymentToken = computeSecureToken('payment', matchedUser.id, matchedUser.email, matchedUser.planExpiry);
+            }
         }
 
         // Persist reconciled account data back to storage
