@@ -137,7 +137,7 @@ USING (true);
 CREATE POLICY "Messages can be sent" 
 ON public.messages FOR INSERT 
 WITH CHECK (
-    message IS NOT NULL AND 
+    text IS NOT NULL AND 
     sender_id IS NOT NULL AND 
     receiver_id IS NOT NULL
 );
@@ -166,7 +166,7 @@ USING (true);
 
 CREATE POLICY "Interests can be sent" 
 ON public.interests FOR INSERT 
-WITH CHECK (from_user_id IS NOT NULL AND to_user_id IS NOT NULL);
+WITH CHECK (sender_id IS NOT NULL AND receiver_id IS NOT NULL);
 
 CREATE POLICY "Interests can be updated" 
 ON public.interests FOR UPDATE 
@@ -189,7 +189,7 @@ USING (true);
 
 CREATE POLICY "Email logs can be recorded" 
 ON public.email_logs FOR INSERT 
-WITH CHECK (email IS NOT NULL);
+WITH CHECK (recipient_email IS NOT NULL);
 
 -- UPDATE and DELETE blocked on email_logs for audit integrity
 CREATE POLICY "Email logs deleted by service role" 
