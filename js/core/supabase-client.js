@@ -852,29 +852,17 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             } catch(e) {}
         }
 
-        // 6. Delete from payments
+        // 6. Delete from payments (payments table stores user_id)
         for (const uid of idList) {
             try {
                 await client.from('payments').delete().eq('user_id', uid);
             } catch(e) {}
         }
-        for (const eml of emailList) {
-            try {
-                await client.from('payments').delete().ilike('user_email', eml);
-            } catch(e) {}
-        }
 
-        // 7. Delete from reports (where user is reporter or reported)
-        for (const eml of emailList) {
-            try {
-                await client.from('reports').delete().ilike('reporter_email', eml);
-                await client.from('reports').delete().ilike('target_user_email', eml);
-            } catch(e) {}
-        }
+        // 7. Clean reports from users table (reports are stored with role: 'report')
         for (const uid of idList) {
             try {
-                await client.from('reports').delete().eq('reporter_id', uid);
-                await client.from('reports').delete().eq('target_user_id', uid);
+                await client.from('users').delete().eq('role', 'report').ilike('suspension_reason', `%"targetUserId":${uid}%`);
             } catch(e) {}
         }
 
@@ -1959,11 +1947,6 @@ function supabaseSubscribeAdminRealtime(callbacks = {}) {
                     if (typeof callbacks.onMaintenanceChange === 'function') callbacks.onMaintenanceChange(payload);
                 }
             })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'reports' }, payload => {
-                if (typeof callbacks.onReportsChange === 'function') {
-                    callbacks.onReportsChange(payload);
-                }
-            })
             .subscribe(status => {
                 console.info('[Supabase Admin Realtime] Status:', status);
             });
@@ -1985,23 +1968,13 @@ async function supabaseSaveUserFavorites(userId, userEmail, favorites) {
     const favArray = Array.isArray(favorites) ? favorites : [];
 
     try {
-        // 1. Try updating raw_data in profiles table
+        // Update raw_data in profiles table (single source of truth for full profile data)
         const { data: p } = await client.from('profiles').select('id, raw_data').ilike('email', normEmail).maybeSingle();
         if (p) {
             const raw = (p.raw_data && typeof p.raw_data === 'object') ? p.raw_data : {};
             raw.favorites = favArray;
             await client.from('profiles').update({ raw_data: raw, updated_at: new Date().toISOString() }).eq('id', p.id);
         }
-
-        // 2. Try updating raw_data in users table
-        try {
-            const { data: u } = await client.from('users').select('id, raw_data').ilike('email', normEmail).maybeSingle();
-            if (u) {
-                const uRaw = (u.raw_data && typeof u.raw_data === 'object') ? u.raw_data : {};
-                uRaw.favorites = favArray;
-                await client.from('users').update({ raw_data: uRaw }).eq('id', u.id);
-            }
-        } catch(e) {}
 
         console.info('[Supabase] Favorites successfully synced to database for:', normEmail, favArray.length);
         return { success: true };
@@ -2020,19 +1993,11 @@ async function supabaseFetchUserFavorites(userId, userEmail) {
     const normEmail = String(userEmail).trim().toLowerCase();
 
     try {
-        // 1. Try profiles table
+        // Query profiles table which contains the raw_data JSONB store
         const { data: p, error } = await client.from('profiles').select('raw_data').ilike('email', normEmail).maybeSingle();
         if (!error && p && p.raw_data && Array.isArray(p.raw_data.favorites)) {
             return p.raw_data.favorites;
         }
-        // 2. Fallback to users table
-        try {
-            const { data: u } = await client.from('users').select('raw_data').ilike('email', normEmail).maybeSingle();
-            if (u && u.raw_data && Array.isArray(u.raw_data.favorites)) {
-                return u.raw_data.favorites;
-            }
-        } catch(e) {}
-
         return [];
     } catch(err) {
         console.warn('[Supabase] Fetch favorites notice:', err);
@@ -2271,25 +2236,7 @@ async function supabaseSubmitReport(reportData) {
 
     let cloudSaved = false;
 
-    // 1. Try public.reports table first if it exists
-    try {
-        const { error: repErr } = await client.from('reports').insert({
-            id: repId,
-            reporter_id: String(reportObj.reporterId),
-            reporter_name: reportObj.reporterName,
-            reporter_email: reportObj.reporterEmail,
-            target_user_id: String(reportObj.targetUserId),
-            target_user_name: reportObj.targetUserName,
-            target_user_email: reportObj.targetUserEmail,
-            reason: reportObj.reason,
-            details: reportObj.details,
-            date: reportObj.date,
-            status: 'open'
-        });
-        if (!repErr) cloudSaved = true;
-    } catch(e) {}
-
-    // 2. Universal Cloud Sync into users table (role: 'report')
+    // 1. Universal Cloud Sync into users table (role: 'report')
     try {
         const payload = {
             id: repId,
@@ -2337,33 +2284,7 @@ async function supabaseFetchReportsForAdmin() {
 
     const reportMap = new Map();
 
-    // 1. Try public.reports table
-    try {
-        const { data: repData, error: repErr } = await client
-            .from('reports')
-            .select('*')
-            .order('created_at', { ascending: false });
-        if (!repErr && Array.isArray(repData)) {
-            repData.forEach(r => {
-                reportMap.set(String(r.id), {
-                    id: r.id,
-                    userId: r.target_user_id,
-                    targetUserId: r.target_user_id,
-                    targetUserName: r.target_user_name,
-                    targetUserEmail: r.target_user_email,
-                    reporterId: r.reporter_id,
-                    reporterName: r.reporter_name,
-                    reporterEmail: r.reporter_email,
-                    reason: r.reason,
-                    details: r.details,
-                    date: r.date || (r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent'),
-                    status: r.status || 'open'
-                });
-            });
-        }
-    } catch(e) {}
-
-    // 2. Fetch from users table (role: 'report')
+    // 1. Fetch from users table (role: 'report' - primary cloud store)
     try {
         const { data: uReports, error: uErr } = await client
             .from('users')

@@ -3,7 +3,7 @@
    Strategy: Network-First with Fallback Cache (Ensures instant updates)
    ============================================================ */
 
-const CACHE_NAME = 'lagna-setu-v1.1';
+const CACHE_NAME = 'lagna-setu-v1.2';
 
 // Core assets to pre-cache on install
 const PRECACHE_ASSETS = [
@@ -59,7 +59,18 @@ self.addEventListener('fetch', (event) => {
     // Only handle GET requests
     if (req.method !== 'GET') return;
 
-    const url = new URL(req.url);
+    let url;
+    try {
+        url = new URL(req.url);
+    } catch (_) {
+        return;
+    }
+
+    // CRITICAL FIX: Only handle http: and https: requests.
+    // Explicitly bypass chrome-extension://, moz-extension://, chrome://, data:, blob:, ws:, wss:
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+        return;
+    }
 
     // Bypass dynamic APIs & external services (Supabase, EmailJS, Cloudinary, Razorpay, CDN scripts)
     if (
@@ -81,9 +92,11 @@ self.addEventListener('fetch', (event) => {
                 // If valid response, update cache in background
                 if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
                     const responseToCache = networkResponse.clone();
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(req, responseToCache);
-                    });
+                    caches.open(CACHE_NAME)
+                        .then((cache) => {
+                            cache.put(req, responseToCache).catch(() => {});
+                        })
+                        .catch(() => {});
                 }
                 return networkResponse;
             })
@@ -94,7 +107,7 @@ self.addEventListener('fetch', (event) => {
                     if (req.mode === 'navigate') {
                         return caches.match('./app.html');
                     }
-                });
+                }).catch(() => {});
             })
     );
 });
