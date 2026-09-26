@@ -875,7 +875,7 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
                     payload: { id: normId, email: normEmail, ids: idList, emails: emailList, time: Date.now() }
                 });
             } else if (typeof client.channel === 'function') {
-                const bChan = client.channel('realtime:presence:community');
+                const bChan = client.channel(`realtime:broadcast:del_${Date.now()}`);
                 bChan.subscribe(status => {
                     if (status === 'SUBSCRIBED') {
                         bChan.send({
@@ -883,6 +883,9 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
                             event: 'user_account_deleted',
                             payload: { id: normId, email: normEmail, ids: idList, emails: emailList, time: Date.now() }
                         });
+                        setTimeout(() => {
+                            try { client.removeChannel(bChan); } catch (_) {}
+                        }, 2500);
                     }
                 });
             }
@@ -2120,8 +2123,47 @@ function supabaseInitPresence(currentUser, onChangeCallback) {
     }
     notifyPresenceListeners();
 
+    // 1. If userPresenceChannel is already active and subscribed, simply re-track and return
     if (userPresenceChannel) {
-        return userPresenceChannel;
+        const chState = userPresenceChannel.state;
+        if (chState === 'joined' || chState === 'subscribing') {
+            try {
+                userPresenceChannel.track({
+                    userId: userId,
+                    email: userEmail,
+                    name: currentUser.name || '',
+                    onlineAt: Date.now()
+                }).catch(() => {});
+            } catch (_) {}
+            return userPresenceChannel;
+        }
+    }
+
+    // 2. Check if client's internal channels list already holds this presence topic
+    if (typeof client.getChannels === 'function') {
+        const existing = client.getChannels().find(ch => 
+            ch.topic === 'realtime:presence:community' || 
+            ch.topic === 'realtime:realtime:presence:community'
+        );
+        if (existing) {
+            const st = existing.state;
+            if (st === 'joined' || st === 'subscribing') {
+                userPresenceChannel = existing;
+                try {
+                    userPresenceChannel.track({
+                        userId: userId,
+                        email: userEmail,
+                        name: currentUser.name || '',
+                        onlineAt: Date.now()
+                    }).catch(() => {});
+                } catch (_) {}
+                return userPresenceChannel;
+            } else {
+                try {
+                    client.removeChannel(existing);
+                } catch (_) {}
+            }
+        }
     }
 
     try {
@@ -2133,17 +2175,22 @@ function supabaseInitPresence(currentUser, onChangeCallback) {
             }
         });
 
-        userPresenceChannel
-            .on('presence', { event: 'sync' }, () => {
-                syncPresenceStateFromChannel();
-            })
-            .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-                syncPresenceStateFromChannel();
-            })
-            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-                syncPresenceStateFromChannel();
-            })
-            .subscribe(async (status) => {
+        // CRITICAL FIX: Only attach callbacks if the channel is not yet subscribed
+        if (!userPresenceChannel.state || userPresenceChannel.state === 'closed') {
+            userPresenceChannel
+                .on('presence', { event: 'sync' }, () => {
+                    syncPresenceStateFromChannel();
+                })
+                .on('presence', { event: 'join' }, () => {
+                    syncPresenceStateFromChannel();
+                })
+                .on('presence', { event: 'leave' }, () => {
+                    syncPresenceStateFromChannel();
+                });
+        }
+
+        if (!userPresenceChannel.state || userPresenceChannel.state === 'closed') {
+            userPresenceChannel.subscribe(async (status) => {
                 console.info('[Supabase Realtime Presence] Status:', status);
                 if (status === 'SUBSCRIBED' && userPresenceChannel) {
                     try {
@@ -2159,6 +2206,14 @@ function supabaseInitPresence(currentUser, onChangeCallback) {
                     }
                 }
             });
+        } else if (userPresenceChannel.state === 'joined') {
+            userPresenceChannel.track({
+                userId: userId,
+                email: userEmail,
+                name: currentUser.name || '',
+                onlineAt: Date.now()
+            }).catch(() => {});
+        }
 
         return userPresenceChannel;
     } catch (e) {
@@ -2173,15 +2228,28 @@ function supabaseInitPresence(currentUser, onChangeCallback) {
 async function supabaseLeavePresence() {
     const client = getSupabaseClient();
     if (userPresenceChannel) {
+        const chan = userPresenceChannel;
+        userPresenceChannel = null;
         try {
-            await userPresenceChannel.untrack();
+            await chan.untrack();
         } catch (e) {}
         try {
             if (client && typeof client.removeChannel === 'function') {
-                client.removeChannel(userPresenceChannel);
+                await client.removeChannel(chan);
             }
         } catch (e) {}
-        userPresenceChannel = null;
+    }
+    // Also sweep any lingering presence channel references
+    if (client && typeof client.getChannels === 'function') {
+        const lingering = client.getChannels().filter(ch => 
+            ch.topic === 'realtime:presence:community' || 
+            ch.topic === 'realtime:realtime:presence:community'
+        );
+        for (const ch of lingering) {
+            try {
+                await client.removeChannel(ch);
+            } catch (_) {}
+        }
     }
     ONLINE_USERS_SET.clear();
     notifyPresenceListeners();
