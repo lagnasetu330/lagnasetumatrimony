@@ -1010,9 +1010,9 @@
 
         .phone-device {
             width: 100%;
-            max-width: 300px;
-            height: 590px;
-            background: #110D1A;
+            max-width: 295px;
+            height: 580px;
+            background: #1E172B;
             border: 9px solid #1E172B;
             border-radius: 40px;
             box-shadow: 0 24px 60px -15px rgba(90, 24, 154, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.25);
@@ -1023,96 +1023,15 @@
             z-index: 1;
         }
 
-        .phone-notch {
-            width: 90px;
-            height: 18px;
-            background: #1E172B;
-            border-radius: 0 0 12px 12px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            z-index: 20;
-            flex-shrink: 0;
-        }
-
-        .phone-speaker {
-            width: 32px;
-            height: 3px;
-            background: #3B3349;
-            border-radius: 2px;
-        }
-
-        .phone-lens {
-            width: 6px;
-            height: 6px;
-            background: #0E223D;
-            border-radius: 50%;
-        }
-
-        .phone-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 3px 16px 4px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #fff;
-            background: #110D1A;
-            flex-shrink: 0;
-        }
-
-        .phone-status-icons {
-            display: flex;
-            gap: 5px;
-            font-size: 10px;
-        }
-
-        .phone-screen-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 7px 12px;
-            background: #FAF8FD;
-            border-bottom: 1px solid #ECE5F5;
-            flex-shrink: 0;
-        }
-
-        .phone-brand-mini {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .phone-brand-mini img {
-            width: 20px;
-            height: 20px;
-            border-radius: 5px;
-        }
-
-        .phone-brand-mini span {
-            font-size: 12px;
-            font-weight: 800;
-            color: var(--primary-dark);
-            font-family: var(--font-display);
-        }
-
-        .phone-step-pill {
-            font-size: 10px;
-            font-weight: 800;
-            background: var(--primary-light);
-            color: var(--primary);
-            padding: 2px 8px;
-            border-radius: 10px;
-        }
-
-        /* Phone Viewport */
+        /* Phone Viewport - Full Screen inside phone border */
         .phone-viewport {
+            width: 100%;
+            height: 100%;
             flex-grow: 1;
             position: relative;
             background: #FDFBFE;
             overflow: hidden;
+            border-radius: 31px;
         }
 
         .phone-slide {
@@ -1176,14 +1095,7 @@
             50% { transform: translateY(3px); }
         }
 
-        .phone-home-indicator {
-            width: 90px;
-            height: 4px;
-            background: #3B3349;
-            border-radius: 3px;
-            margin: 6px auto;
-            flex-shrink: 0;
-        }
+
 
         /* Slider Controls: Arrows + Dots */
         .hiw-slider-controls {
@@ -1350,8 +1262,14 @@
             }
 
             .phone-device {
-                max-width: 290px;
-                height: 520px;
+                max-width: 275px;
+                height: 540px;
+                border: 8px solid #1E172B;
+                border-radius: 38px;
+            }
+
+            .phone-viewport {
+                border-radius: 30px;
             }
 
             /* 2. Middle: Info Card (Title & Paragraph) */
@@ -2574,32 +2492,7 @@
                         <div class="phone-mockup-wrapper">
                             <div class="phone-ambient-glow"></div>
                             <div class="phone-device" id="phoneDevice" aria-label="Lagna Setu Screen Walkthrough">
-                                <!-- Top Notch & Camera -->
-                                <div class="phone-notch">
-                                    <div class="phone-speaker"></div>
-                                    <div class="phone-lens"></div>
-                                </div>
-
-                                <!-- Status Bar -->
-                                <div class="phone-status">
-                                    <span>9:41 AM</span>
-                                    <div class="phone-status-icons">
-                                        <i class="fa-solid fa-signal"></i>
-                                        <i class="fa-solid fa-wifi"></i>
-                                        <i class="fa-solid fa-battery-full"></i>
-                                    </div>
-                                </div>
-
-                                <!-- Top Screen Header Identifier -->
-                                <div class="phone-screen-header">
-                                    <div class="phone-brand-mini">
-                                        <img src="images/lagna_setu_logo.png" alt="Lagna Setu">
-                                        <span>Lagna Setu</span>
-                                    </div>
-                                    <span class="phone-step-pill" id="phoneStepBadge">Screen 1 of 6</span>
-                                </div>
-
-                                <!-- Viewport holding real screenshots -->
+                                <!-- Viewport holding real screenshots in full screen -->
                                 <div class="phone-viewport" id="phoneViewport">
                                     <!-- Screen 1: Welcome -->
                                     <div class="phone-slide active" data-slide="1">
@@ -2634,8 +2527,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Phone Home Indicator -->
-                                <div class="phone-home-indicator"></div>
+
                             </div>
                         </div>
 
