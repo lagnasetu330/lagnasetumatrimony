@@ -1010,8 +1010,8 @@
 
         .phone-device {
             width: 100%;
-            max-width: 295px;
-            height: 580px;
+            max-width: 300px;
+            height: 605px;
             background: #1E172B;
             border: 9px solid #1E172B;
             border-radius: 40px;
@@ -1023,15 +1023,55 @@
             z-index: 1;
         }
 
-        /* Phone Viewport - Full Screen inside phone border */
+        /* Top Screen Header with Step Indicator */
+        .phone-screen-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 14px;
+            background: #FAF8FD;
+            border-bottom: 1px solid #ECE5F5;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .phone-brand-mini {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .phone-brand-mini img {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            object-fit: contain;
+        }
+
+        .phone-brand-mini span {
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--primary-dark);
+            font-family: var(--font-display);
+        }
+
+        .phone-step-pill {
+            font-size: 10px;
+            font-weight: 800;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 3px 9px;
+            border-radius: 10px;
+            letter-spacing: 0.02em;
+        }
+
+        /* Phone Viewport */
         .phone-viewport {
             width: 100%;
-            height: 100%;
             flex-grow: 1;
             position: relative;
             background: #FDFBFE;
             overflow: hidden;
-            border-radius: 31px;
         }
 
         .phone-slide {
@@ -1262,14 +1302,10 @@
             }
 
             .phone-device {
-                max-width: 275px;
-                height: 540px;
+                max-width: 280px;
+                height: 550px;
                 border: 8px solid #1E172B;
                 border-radius: 38px;
-            }
-
-            .phone-viewport {
-                border-radius: 30px;
             }
 
             /* 2. Middle: Info Card (Title & Paragraph) */
@@ -2492,7 +2528,16 @@
                         <div class="phone-mockup-wrapper">
                             <div class="phone-ambient-glow"></div>
                             <div class="phone-device" id="phoneDevice" aria-label="Lagna Setu Screen Walkthrough">
-                                <!-- Viewport holding real screenshots in full screen -->
+                                <!-- Top Screen Header with Step Indicator -->
+                                <div class="phone-screen-header">
+                                    <div class="phone-brand-mini">
+                                        <img src="images/lagna_setu_logo.png" alt="Lagna Setu">
+                                        <span>Lagna Setu</span>
+                                    </div>
+                                    <span class="phone-step-pill" id="phoneStepBadge">Step 1 of 6</span>
+                                </div>
+
+                                <!-- Viewport holding real screenshots -->
                                 <div class="phone-viewport" id="phoneViewport">
                                     <!-- Screen 1: Welcome -->
                                     <div class="phone-slide active" data-slide="1">
@@ -3184,7 +3229,7 @@
 
                 // Update Step Badge inside Phone Header
                 if (phoneStepBadge) {
-                    phoneStepBadge.textContent = 'Screen ' + currentSlide + ' of ' + totalSlides;
+                    phoneStepBadge.textContent = 'Step ' + currentSlide + ' of ' + totalSlides;
                 }
             }
 
