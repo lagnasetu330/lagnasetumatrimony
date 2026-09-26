@@ -877,7 +877,7 @@ function initInactivityTimer(customTimeoutMs) {
                 } catch (_) {}
                 if (typeof go === 'function') go('scr-welcome', true);
                 if (typeof showToast === 'function') {
-                    showToast('૧૦ મિનિટથી કોઈ પ્રવૃત્તિ ન હોવાથી તમે આપમેળે લૉગઆઉટ થયા છો. / Logged out due to 10 minutes of inactivity.');
+                    showToast('Logged out due to 10 minutes of inactivity.');
                 }
             }
         }

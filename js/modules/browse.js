@@ -585,7 +585,7 @@ function syncGenderUI() {
     if (isBoy) {
         state.tab = 'girls';
         state.filters.gender = 'girls';
-        if (browseTitle) browseTitle.textContent = 'Browse Brides (કન્યાઓ)';
+        if (browseTitle) browseTitle.textContent = 'Browse Brides';
         if (browseToggle) browseToggle.style.display = 'none'; // Uncluttered: only opposite gender
         if (btnGirls && btnBoys) {
             btnGirls.classList.add('active');
@@ -594,7 +594,7 @@ function syncGenderUI() {
     } else if (isGirl) {
         state.tab = 'boys';
         state.filters.gender = 'boys';
-        if (browseTitle) browseTitle.textContent = 'Browse Grooms (વરરાજા)';
+        if (browseTitle) browseTitle.textContent = 'Browse Grooms';
         if (browseToggle) browseToggle.style.display = 'none'; // Uncluttered: only opposite gender
         if (btnGirls && btnBoys) {
             btnBoys.classList.add('active');

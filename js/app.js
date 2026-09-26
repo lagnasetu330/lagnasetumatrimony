@@ -7,7 +7,7 @@ function initApp() {
         window._sessionTimedOutOnBoot = false;
         setTimeout(() => {
             if (typeof showToast === 'function') {
-                showToast('૧૦ મિનિટથી કોઈ પ્રવૃત્તિ ન હોવાથી તમે આપમેળે લૉગઆઉટ થયા છો. / Logged out due to 10 minutes of inactivity.');
+                showToast('Logged out due to 10 minutes of inactivity.');
             }
         }, 500);
     }

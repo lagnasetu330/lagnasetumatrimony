@@ -1114,7 +1114,7 @@ function doLogout(isTimeout = false) {
     }
 
     if (isTimeout) {
-        showToast('૧૦ મિનિટથી કોઈ પ્રવૃત્તિ ન હોવાથી તમે આપમેળે લૉગઆઉટ થયા છો. / Logged out due to 10 minutes of inactivity.');
+        showToast('Logged out due to 10 minutes of inactivity.');
     } else {
         showToast('You have been logged out successfully');
     }
