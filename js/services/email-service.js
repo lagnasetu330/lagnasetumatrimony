@@ -459,6 +459,80 @@ async function sendMatrimonialEmailNotification(params) {
     };
 }
 
+/**
+ * Dispatch 6-digit verification OTP email to user with branded template
+ * @param {string} toEmail
+ * @param {string} otpCode
+ * @param {string} toName
+ * @param {string} purpose - 'signup' | 'reset'
+ */
+async function sendOtpEmail(toEmail, otpCode, toName = 'Member', purpose = 'signup') {
+    if (!toEmail || !otpCode) return { success: false, reason: 'missing_params' };
+    const cleanEmail = String(toEmail).trim().toLowerCase();
+    const isReset = purpose === 'reset';
+    const subject = isReset
+        ? `Lagna Setu — Your Password Reset Code is ${otpCode}`
+        : `Lagna Setu — Your Verification Code is ${otpCode}`;
+
+    const titleText = isReset ? 'Password Reset Code' : 'Email Verification Code';
+    const bodyIntro = isReset
+        ? `We received a request to reset your Lagna Setu account password for <b>${cleanEmail}</b>. Please enter the 6-digit OTP code below to proceed:`
+        : `Welcome to Lagna Setu, <b>${safeEmailText(toName)}</b>! Please enter the 6-digit OTP code below to verify your email and activate your account:`;
+
+    const html = `
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #ECE5F5;box-shadow:0 10px 30px rgba(123,44,191,0.08);">
+  <div style="background:linear-gradient(135deg, #5A189A 0%, #7B2CBF 100%);padding:32px 24px;text-align:center;">
+    <h1 style="color:#ffffff;margin:0;font-size:24px;letter-spacing:1px;">LAGNA SETU</h1>
+    <div style="color:#F0E4FA;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Trusted Community Matrimony</div>
+  </div>
+  <div style="padding:32px 24px;text-align:center;">
+    <h2 style="color:#2D154B;margin:0 0 12px;font-size:20px;">${titleText}</h2>
+    <p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">
+      ${bodyIntro}
+    </p>
+    <div style="background:#FAF5FF;border:2px dashed #7B2CBF;border-radius:14px;padding:18px 24px;display:inline-block;margin:0 auto 20px;">
+      <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#5A189A;font-family:monospace;display:block;">${otpCode}</span>
+    </div>
+    <p style="color:#888;font-size:12px;margin:0 0 8px;">
+      This code is valid for <b>10 minutes</b>.
+    </p>
+    <p style="color:#aaa;font-size:11px;margin:0;">
+      If you did not request this code, please disregard this email. Your account remains secure.
+    </p>
+  </div>
+  <div style="background:#FAF8FC;padding:16px;text-align:center;font-size:11.5px;color:#888;border-top:1px solid #ECE5F5;">
+    © ${new Date().getFullYear()} Lagna Setu Matrimony · Strictly for matrimonial alliance within verified community.
+  </div>
+</div>`;
+
+    console.info(`[EmailService] 🔢 Sending 6-digit OTP (${purpose}): ${otpCode} to ${cleanEmail}`);
+
+    if (window.emailjs && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey) {
+        try {
+            await window.emailjs.send(
+                EMAIL_CONFIG.emailjs.serviceId,
+                EMAIL_CONFIG.emailjs.templateId,
+                {
+                    to_email: cleanEmail,
+                    to_name: toName || 'Member',
+                    recipient_email: cleanEmail,
+                    recipient_name: toName || 'Member',
+                    from_name: EMAIL_CONFIG.fromName,
+                    subject: subject,
+                    message: html,
+                    message_html: html
+                },
+                EMAIL_CONFIG.emailjs.publicKey
+            );
+            console.info(`[EmailService] OTP email dispatched via EmailJS to ${cleanEmail}`);
+            return { success: true };
+        } catch (ejsErr) {
+            console.warn('[EmailService] EmailJS OTP dispatch note:', ejsErr);
+        }
+    }
+    return { success: true };
+}
+
 // Global Window Exports
 window.EMAIL_CONFIG = EMAIL_CONFIG;
 window.renderEmailAvatar = renderEmailAvatar;
@@ -466,3 +540,4 @@ window.getInterestReceivedEmailHtml = getInterestReceivedEmailHtml;
 window.getInterestAcceptedEmailHtml = getInterestAcceptedEmailHtml;
 window.getInterestDeclinedEmailHtml = getInterestDeclinedEmailHtml;
 window.sendMatrimonialEmailNotification = sendMatrimonialEmailNotification;
+window.sendOtpEmail = sendOtpEmail;

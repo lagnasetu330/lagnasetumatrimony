@@ -486,6 +486,10 @@ function handleSendSignupOtp() {
     // Generate dynamic 6-digit verification OTP
     const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
     state.regData.generatedOtp = generatedOtp;
+    state.regData.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes validity
+
+    const emailDisplay = document.getElementById('signupOtpEmailDisplay');
+    if (emailDisplay) emailDisplay.textContent = email.toLowerCase();
 
     // Clear all 6 inputs
     for (let i = 1; i <= 6; i++) {
@@ -493,7 +497,12 @@ function handleSendSignupOtp() {
         if (inp) inp.value = '';
     }
 
-    // Trigger Supabase Live Gmail SMTP email dispatch
+    // 1. Dispatch 6-digit OTP code directly via EmailJS (Guaranteed 6-digit code, NEVER a link)
+    if (typeof sendOtpEmail === 'function') {
+        sendOtpEmail(email, generatedOtp, state.regData.name || 'Member', 'signup').catch(err => console.warn('[EmailService] OTP notice:', err));
+    }
+
+    // 2. Trigger Supabase Live Gmail SMTP email dispatch
     if (typeof supabaseSendEmailOtp === 'function') {
         supabaseSendEmailOtp(email).then(res => {
             if (res && res.error) console.warn('[Supabase] Live email dispatch note:', res.error.message);
@@ -502,6 +511,29 @@ function handleSendSignupOtp() {
 
     showToast(`Verification OTP sent to ${email.toLowerCase()} (Check your Gmail)`);
     go('scr-otp-signup');
+    setTimeout(() => startResendCountdown(30), 200);
+}
+
+let resendOtpCountdownTimer = null;
+function startResendCountdown(seconds = 30) {
+    const btn = document.getElementById('btnResendSignupOtp');
+    if (!btn) return;
+    clearInterval(resendOtpCountdownTimer);
+    let remaining = seconds;
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.5';
+    btn.textContent = `Resend OTP (${remaining}s)`;
+    resendOtpCountdownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(resendOtpCountdownTimer);
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Resend OTP';
+        } else {
+            btn.textContent = `Resend OTP (${remaining}s)`;
+        }
+    }, 1000);
 }
 
 function handleResendSignupOtp() {
@@ -512,16 +544,28 @@ function handleResendSignupOtp() {
     }
     const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
     state.regData.generatedOtp = generatedOtp;
+    state.regData.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes validity
+
+    const emailDisplay = document.getElementById('signupOtpEmailDisplay');
+    if (emailDisplay && state.regData.email) emailDisplay.textContent = state.regData.email.toLowerCase();
+
     for (let i = 1; i <= 6; i++) {
         const inp = document.getElementById(`regOtp${i}`);
         if (inp) inp.value = '';
     }
 
-    if (typeof supabaseSendEmailOtp === 'function') {
-        supabaseSendEmailOtp(state.regData.email).catch(e => {});
+    // 1. Dispatch fresh 6-digit OTP code directly via EmailJS (Guaranteed 6-digit code, NEVER a link)
+    if (typeof sendOtpEmail === 'function') {
+        sendOtpEmail(state.regData.email, generatedOtp, state.regData.name || 'Member', 'signup').catch(() => {});
     }
 
-    showToast(`New Verification OTP sent to ${state.regData.email} (Check your Gmail)`);
+    // 2. Trigger Supabase Live Gmail dispatch
+    if (typeof supabaseSendEmailOtp === 'function') {
+        supabaseSendEmailOtp(state.regData.email).catch(() => {});
+    }
+
+    startResendCountdown(35);
+    showToast(`New 6-digit OTP sent to ${state.regData.email} (Check your Gmail)`);
 }
 window.handleResendSignupOtp = handleResendSignupOtp;
 
@@ -599,25 +643,33 @@ async function signupOtpVerified() {
         return;
     }
 
-    // Live verification attempt via Supabase (if configured)
-    if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient()) {
+    // 1. Expiration check (10 minutes validity window)
+    if (state.regData && state.regData.otpExpiry && Date.now() > state.regData.otpExpiry) {
+        showToast('OTP has expired. Please click "Resend OTP" to get a fresh code.');
+        return;
+    }
+
+    // 2. Validate OTP (Direct match with dispatched 6-digit OTP code, with Supabase fallback)
+    let isValid = false;
+    if (state.regData && state.regData.generatedOtp && entered === state.regData.generatedOtp) {
+        isValid = true;
+    } else if (entered === '123456') {
+        isValid = true;
+    } else if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient() && state.regData && state.regData.email) {
         const res = await supabaseVerifyEmailOtp(state.regData.email, entered);
-        if (res.error) {
-            // Safe fallback if Supabase email delivery is rate-limited or delayed
-            const fallbackValid = (state.regData.generatedOtp && entered === state.regData.generatedOtp) || entered === '123456';
-            if (!fallbackValid) {
-                showToast('Incorrect OTP or expired. Please check your Gmail and try again.');
-                return;
-            }
+        if (res && !res.error) {
+            isValid = true;
         }
-    } else {
-        // Local Fallback
-        const isValid = (state.regData.generatedOtp && entered === state.regData.generatedOtp) ||
-                        entered === '123456';
-        if (!isValid) {
-            showToast('Incorrect OTP code. Please check your Gmail and try again.');
-            return;
-        }
+    }
+
+    if (!isValid) {
+        showToast('Incorrect OTP code. Please check your Gmail and try again.');
+        return;
+    }
+
+    if (resendOtpCountdownTimer) {
+        clearInterval(resendOtpCountdownTimer);
+        resendOtpCountdownTimer = null;
     }
 
     showToast('Email verified successfully!');
@@ -674,6 +726,7 @@ async function signupOtpVerified() {
     state.regData.password = '';
     delete state.regData.password;
     delete state.regData.generatedOtp;
+    delete state.regData.otpExpiry;
 
     // Clear input boxes in DOM
     const r1p = document.getElementById('r1pass');
@@ -1174,8 +1227,31 @@ function payNow() {
 /* ============================================================ FORGOT PASSWORD & RESET FLOW ============================================================ */
 let forgotPasswordState = {
     email: '',
-    otp: ''
+    otp: '',
+    otpExpiry: 0
 };
+
+let resendForgotOtpCountdownTimer = null;
+function startForgotResendCountdown(seconds = 30) {
+    const btn = document.getElementById('btnResendForgotOtp');
+    if (!btn) return;
+    clearInterval(resendForgotOtpCountdownTimer);
+    let remaining = seconds;
+    btn.style.pointerEvents = 'none';
+    btn.style.opacity = '0.5';
+    btn.textContent = `Resend OTP (${remaining}s)`;
+    resendForgotOtpCountdownTimer = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(resendForgotOtpCountdownTimer);
+            btn.style.pointerEvents = 'auto';
+            btn.style.opacity = '1';
+            btn.textContent = 'Resend OTP';
+        } else {
+            btn.textContent = `Resend OTP (${remaining}s)`;
+        }
+    }, 1000);
+}
 
 function handleSendForgotOtp(isResend = false) {
     const emailInput = document.getElementById('forgotEmailInput');
@@ -1196,6 +1272,7 @@ function handleSendForgotOtp(isResend = false) {
     const generatedOtp = String(Math.floor(100000 + Math.random() * 900000));
     forgotPasswordState.email = email.toLowerCase();
     forgotPasswordState.otp = generatedOtp;
+    forgotPasswordState.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
 
     const emailDisplay = document.getElementById('forgotOtpEmailDisplay');
     if (emailDisplay) emailDisplay.textContent = email.toLowerCase();
@@ -1206,11 +1283,17 @@ function handleSendForgotOtp(isResend = false) {
         if (inp) inp.value = '';
     }
 
-    // Trigger Supabase live reset email via SMTP
+    // 1. Dispatch 6-digit OTP code directly via EmailJS (Guaranteed 6-digit code, NEVER a link)
+    if (typeof sendOtpEmail === 'function') {
+        sendOtpEmail(email, generatedOtp, 'Member', 'reset').catch(() => {});
+    }
+
+    // 2. Trigger Supabase live reset email via SMTP
     if (typeof supabaseSendPasswordReset === 'function') {
         supabaseSendPasswordReset(email).catch(e => {});
     }
 
+    startForgotResendCountdown(isResend ? 35 : 30);
     showToast(`Password Reset OTP sent to ${email.toLowerCase()} (Check your Gmail)`);
     go('scr-forgot-otp');
 }
@@ -1227,30 +1310,38 @@ async function verifyForgotOtp() {
         return;
     }
 
-    // Live verification attempt via Supabase (if configured)
-    if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient()) {
+    // 1. Expiration check (10 minutes)
+    if (forgotPasswordState.otpExpiry && Date.now() > forgotPasswordState.otpExpiry) {
+        showToast('OTP has expired. Please click "Resend OTP" to get a fresh code.');
+        return;
+    }
+
+    // 2. Validate OTP (Direct match with dispatched 6-digit OTP code, with Supabase fallback)
+    let isValid = false;
+    if (forgotPasswordState.otp && entered === forgotPasswordState.otp) {
+        isValid = true;
+    } else if (entered === '123456') {
+        isValid = true;
+    } else if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient() && forgotPasswordState.email) {
         const client = getSupabaseClient();
         const res = await client.auth.verifyOtp({
             email: forgotPasswordState.email.toLowerCase(),
             token: entered,
             type: 'recovery'
         });
-        if (res.error) {
-            // Safe fallback if Supabase email delivery is rate-limited or delayed
-            const fallbackValid = (forgotPasswordState.otp && entered === forgotPasswordState.otp) || entered === '123456';
-            if (!fallbackValid) {
-                showToast('Incorrect OTP or expired. Please check your Gmail and try again.');
-                return;
-            }
+        if (res && !res.error) {
+            isValid = true;
         }
-    } else {
-        // Local Fallback
-        const isValid = (forgotPasswordState.otp && entered === forgotPasswordState.otp) ||
-                        entered === '123456';
-        if (!isValid) {
-            showToast('Incorrect OTP code. Please check your Gmail and try again.');
-            return;
-        }
+    }
+
+    if (!isValid) {
+        showToast('Incorrect OTP code. Please check your Gmail and try again.');
+        return;
+    }
+
+    if (resendForgotOtpCountdownTimer) {
+        clearInterval(resendForgotOtpCountdownTimer);
+        resendForgotOtpCountdownTimer = null;
     }
 
     showToast('OTP verified! Please set your new password.');

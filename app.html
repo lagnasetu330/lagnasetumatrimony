@@ -339,7 +339,7 @@
                     <input maxlength="1" inputmode="numeric" id="forgotOtp6" onkeyup="otpMove(this, event)">
                 </div>
                 <div class="p-muted" style="margin-bottom:22px;">Didn't get it? <span class="link-txt"
-                        onclick="handleSendForgotOtp(true)">Resend OTP</span></div>
+                        id="btnResendForgotOtp" onclick="handleSendForgotOtp(true)">Resend OTP</span></div>
                 <button class="btn btn-primary" onclick="verifyForgotOtp()"><i class="fa-solid fa-check"></i> Verify
                     &amp; Proceed</button>
             </div>
@@ -441,8 +441,8 @@
                     <i class="fa-solid fa-envelope-circle-check"></i>
                 </div>
                 <div class="h-display h-lg">Verify your email</div>
-                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit verification code to your registered Gmail
-                    address to activate your account.</p>
+                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit verification code to <b
+                        id="signupOtpEmailDisplay">your registered Gmail</b> (valid for 10 minutes).</p>
                 <div class="otp-boxes" onpaste="handleOtpPaste(event, 'regOtp')">
                     <input maxlength="1" inputmode="numeric" id="regOtp1" onkeyup="otpMove(this, event)"
                         autocomplete="one-time-code">
@@ -453,7 +453,7 @@
                     <input maxlength="1" inputmode="numeric" id="regOtp6" onkeyup="otpMove(this, event)">
                 </div>
                 <div class="p-muted" style="margin-bottom:24px;">Didn't get it? <span class="link-txt"
-                        onclick="handleResendSignupOtp()">Resend OTP</span></div>
+                        id="btnResendSignupOtp" onclick="handleResendSignupOtp()">Resend OTP</span></div>
                 <button class="btn btn-primary" onclick="signupOtpVerified()"><i class="fa-solid fa-check"></i> Verify
                     &amp; Complete Profile</button>
             </div>
@@ -2649,7 +2649,7 @@
     <script src="js/core/supabase-client.js?v=3.8"></script>
     <!-- EmailJS SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script src="js/services/email-service.js?v=3.5"></script>
+    <script src="js/services/email-service.js?v=3.6"></script>
     <script src="js/core/router.js?v=3.5"></script>
     <!-- Data Modules -->
     <script src="js/data/castes.js?v=3.5"></script>
@@ -2662,7 +2662,7 @@
     <script src="js/utils/cropper.js?v=3.5"></script>
     <script src="js/utils/datepicker.js?v=3.5"></script>
     <!-- Application Modules -->
-    <script src="js/modules/auth.js?v=3.6"></script>
+    <script src="js/modules/auth.js?v=3.7"></script>
     <script src="js/modules/browse.js?v=3.5"></script>
     <script src="js/modules/chat.js?v=3.5"></script>
     <script src="js/modules/profile.js?v=3.7"></script>
