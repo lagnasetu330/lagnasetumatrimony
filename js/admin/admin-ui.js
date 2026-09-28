@@ -199,10 +199,12 @@
         }
 
         function goBack() {
-            state.history.pop();
+            const current = state.history.pop();
             let prev = state.history[state.history.length - 1];
-            if (!prev || prev === 'scr-splash' || prev === 'scr-login') {
-                prev = 'scr-dashboard';
+            if (!prev || prev === 'scr-splash' || prev === 'scr-login' || prev === current) {
+                if (current === 'scr-userdetail') prev = 'scr-users';
+                else if (current === 'scr-interestdetail' || current === 'scr-chatmonitor') prev = 'scr-interests';
+                else prev = 'scr-dashboard';
             }
             go(prev, true);
         }
@@ -276,13 +278,26 @@
                 const savedHelpTab = sessionStorage.getItem('admin_helpTab');
                 if (savedHelpTab) state.helpTab = savedHelpTab;
                 const savedUserId = sessionStorage.getItem('admin_activeUserId');
-                if (savedUserId) state.activeUserId = parseInt(savedUserId);
+                if (savedUserId) {
+                    state.activeUserId = !isNaN(Number(savedUserId)) && Number(savedUserId) > 0 ? Number(savedUserId) : savedUserId;
+                }
                 const savedReportId = sessionStorage.getItem('admin_activeReportId');
-                if (savedReportId) state.activeReportId = parseInt(savedReportId);
+                if (savedReportId) {
+                    state.activeReportId = !isNaN(Number(savedReportId)) && Number(savedReportId) > 0 ? Number(savedReportId) : savedReportId;
+                }
                 const savedPayId = sessionStorage.getItem('admin_activePayId');
                 if (savedPayId) state.activePayId = savedPayId;
                 const savedInterestId = sessionStorage.getItem('admin_activeInterestId');
-                if (savedInterestId) state.activeInterestId = parseInt(savedInterestId);
+                if (savedInterestId) {
+                    state.activeInterestId = !isNaN(Number(savedInterestId)) && Number(savedInterestId) > 0 ? Number(savedInterestId) : savedInterestId;
+                }
+
+                // If target screen is userdetail or interestdetail, verify we have the required ID; if not, fallback to parent screen
+                if (targetScreen === 'scr-userdetail' && !state.activeUserId) {
+                    targetScreen = 'scr-users';
+                } else if (targetScreen === 'scr-interestdetail' && !state.activeInterestId) {
+                    targetScreen = 'scr-interests';
+                }
 
                 // Switch screen
                 document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -295,12 +310,20 @@
                 // Render current screen
                 if (targetScreen === 'scr-dashboard') renderDashboard();
                 else if (targetScreen === 'scr-users') renderUsers();
-                else if (targetScreen === 'scr-userdetail' && state.activeUserId) {
-                    if (typeof openUserDetail === 'function') openUserDetail(state.activeUserId);
+                else if (targetScreen === 'scr-userdetail') {
+                    if (typeof openUserDetail === 'function' && state.activeUserId) {
+                        openUserDetail(state.activeUserId);
+                    } else if (typeof renderUsers === 'function') {
+                        renderUsers();
+                    }
                 }
                 else if (targetScreen === 'scr-interests') renderInterests();
-                else if (targetScreen === 'scr-interestdetail' && state.activeInterestId) {
-                    if (typeof openInterestDetail === 'function') openInterestDetail(state.activeInterestId);
+                else if (targetScreen === 'scr-interestdetail') {
+                    if (typeof openInterestDetail === 'function' && state.activeInterestId) {
+                        openInterestDetail(state.activeInterestId);
+                    } else if (typeof renderInterests === 'function') {
+                        renderInterests();
+                    }
                 }
                 else if (targetScreen === 'scr-chatmonitor') {
                     const savedUserA = sessionStorage.getItem('admin_chatUserA') || (state.activeInterestId || 1);
@@ -971,12 +994,21 @@
         function refreshCurrentScreen() {
             const active = document.querySelector('.screen.active');
             if (!active) return;
-            if (active.id === 'scr-users') renderUsers();
-            if (active.id === 'scr-dashboard') renderDashboard();
-            if (active.id === 'scr-userdetail') openUserDetail(state.activeUserId);
-            if (active.id === 'scr-interests') renderInterests();
-            if (active.id === 'scr-interestdetail') openInterestDetail(state.activeInterestId);
+            if (active.id === 'scr-users' && typeof renderUsers === 'function') renderUsers();
+            if (active.id === 'scr-dashboard' && typeof renderDashboard === 'function') renderDashboard();
+            if (active.id === 'scr-userdetail' && typeof openUserDetail === 'function') {
+                const uid = state.activeUserId || sessionStorage.getItem('admin_activeUserId');
+                if (uid) openUserDetail(uid);
+            }
+            if (active.id === 'scr-interests' && typeof renderInterests === 'function') renderInterests();
+            if (active.id === 'scr-interestdetail' && typeof openInterestDetail === 'function') {
+                const iid = state.activeInterestId || sessionStorage.getItem('admin_activeInterestId');
+                if (iid) openInterestDetail(iid);
+            }
+            if (active.id === 'scr-payments' && typeof renderPayments === 'function') renderPayments();
+            if (active.id === 'scr-reports' && typeof renderReports === 'function') renderReports();
         }
+        window.refreshCurrentScreen = refreshCurrentScreen;
 
         /* Suspend / delete */
         function openSuspendModal(id) {

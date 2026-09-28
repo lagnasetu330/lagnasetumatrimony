@@ -136,10 +136,49 @@ window.escapeHtml = escapeHtmlAdmin;
         }
 
         function openUserDetail(id) {
+            if (!id && id !== 0) return;
             state.activeUserId = id;
-            const u = findUser(id);
-            if (!u) return;
+            try { sessionStorage.setItem('admin_activeUserId', String(id)); } catch(_) {}
             const el = document.getElementById('userDetailContent');
+            const u = typeof findUser === 'function' ? findUser(id) : (window.findUser ? window.findUser(id) : null);
+            if (!u) {
+                // If users have not arrived from Supabase yet (initial page load / refresh)
+                if (!Array.isArray(USERS) || USERS.length === 0) {
+                    if (el) {
+                        el.innerHTML = `
+                            <div class="center-txt" style="padding:60px 20px;">
+                                <div style="width:48px;height:48px;border-radius:50%;border:3px solid rgba(123,44,191,0.18);border-top-color:var(--primary);animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+                                <div style="font-weight:700;font-size:15px;color:var(--text);">Loading member profile...</div>
+                                <div class="p-muted" style="font-size:13px;margin-top:4px;">Fetching live details from database...</div>
+                            </div>
+                        `;
+                    }
+                    if (typeof go === 'function' && !document.getElementById('scr-userdetail')?.classList.contains('active')) {
+                        go('scr-userdetail');
+                    }
+                    return;
+                }
+                // If users have arrived from Supabase and this profile doesn't exist
+                if (el) {
+                    el.innerHTML = `
+                        <div class="card center-txt" style="padding:40px 20px;margin-top:20px;border-radius:18px;">
+                            <div style="width:60px;height:60px;border-radius:50%;background:rgba(230,57,70,0.1);color:var(--error);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;">
+                                <i class="fa-solid fa-user-slash"></i>
+                            </div>
+                            <div style="font-size:17px;font-weight:800;color:var(--text);">Member Profile Not Available</div>
+                            <p class="p-muted" style="margin:8px auto 20px;font-size:13px;max-width:320px;">This account might have been deleted, suspended, or does not exist.</p>
+                            <button class="btn btn-primary" onclick="go('scr-users', true)" style="display:inline-flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-arrow-left"></i> Back to Members List
+                            </button>
+                        </div>
+                    `;
+                }
+                if (typeof go === 'function' && !document.getElementById('scr-userdetail')?.classList.contains('active')) {
+                    go('scr-userdetail');
+                }
+                return;
+            }
+            if (!el) return;
             const isGirl = u.gender === 'girls' || u.gender === 'Girl';
             const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
             const statusBadge = u.accountStatus === 'active' ? '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active Account</span>' : '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>';
@@ -279,7 +318,9 @@ window.escapeHtml = escapeHtmlAdmin;
     <div class="section-label">Interests & Matches <span class="sl-action" onclick="setInterestTab('pending');go('scr-interests')">View all</span></div>
     <div id="userInterestsWrap"></div>
 `;
-            go('scr-userdetail');
+            if (typeof go === 'function' && !document.getElementById('scr-userdetail')?.classList.contains('active')) {
+                go('scr-userdetail');
+            }
             renderUserInterestsMini(u.id);
         }
 
@@ -348,21 +389,54 @@ window.escapeHtml = escapeHtmlAdmin;
         }
 
         function openInterestDetail(interestId) {
+            if (!interestId && interestId !== 0) return;
             state.activeInterestId = interestId;
-            const i = INTERESTS.find(x => x.id === interestId);
-            if (!i) return;
-            const from = findUser(i.fromUserId) || {
+            try { sessionStorage.setItem('admin_activeInterestId', String(interestId)); } catch(_) {}
+            const el = document.getElementById('interestDetailContent');
+            const i = Array.isArray(INTERESTS) ? INTERESTS.find(x => String(x.id) === String(interestId)) : null;
+            if (!i) {
+                if (!Array.isArray(INTERESTS) || INTERESTS.length === 0) {
+                    if (el) {
+                        el.innerHTML = `
+                            <div class="center-txt" style="padding:60px 20px;">
+                                <div style="width:48px;height:48px;border-radius:50%;border:3px solid rgba(123,44,191,0.18);border-top-color:var(--primary);animation:spin 0.8s linear infinite;margin:0 auto 16px;"></div>
+                                <div style="font-weight:700;font-size:15px;color:var(--text);">Loading request details...</div>
+                                <div class="p-muted" style="font-size:13px;margin-top:4px;">Fetching live details from database...</div>
+                            </div>
+                        `;
+                    }
+                    if (typeof go === 'function' && !document.getElementById('scr-interestdetail')?.classList.contains('active')) {
+                        go('scr-interestdetail');
+                    }
+                    return;
+                }
+                if (el) {
+                    el.innerHTML = `
+                        <div class="card center-txt" style="padding:40px 20px;margin-top:20px;border-radius:18px;">
+                            <div style="font-size:17px;font-weight:800;color:var(--text);">Request Not Available</div>
+                            <p class="p-muted" style="margin:8px auto 20px;font-size:13px;">This interest request may have been removed or does not exist.</p>
+                            <button class="btn btn-primary" onclick="go('scr-interests', true)" style="display:inline-flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-arrow-left"></i> Back to Interests
+                            </button>
+                        </div>
+                    `;
+                }
+                if (typeof go === 'function' && !document.getElementById('scr-interestdetail')?.classList.contains('active')) {
+                    go('scr-interestdetail');
+                }
+                return;
+            }
+            const from = (typeof findUser === 'function' ? findUser(i.fromUserId) : null) || {
                 id: i.fromUserId,
                 name: i.senderName || ('Member #' + i.fromUserId),
                 img: i.senderPhoto || 'images/default_avatar.png'
             };
-            const to = findUser(i.toUserId) || {
+            const to = (typeof findUser === 'function' ? findUser(i.toUserId) : null) || {
                 id: i.toUserId,
                 name: i.receiverName || ('Member #' + i.toUserId),
                 img: i.receiverPhoto || 'images/default_avatar.png'
             };
 
-            const el = document.getElementById('interestDetailContent');
             if (!el) return;
             el.innerHTML = `
     <div class="center-txt" style="margin-bottom:18px;">
@@ -397,7 +471,9 @@ window.escapeHtml = escapeHtmlAdmin;
 
     <button class="btn btn-ghost" style="margin-top:18px;" onclick="goBack()"><i class="fa-solid fa-arrow-left"></i> Back to list</button>
     `;
-            go('scr-interestdetail');
+            if (typeof go === 'function' && !document.getElementById('scr-interestdetail')?.classList.contains('active')) {
+                go('scr-interestdetail');
+            }
         }
 
         async function openChatMonitor(userIdA, userIdB, silentRefresh = false) {
@@ -518,6 +594,7 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!p) return;
             const u = findUser(p.userId);
             state.activePayId = txnId;
+            try { sessionStorage.setItem('admin_activePayId', String(txnId)); } catch(_) {}
 
             const modalBody = document.getElementById('payDetailBody');
             if (modalBody) {

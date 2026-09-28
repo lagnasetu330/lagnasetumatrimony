@@ -334,6 +334,10 @@ async function syncAdminDataFromSupabase() {
                 window.USERS = USERS;
                 if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
                 if (typeof renderDashboard === 'function') renderDashboard();
+                const activeEl = document.querySelector('.screen.active');
+                if (activeEl && activeEl.id === 'scr-userdetail' && state && (state.activeUserId || sessionStorage.getItem('admin_activeUserId')) && typeof openUserDetail === 'function') {
+                    openUserDetail(state.activeUserId || sessionStorage.getItem('admin_activeUserId'));
+                }
             }
         }
 
@@ -356,6 +360,10 @@ async function syncAdminDataFromSupabase() {
                 window.INTERESTS = INTERESTS;
                 if (typeof renderInterests === 'function' && document.getElementById('interestList')) renderInterests();
                 if (typeof renderDashboard === 'function') renderDashboard();
+                const activeEl = document.querySelector('.screen.active');
+                if (activeEl && activeEl.id === 'scr-interestdetail' && state && (state.activeInterestId || sessionStorage.getItem('admin_activeInterestId')) && typeof openInterestDetail === 'function') {
+                    openInterestDetail(state.activeInterestId || sessionStorage.getItem('admin_activeInterestId'));
+                }
             }
         }
 
@@ -406,6 +414,13 @@ async function syncAdminDataFromSupabase() {
 
         // ── NOTIFS (generated from live DB data in memory) ────────────────────
         syncAdminNotifsFromDatabase();
+
+        // Refresh active screen with freshest database state
+        if (typeof refreshCurrentScreen === 'function') {
+            refreshCurrentScreen();
+        } else if (typeof window.refreshCurrentScreen === 'function') {
+            window.refreshCurrentScreen();
+        }
     } catch (err) {
         console.warn('[Admin] Supabase sync notice:', err);
     } finally {
