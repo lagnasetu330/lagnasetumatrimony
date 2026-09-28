@@ -466,31 +466,38 @@ async function sendOtpEmail(toEmail, otpCode, toName = 'Member', purpose = 'sign
         ? `We received a request to reset your Lagna Setu account password for <b>${cleanEmail}</b>. Please enter the 6-digit OTP code below to proceed:`
         : `Welcome to Lagna Setu, <b>${safeEmailText(toName)}</b>! Please enter the 6-digit OTP code below to verify your email and activate your account:`;
 
-    const html = `
-<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;max-width:560px;margin:0 auto;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #ECE5F5;box-shadow:0 10px 30px rgba(123,44,191,0.08);">
-  <div style="background:linear-gradient(135deg, #5A189A 0%, #7B2CBF 100%);padding:32px 24px;text-align:center;">
-    <h1 style="color:#ffffff;margin:0;font-size:24px;letter-spacing:1px;">LAGNA SETU</h1>
-    <div style="color:#F0E4FA;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;margin-top:4px;">Trusted Community Matrimony</div>
-  </div>
-  <div style="padding:32px 24px;text-align:center;">
-    <h2 style="color:#2D154B;margin:0 0 12px;font-size:20px;">${titleText}</h2>
-    <p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">
-      ${bodyIntro}
-    </p>
-    <div style="background:#FAF5FF;border:2px dashed #7B2CBF;border-radius:14px;padding:18px 24px;display:inline-block;margin:0 auto 20px;">
-      <span style="font-size:36px;font-weight:900;letter-spacing:10px;color:#5A189A;font-family:monospace;display:block;">${otpCode}</span>
-    </div>
-    <p style="color:#888;font-size:12px;margin:0 0 8px;">
-      This code is valid for <b>10 minutes</b>.
-    </p>
-    <p style="color:#aaa;font-size:11px;margin:0;">
-      If you did not request this code, please disregard this email. Your account remains secure.
-    </p>
-  </div>
-  <div style="background:#FAF8FC;padding:16px;text-align:center;font-size:11.5px;color:#888;border-top:1px solid #ECE5F5;">
-    © ${new Date().getFullYear()} Lagna Setu Matrimony · Strictly for matrimonial alliance within verified community.
-  </div>
-</div>`;
+    const otpBody = `
+      <h2 style="margin: 0 0 10px; font-size: 18px; font-weight: 700; color: #202124;">
+        ${titleText}
+      </h2>
+      <p style="margin: 0 0 22px; font-size: 14.5px; line-height: 1.6; color: #5F5B67;">
+        ${bodyIntro}
+      </p>
+
+      <!-- OTP CARD -->
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FAF8FC; border: 1px solid #ECE5F5; border-radius: 14px; margin: 0 0 22px;">
+        <tr>
+          <td align="center" style="padding: 24px 16px;">
+            <div style="font-size: 11px; font-weight: 700; color: #7B2CBF; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px;">
+              ONE-TIME PASSWORD (OTP)
+            </div>
+            <div class="otp-code" style="font-size: 38px; font-weight: 800; color: #5A189A; letter-spacing: 7px; font-family: 'Courier New', Courier, monospace; margin: 6px 0;">
+              ${otpCode}
+            </div>
+            <div style="font-size: 12px; color: #726E7A; margin-top: 6px;">
+              ⏱ Valid for <b>10 minutes</b> · Please do not share this code
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Security Notice -->
+      <div style="background-color: #FAF8FC; border-left: 3px solid #7B2CBF; border-radius: 8px; padding: 12px 16px; font-size: 12.5px; color: #726E7A; line-height: 1.55;">
+        🔒 <b>Security Note:</b> If you did not request this verification code, please ignore this email. Your Lagna Setu account remains safe and secure.
+      </div>
+    `;
+
+    const html = wrapEmailTemplate(titleText, `Your verification code is ${otpCode}`, otpBody);
 
     console.info(`[EmailService] 🔢 Sending 6-digit OTP (${purpose}): ${otpCode} to ${cleanEmail}`);
 
