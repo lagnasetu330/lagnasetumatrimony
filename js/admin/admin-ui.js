@@ -32,44 +32,89 @@
         }
 
         let _adminLoaderStartTime = 0;
+        let _adminLoaderAutoHideTimer = null;
         let _adminLoaderSafetyTimer = null;
 
         function showGlobalLoader(text = 'Loading Admin Console...', minDuration = 0) {
+            if (typeof document === 'undefined') return;
+
             const loader = document.getElementById('globalPageLoader');
             const txtEl = document.getElementById('globalLoaderText');
             if (txtEl) txtEl.textContent = text;
             if (loader) {
                 loader.classList.add('active');
+                loader.style.display = 'flex';
                 loader.style.opacity = '1';
                 loader.style.visibility = 'visible';
                 loader.style.pointerEvents = 'all';
             }
+
+            const routeLoader = document.getElementById('adminGlobalLoader') || document.getElementById('pageRouteLoader');
+            const routeTxt = document.getElementById('adminGlobalLoaderText') || document.getElementById('pageRouteLoaderText');
+            if (routeTxt) routeTxt.textContent = text;
+            if (routeLoader) {
+                routeLoader.classList.add('open');
+                routeLoader.style.display = 'flex';
+            }
+
             _adminLoaderStartTime = Date.now();
 
-            clearTimeout(_adminLoaderSafetyTimer);
+            if (_adminLoaderAutoHideTimer) {
+                clearTimeout(_adminLoaderAutoHideTimer);
+                _adminLoaderAutoHideTimer = null;
+            }
+            if (_adminLoaderSafetyTimer) {
+                clearTimeout(_adminLoaderSafetyTimer);
+                _adminLoaderSafetyTimer = null;
+            }
+
+            if (minDuration > 0) {
+                _adminLoaderAutoHideTimer = setTimeout(() => {
+                    hideGlobalLoader();
+                }, minDuration);
+            }
+
             _adminLoaderSafetyTimer = setTimeout(() => {
                 hideGlobalLoader(true);
-            }, 10000);
+            }, 2000);
         }
 
         function hideGlobalLoader(force = false) {
-            clearTimeout(_adminLoaderSafetyTimer);
+            if (_adminLoaderAutoHideTimer) {
+                clearTimeout(_adminLoaderAutoHideTimer);
+                _adminLoaderAutoHideTimer = null;
+            }
+            if (_adminLoaderSafetyTimer) {
+                clearTimeout(_adminLoaderSafetyTimer);
+                _adminLoaderSafetyTimer = null;
+            }
+
             const doHide = () => {
+                if (typeof document === 'undefined') return;
+
                 const loader = document.getElementById('globalPageLoader');
                 if (loader) {
                     loader.classList.remove('active');
                     loader.style.opacity = '0';
                     loader.style.visibility = 'hidden';
                     loader.style.pointerEvents = 'none';
+                    loader.style.display = 'none';
                 }
                 const routeLoader = document.getElementById('adminGlobalLoader');
                 if (routeLoader) {
                     routeLoader.classList.remove('open');
                     routeLoader.style.display = 'none';
                 }
+                const pageLoader = document.getElementById('pageRouteLoader');
+                if (pageLoader) {
+                    pageLoader.classList.remove('open');
+                    pageLoader.style.display = 'none';
+                }
                 const preloadStyle = document.getElementById('spa-preload-css');
                 if (preloadStyle) preloadStyle.remove();
-                document.documentElement.classList.remove('bypassing-splash');
+                if (document.documentElement) {
+                    document.documentElement.classList.remove('bypassing-splash');
+                }
             };
 
             if (force) {
@@ -78,13 +123,16 @@
             }
 
             const elapsed = Date.now() - _adminLoaderStartTime;
-            const minWait = 350;
-            if (elapsed < minWait) {
+            const minWait = 100;
+            if (elapsed < minWait && _adminLoaderStartTime > 0) {
                 setTimeout(doHide, minWait - elapsed);
             } else {
                 doHide();
             }
         }
+
+        window.showGlobalLoader = showGlobalLoader;
+        window.hideGlobalLoader = hideGlobalLoader;
 
         function go(id, replace) {
             // Strict Auth Guard: Protect all administrative screens from unauthorized console access
@@ -95,6 +143,9 @@
 
             if (!isAuth && !publicScreens.has(id)) {
                 id = 'scr-login';
+            }
+            if (id === 'scr-login') {
+                hideGlobalLoader(true);
             }
 
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

@@ -61,9 +61,17 @@
                     var style = document.createElement('style');
                     style.id = 'spa-preload-css';
                     style.textContent = 'html.bypassing-splash #scr-splash{display:none!important;}' +
-                        'html.bypassing-splash #' + target + '{display:flex!important;animation:none!important;}' +
-                        'html.bypassing-splash #globalPageLoader{opacity:1!important;visibility:visible!important;pointer-events:all!important;transition:none!important;}';
+                        'html.bypassing-splash #' + target + '{display:flex!important;animation:none!important;}';
                     document.head.appendChild(style);
+
+                    // Automatic safety fallback: Ensure splash-bypass & preloader NEVER lock screen
+                    setTimeout(function () {
+                        try {
+                            var s = document.getElementById('spa-preload-css');
+                            if (s) s.remove();
+                            document.documentElement.classList.remove('bypassing-splash');
+                        } catch (err) { }
+                    }, 1200);
                 }
             } catch (e) { }
         })();

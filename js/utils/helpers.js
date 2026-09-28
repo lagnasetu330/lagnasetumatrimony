@@ -917,52 +917,118 @@ window.resetInactivityTimer = resetInactivityTimer;
 window.clearInactivityTimer = clearInactivityTimer;
 window.setInactivityTimeoutForTesting = setInactivityTimeoutForTesting;
 
-/* ============================================================ LIVE GLOBAL LOADER ============================================================ */
-let _globalLoaderTimer = null;
-function showGlobalLoader(msg = 'Syncing data with cloud...') {
-    if (typeof document === 'undefined') return;
-    let loader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
-    if (!loader) {
-        loader = document.createElement('div');
-        loader.id = 'pageRouteLoader';
-        loader.className = 'page-route-loader';
-        loader.innerHTML = `
-            <div style="width:56px;height:56px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;color:var(--primary,#E63946);font-size:26px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);border:2px solid var(--secondary,#F1A7A7);">
-                <i class="fa-solid fa-circle-notch fa-spin"></i>
-            </div>
-            <div id="pageRouteLoaderText" style="font-weight:700;font-size:13px;color:var(--primary-dark,#202124);letter-spacing:.02em;background:rgba(255,255,255,0.95);padding:7px 18px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);">
-                ${escapeHtml(msg)}
-            </div>
-        `;
-        document.body.appendChild(loader);
-    }
-    const txt = document.getElementById('pageRouteLoaderText') || document.getElementById('adminGlobalLoaderText') || loader.querySelector('div:last-child');
-    if (txt) txt.textContent = msg;
-    loader.classList.add('open');
-    loader.style.display = 'flex';
+/* ============================================================ UNIFIED GLOBAL LOADER ============================================================ */
+let _globalLoaderStartTime = 0;
+let _globalLoaderAutoHideTimer = null;
+let _globalLoaderSafetyTimer = null;
 
-    // Auto-safety: clear after 8s so UI never locks indefinitely
-    clearTimeout(_globalLoaderTimer);
-    _globalLoaderTimer = setTimeout(() => {
-        hideGlobalLoader();
-    }, 8000);
+function showGlobalLoader(text = 'Loading...', minDuration = 0) {
+    if (typeof document === 'undefined') return;
+
+    // 1. Fullscreen page loader
+    const gloader = document.getElementById('globalPageLoader');
+    const txtEl = document.getElementById('globalLoaderText');
+    if (txtEl) txtEl.textContent = text;
+    if (gloader) {
+        gloader.classList.add('active');
+        gloader.style.display = 'flex';
+        gloader.style.opacity = '1';
+        gloader.style.visibility = 'visible';
+        gloader.style.pointerEvents = 'all';
+    }
+
+    // 2. Secondary floating pill loader (if present)
+    const routeLoader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
+    const routeTxt = document.getElementById('pageRouteLoaderText') || document.getElementById('adminGlobalLoaderText');
+    if (routeTxt) routeTxt.textContent = text;
+    if (routeLoader) {
+        routeLoader.classList.add('open');
+        routeLoader.style.display = 'flex';
+    }
+
+    _globalLoaderStartTime = Date.now();
+
+    if (_globalLoaderAutoHideTimer) {
+        clearTimeout(_globalLoaderAutoHideTimer);
+        _globalLoaderAutoHideTimer = null;
+    }
+    if (_globalLoaderSafetyTimer) {
+        clearTimeout(_globalLoaderSafetyTimer);
+        _globalLoaderSafetyTimer = null;
+    }
+
+    // Auto-dismiss if caller passed a duration (e.g. 240ms on screen navigation)
+    if (minDuration > 0) {
+        _globalLoaderAutoHideTimer = setTimeout(() => {
+            hideGlobalLoader();
+        }, minDuration);
+    }
+
+    // Unbreakable safety timer: always dismiss within 2000ms so UI never locks
+    _globalLoaderSafetyTimer = setTimeout(() => {
+        hideGlobalLoader(true);
+    }, 2000);
 }
 
-function hideGlobalLoader() {
-    clearTimeout(_globalLoaderTimer);
-    if (typeof document === 'undefined') return;
-    const loader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
-    if (loader) {
-        loader.classList.remove('open');
-        setTimeout(() => {
-            if (!loader.classList.contains('open')) {
-                loader.style.display = 'none';
-            }
-        }, 180);
+function hideGlobalLoader(force = false) {
+    if (_globalLoaderAutoHideTimer) {
+        clearTimeout(_globalLoaderAutoHideTimer);
+        _globalLoaderAutoHideTimer = null;
+    }
+    if (_globalLoaderSafetyTimer) {
+        clearTimeout(_globalLoaderSafetyTimer);
+        _globalLoaderSafetyTimer = null;
+    }
+
+    const doDismiss = () => {
+        if (typeof document === 'undefined') return;
+
+        // Dismiss fullscreen page loader
+        const gloader = document.getElementById('globalPageLoader');
+        if (gloader) {
+            gloader.classList.remove('active');
+            gloader.style.opacity = '0';
+            gloader.style.visibility = 'hidden';
+            gloader.style.pointerEvents = 'none';
+            gloader.style.display = 'none';
+        }
+
+        // Dismiss secondary floating pill loaders
+        const pageLoader = document.getElementById('pageRouteLoader');
+        if (pageLoader) {
+            pageLoader.classList.remove('open');
+            pageLoader.style.display = 'none';
+        }
+        const adminLoader = document.getElementById('adminGlobalLoader');
+        if (adminLoader) {
+            adminLoader.classList.remove('open');
+            adminLoader.style.display = 'none';
+        }
+
+        // Clean up preloader style and splash bypass
+        const preloadStyle = document.getElementById('spa-preload-css');
+        if (preloadStyle) preloadStyle.remove();
+        if (document.documentElement) {
+            document.documentElement.classList.remove('bypassing-splash');
+        }
+    };
+
+    if (force) {
+        doDismiss();
+        return;
+    }
+
+    const elapsed = Date.now() - _globalLoaderStartTime;
+    const minWait = 100;
+    if (elapsed < minWait && _globalLoaderStartTime > 0) {
+        setTimeout(doDismiss, minWait - elapsed);
+    } else {
+        doDismiss();
     }
 }
 
 window.showGlobalLoader = showGlobalLoader;
 window.hideGlobalLoader = hideGlobalLoader;
+
 
 

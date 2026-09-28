@@ -321,9 +321,10 @@ async function saveCastesData() {
  * and app_settings (faqs, guide_steps, castes) directly from Supabase
  */
 async function syncAdminDataFromSupabase() {
+    const shouldShowLoader = !USERS || USERS.length === 0;
     try {
-        if (typeof showGlobalLoader === 'function') {
-            showGlobalLoader('Loading live admin data from Supabase...');
+        if (shouldShowLoader && typeof showGlobalLoader === 'function') {
+            showGlobalLoader('Loading live admin data from Supabase...', 1500);
         }
         // ── USERS (profiles) ──────────────────────────────────────────────────
         if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
@@ -408,7 +409,7 @@ async function syncAdminDataFromSupabase() {
     } catch (err) {
         console.warn('[Admin] Supabase sync notice:', err);
     } finally {
-        if (typeof hideGlobalLoader === 'function') {
+        if (shouldShowLoader && typeof hideGlobalLoader === 'function') {
             hideGlobalLoader();
         }
     }

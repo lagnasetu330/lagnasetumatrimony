@@ -24,11 +24,12 @@ function saveCommunityProfiles() {
 /**
  * Asynchronously sync profiles from Supabase PostgreSQL on startup
  */
-async function syncProfilesFromSupabase() {
+async function syncProfilesFromSupabase(force = false) {
     if (typeof supabaseFetchProfiles !== 'function') return;
+    const shouldShowLoader = !PROFILES || PROFILES.length === 0;
     try {
-        if (typeof showGlobalLoader === 'function') {
-            showGlobalLoader('Loading verified profiles from Supabase...');
+        if (shouldShowLoader && typeof showGlobalLoader === 'function') {
+            showGlobalLoader('Loading verified profiles from Supabase...', 1500);
         }
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
@@ -73,7 +74,7 @@ async function syncProfilesFromSupabase() {
     } catch (err) {
         console.warn('[Profiles] Supabase sync note:', err);
     } finally {
-        if (typeof hideGlobalLoader === 'function') {
+        if (shouldShowLoader && typeof hideGlobalLoader === 'function') {
             hideGlobalLoader();
         }
     }

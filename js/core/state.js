@@ -332,54 +332,113 @@ function updateHeaderUserDisplay() {
     }
 }
 
+/* ============================================================ UNIFIED GLOBAL LOADER ============================================================ */
 let _globalLoaderStartTime = 0;
+let _globalLoaderAutoHideTimer = null;
 let _globalLoaderSafetyTimer = null;
 
 function showGlobalLoader(text = 'Loading...', minDuration = 0) {
-    const loader = document.getElementById('globalPageLoader');
+    if (typeof document === 'undefined') return;
+
+    // 1. Fullscreen page loader
+    const gloader = document.getElementById('globalPageLoader');
     const txtEl = document.getElementById('globalLoaderText');
     if (txtEl) txtEl.textContent = text;
-    if (loader) {
-        loader.classList.add('active');
-        loader.style.opacity = '1';
-        loader.style.visibility = 'visible';
-        loader.style.pointerEvents = 'all';
+    if (gloader) {
+        gloader.classList.add('active');
+        gloader.style.display = 'flex';
+        gloader.style.opacity = '1';
+        gloader.style.visibility = 'visible';
+        gloader.style.pointerEvents = 'all';
     }
+
+    // 2. Secondary floating pill loader (if present)
+    const routeLoader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
+    const routeTxt = document.getElementById('pageRouteLoaderText') || document.getElementById('adminGlobalLoaderText');
+    if (routeTxt) routeTxt.textContent = text;
+    if (routeLoader) {
+        routeLoader.classList.add('open');
+        routeLoader.style.display = 'flex';
+    }
+
     _globalLoaderStartTime = Date.now();
 
-    // Auto-safety timer: clear after 10s so UI never locks indefinitely
-    clearTimeout(_globalLoaderSafetyTimer);
+    if (_globalLoaderAutoHideTimer) {
+        clearTimeout(_globalLoaderAutoHideTimer);
+        _globalLoaderAutoHideTimer = null;
+    }
+    if (_globalLoaderSafetyTimer) {
+        clearTimeout(_globalLoaderSafetyTimer);
+        _globalLoaderSafetyTimer = null;
+    }
+
+    // Auto-dismiss if caller passed a duration (e.g. 240ms on screen navigation)
+    if (minDuration > 0) {
+        _globalLoaderAutoHideTimer = setTimeout(() => {
+            hideGlobalLoader();
+        }, minDuration);
+    }
+
+    // Unbreakable safety timer: always dismiss within 2000ms so UI never locks
     _globalLoaderSafetyTimer = setTimeout(() => {
         hideGlobalLoader(true);
-    }, 10000);
+    }, 2000);
 }
 
 function hideGlobalLoader(force = false) {
-    clearTimeout(_globalLoaderSafetyTimer);
-    const doHide = () => {
-        const loader = document.getElementById('globalPageLoader');
-        if (loader) {
-            loader.classList.remove('active');
-            loader.style.opacity = '0';
-            loader.style.visibility = 'hidden';
-            loader.style.pointerEvents = 'none';
+    if (_globalLoaderAutoHideTimer) {
+        clearTimeout(_globalLoaderAutoHideTimer);
+        _globalLoaderAutoHideTimer = null;
+    }
+    if (_globalLoaderSafetyTimer) {
+        clearTimeout(_globalLoaderSafetyTimer);
+        _globalLoaderSafetyTimer = null;
+    }
+
+    const doDismiss = () => {
+        if (typeof document === 'undefined') return;
+
+        // Dismiss fullscreen page loader
+        const gloader = document.getElementById('globalPageLoader');
+        if (gloader) {
+            gloader.classList.remove('active');
+            gloader.style.opacity = '0';
+            gloader.style.visibility = 'hidden';
+            gloader.style.pointerEvents = 'none';
+            gloader.style.display = 'none';
         }
+
+        // Dismiss secondary floating pill loaders
+        const pageLoader = document.getElementById('pageRouteLoader');
+        if (pageLoader) {
+            pageLoader.classList.remove('open');
+            pageLoader.style.display = 'none';
+        }
+        const adminLoader = document.getElementById('adminGlobalLoader');
+        if (adminLoader) {
+            adminLoader.classList.remove('open');
+            adminLoader.style.display = 'none';
+        }
+
+        // Clean up preloader style and splash bypass
         const preloadStyle = document.getElementById('spa-preload-css');
         if (preloadStyle) preloadStyle.remove();
-        document.documentElement.classList.remove('bypassing-splash');
+        if (document.documentElement) {
+            document.documentElement.classList.remove('bypassing-splash');
+        }
     };
 
     if (force) {
-        doHide();
+        doDismiss();
         return;
     }
 
     const elapsed = Date.now() - _globalLoaderStartTime;
-    const minWait = 350;
-    if (elapsed < minWait) {
-        setTimeout(doHide, minWait - elapsed);
+    const minWait = 100;
+    if (elapsed < minWait && _globalLoaderStartTime > 0) {
+        setTimeout(doDismiss, minWait - elapsed);
     } else {
-        doHide();
+        doDismiss();
     }
 }
 
@@ -388,3 +447,4 @@ window.loadSessionState = loadSessionState;
 window.updateHeaderUserDisplay = updateHeaderUserDisplay;
 window.showGlobalLoader = showGlobalLoader;
 window.hideGlobalLoader = hideGlobalLoader;
+
