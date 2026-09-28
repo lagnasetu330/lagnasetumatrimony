@@ -117,7 +117,10 @@
 
         function goBack() {
             state.history.pop();
-            const prev = state.history[state.history.length - 1] || 'scr-dashboard';
+            let prev = state.history[state.history.length - 1];
+            if (!prev || prev === 'scr-splash' || prev === 'scr-login') {
+                prev = 'scr-dashboard';
+            }
             go(prev, true);
         }
 
@@ -1113,9 +1116,9 @@
                 console.warn('[Admin Delete] Local storage purge note:', e);
             }
 
-            // Navigate back immediately and refresh UI
-            goBack();
-            refreshCurrentScreen();
+            // Navigate cleanly to Users table screen (NEVER splash) and refresh UI
+            go('scr-users', true);
+            renderUsers();
             showToast(`Permanently deleting ${userName}...`);
 
             // 2. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
@@ -1129,8 +1132,20 @@
                 console.warn('[Admin Delete] Supabase delete note:', delErr);
             }
 
+            // Sync fresh data from Supabase to verify complete purge
+            if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
+                try {
+                    const fresh = await supabaseFetchAllProfilesForAdmin();
+                    if (Array.isArray(fresh)) {
+                        USERS = fresh.filter(x => !ids.includes(String(x.id)) && (!normEmail || (x.email || '').toLowerCase().trim() !== normEmail));
+                        window.USERS = USERS;
+                        saveAdminData();
+                    }
+                } catch(_) {}
+            }
+
+            renderUsers();
             showToast(`${userName}'s account and all records permanently wiped from database`);
-            refreshCurrentScreen();
         }
 
 // Global Window Exports
