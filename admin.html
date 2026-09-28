@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -8,6 +8,22 @@
     <link rel="icon" type="image/png" href="images/lagna_setu_logo.png">
     <link rel="apple-touch-icon" href="images/lagna_setu_logo.png">
     <script>
+        (function () {
+            try {
+                var PURGE_FLAG = '_LS_AUTO_PURGED_V4';
+                if (localStorage.getItem(PURGE_FLAG) !== 'true') {
+                    var savedCreds = localStorage.getItem('LS_ADMIN_CREDENTIALS');
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    localStorage.setItem(PURGE_FLAG, 'true');
+                    if (savedCreds) {
+                        localStorage.setItem('LS_ADMIN_CREDENTIALS', savedCreds);
+                    }
+                    window.location.reload();
+                    return;
+                }
+            } catch (e) { }
+        })();
         (function () {
             try {
                 var loggedIn = sessionStorage.getItem('admin_isLoggedIn') === 'true' && !!sessionStorage.getItem('admin_session_token');

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -16,6 +16,28 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Lagna Setu">
     <script>
+        (function () {
+            try {
+                var PURGE_FLAG = '_LS_APP_PURGED_V4';
+                if (localStorage.getItem(PURGE_FLAG) !== 'true') {
+                    var u1 = localStorage.getItem('lagnaSetu_activeUser');
+                    var t1 = localStorage.getItem('lagnaSetu_lastActiveTimestamp');
+                    var u2 = sessionStorage.getItem('lagnaSetu_currentUser');
+                    var legacyKeys = [
+                        'LS_COMMUNITY_USERS', 'LS_COMMUNITY_PROFILES', 'LS_ADMIN_USERS',
+                        'LS_ADMIN_PAYMENTS', 'LS_ADMIN_INTERESTS', 'LS_ADMIN_REPORTS',
+                        'LS_ADMIN_NOTIFS', 'LS_COMMUNITY_FAQS', 'LS_COMMUNITY_HOWITWORKS',
+                        'LS_COMMUNITY_CASTES', 'LS_COMMUNITY_MAINTENANCE', 'LS_COMMUNITY_AUTO_APPROVE',
+                        'lagnaSetu_profiles', 'LS_PURGED_USER_CACHE'
+                    ];
+                    legacyKeys.forEach(function(k) { localStorage.removeItem(k); });
+                    localStorage.setItem(PURGE_FLAG, 'true');
+                    if (u1) localStorage.setItem('lagnaSetu_activeUser', u1);
+                    if (t1) localStorage.setItem('lagnaSetu_lastActiveTimestamp', t1);
+                    if (u2) sessionStorage.setItem('lagnaSetu_currentUser', u2);
+                }
+            } catch (e) { }
+        })();
         (function () {
             try {
                 var lsUser = localStorage.getItem('lagnaSetu_activeUser');
