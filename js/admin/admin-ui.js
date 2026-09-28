@@ -83,11 +83,12 @@
                 renderUsers();
                 if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
                     supabaseFetchAllProfilesForAdmin().then(remoteProfiles => {
-                        if (Array.isArray(remoteProfiles) && remoteProfiles.length > 0) {
-                            USERS = remoteProfiles;
+                        if (Array.isArray(remoteProfiles)) {
+                            USERS = remoteProfiles.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                             window.USERS = USERS;
                             localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                             renderUsers();
+                            if (typeof renderDashboard === 'function') renderDashboard();
                         }
                     }).catch(() => {});
                 }
@@ -376,11 +377,13 @@
         /* ============================================================ DASHBOARD ============================================================ */
         function renderDashboard() {
             buildTabbar('tabbarDash', 'dashboard');
-            const total = USERS.length;
-            const boys = USERS.filter(u => isBoyGender(u.gender) && u.accountStatus !== 'suspended').length;
-            const girls = USERS.filter(u => isGirlGender(u.gender) && u.accountStatus !== 'suspended').length;
-            const suspended = USERS.filter(u => u.accountStatus === 'suspended').length;
-            const activeCount = USERS.filter(u => u.accountStatus === 'active' || !u.accountStatus).length;
+            // Only count real/active users — exclude deleted or purged accounts
+            const activeUsers = USERS.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
+            const total = activeUsers.length;
+            const boys = activeUsers.filter(u => isBoyGender(u.gender) && u.accountStatus !== 'suspended').length;
+            const girls = activeUsers.filter(u => isGirlGender(u.gender) && u.accountStatus !== 'suspended').length;
+            const suspended = activeUsers.filter(u => u.accountStatus === 'suspended').length;
+            const activeCount = activeUsers.filter(u => u.accountStatus === 'active' || !u.accountStatus).length;
             const revenue = PAYMENTS.filter(p => p.status === 'success').reduce((s, p) => s + (Number(p.amount) || 0), 0);
             const matches = INTERESTS.filter(i => i.status === 'accepted').length;
 
@@ -418,7 +421,7 @@
 
             const pend = document.getElementById('dashPending');
             pend.innerHTML = '';
-            const recentUsers = USERS.slice(0, 4);
+            const recentUsers = USERS.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).slice(0, 4);
             if (recentUsers.length === 0) {
                 pend.innerHTML =
                     `<div class="empty-state"><i class="fa-solid fa-users"></i><h3>No members yet</h3><p>Registered members will appear here.</p></div>`;

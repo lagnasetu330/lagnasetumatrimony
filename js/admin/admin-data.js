@@ -336,8 +336,8 @@ async function syncAdminDataFromSupabase() {
     try {
         if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
             const remoteProfiles = await supabaseFetchAllProfilesForAdmin();
-            if (Array.isArray(remoteProfiles) && remoteProfiles.length > 0) {
-                USERS = remoteProfiles;
+            if (Array.isArray(remoteProfiles) && remoteProfiles.length >= 0) {
+                USERS = remoteProfiles.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                 window.USERS = USERS;
                 localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                 if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();

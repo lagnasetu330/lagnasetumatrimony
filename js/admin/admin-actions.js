@@ -35,11 +35,12 @@ window.escapeHtml = escapeHtmlAdmin;
                 const q = query.toLowerCase();
                 list = list.filter(u => (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q)) || (u.city && u.city.toLowerCase().includes(q)));
             }
-            const boysCount = USERS.filter(u => checkBoy(u.gender) && u.accountStatus !== 'suspended').length;
-            const girlsCount = USERS.filter(u => checkGirl(u.gender) && u.accountStatus !== 'suspended').length;
-            const suspendedCount = USERS.filter(u => u.accountStatus === 'suspended').length;
+            const boysCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkBoy(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const girlsCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkGirl(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const suspendedCount = USERS.filter(u => u && u.accountStatus === 'suspended').length;
+            const allActiveCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
 
-            if (document.getElementById('uCountAll')) document.getElementById('uCountAll').textContent = USERS.length;
+            if (document.getElementById('uCountAll')) document.getElementById('uCountAll').textContent = allActiveCount;
             if (document.getElementById('uCountBoys')) document.getElementById('uCountBoys').textContent = boysCount;
             if (document.getElementById('uCountGirls')) document.getElementById('uCountGirls').textContent = girlsCount;
             if (document.getElementById('uCountSuspended')) document.getElementById('uCountSuspended').textContent = suspendedCount;
