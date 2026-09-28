@@ -205,7 +205,7 @@ function syncUserNotificationsFromData() {
                 newItems.push({
                     id: memNotifId,
                     icon: 'fa-crown',
-                    title: '30-Day Pass Active (₹49)',
+                    title: '30-Day Pass Active (₹99)',
                     desc: 'Full access unlocked: direct family contact & unlimited chat.',
                     time: 'Active',
                     timestamp: Date.now() - 172800000,
@@ -218,7 +218,7 @@ function syncUserNotificationsFromData() {
                 newItems.push({
                     id: memNotifId,
                     icon: 'fa-bolt',
-                    title: 'Activate Boys 30-Day Pass (₹49)',
+                    title: 'Activate Boys 30-Day Pass (₹99)',
                     desc: 'Unlock direct mobile numbers of verified bride families & live chat.',
                     time: 'Action required',
                     timestamp: Date.now() - 3600000,

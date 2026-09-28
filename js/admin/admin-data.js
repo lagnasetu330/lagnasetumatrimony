@@ -11,7 +11,7 @@
         let FAQS = [
             ['How do I register?', 'Members create an account, verify their phone/email by OTP, select community, and complete personal, family, and address details.'],
             ['Is membership free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
-            ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹49, giving direct contact to verified community brides\' families.'],
+            ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹99, giving direct contact to verified community brides\' families.'],
             ['How do members contact each other?', 'A member can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request to unlock chat.'],
             ['Is a member\'s phone number public?', 'No. A member\'s own mobile number is kept strictly private for Admin review only. Only the father\'s contact number is shown on the public profile.'],
             ['How do multi-photo profiles work?', 'Members can upload up to 3 high-resolution photos. Admin and verified members can view all photos in the photo gallery carousel.'],
@@ -25,7 +25,7 @@
             { title: 'Upload photos', desc: 'Upload up to 3 high-resolution photos to complete your trusted profile.' },
             { title: 'Mobile OTP verification', desc: 'Confirm your mobile number with a fast, secure 6-digit OTP code.' },
             { title: 'Instant profile activation', desc: 'Your profile goes live immediately for community members to see.' },
-            { title: 'Membership pass', desc: 'Community girls: 100% Lifetime Free · Boys: ₹49 for 30 Days Pass.' },
+            { title: 'Membership pass', desc: 'Community girls: 100% Lifetime Free · Boys: ₹99 for 30 Days Pass.' },
             { title: 'Explore profiles', desc: 'Browse verified eligible brides and grooms from your community.' },
             { title: 'Send interest', desc: 'Send an interest request to profiles you like and start connecting.' },
             { title: 'Connect & chat', desc: 'Once accepted, connect directly via phone call, WhatsApp, or in-app chat.' }
@@ -426,7 +426,7 @@ function syncAdminNotifsFromDatabase() {
                 generated.push({
                     id: k,
                     icon: 'fa-sack-dollar',
-                    txt: `₹${p.amount || 49} payment from ${p.userName || 'Member'}`,
+                    txt: `₹${p.amount || 99} payment from ${p.userName || 'Member'}`,
                     sub: `Pass activated · ${p.method || 'UPI'} · TXN: ${p.id}`,
                     time: p.date + (p.time ? ' ' + p.time : ''),
                     unread: false,
@@ -534,7 +534,7 @@ function setupAdminRealtime() {
                         NOTIFS.unshift({
                             id: `pay_${newPay.id}_${Date.now()}`,
                             icon: 'fa-sack-dollar',
-                            txt: `Payment received: ₹${newPay.amount || 49} from ${newPay.user_name || 'Member'}`,
+                            txt: `Payment received: ₹${newPay.amount || 99} from ${newPay.user_name || 'Member'}`,
                             sub: `Pass activated via ${newPay.method || 'UPI'} (TXN: ${newPay.id})`,
                             time: 'Just now',
                             unread: true,
@@ -545,13 +545,25 @@ function setupAdminRealtime() {
                         if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
                         if (typeof renderNotifs === 'function') renderNotifs();
                         if (typeof renderDashboard === 'function') renderDashboard();
-                        if (typeof showToast === 'function') showToast(`💰 Payment received: ₹${newPay.amount || 49} from ${newPay.user_name || 'Member'}`);
+                        if (typeof showToast === 'function') showToast(`💰 Payment received: ₹${newPay.amount || 99} from ${newPay.user_name || 'Member'}`);
                     }
                 },
                 onProfilesChange: async (payload) => {
-                    if (payload && payload.eventType === 'DELETE' && payload.old && payload.old.id) {
-                        const delId = payload.old.id;
-                        USERS = USERS.filter(u => u.id !== delId && String(u.id) !== String(delId));
+                    const isDeleteEvent = payload && (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new && (payload.new.account_status === 'deleted' || payload.new.visible === false)));
+                    if (isDeleteEvent) {
+                        const delId = payload.old?.id || payload.new?.id;
+                        const delEmail = payload.old?.email || payload.new?.email;
+                        const delUid = payload.old?.user_id || payload.new?.user_id;
+                        if (typeof registerPurgedUserId === 'function') {
+                            registerPurgedUserId(delId, delUid, delEmail);
+                        }
+                        USERS = USERS.filter(u => {
+                            if (!u) return false;
+                            if (delId && (u.id === delId || String(u.id) === String(delId))) return false;
+                            if (delUid && (u.userId === delUid || u.user_id === delUid || String(u.id) === String(delUid))) return false;
+                            if (delEmail && u.email && u.email.toLowerCase() === String(delEmail).toLowerCase()) return false;
+                            return true;
+                        });
                         window.USERS = USERS;
                         localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                         if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
@@ -560,7 +572,7 @@ function setupAdminRealtime() {
                     if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
                         const remoteProfiles = await supabaseFetchAllProfilesForAdmin();
                         if (Array.isArray(remoteProfiles)) {
-                            USERS = remoteProfiles;
+                            USERS = remoteProfiles.filter(u => u && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                             window.USERS = USERS;
                             localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                             if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();

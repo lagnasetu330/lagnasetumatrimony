@@ -450,10 +450,10 @@ function renderMembersAnalyticsView(container) {
                     </div>
                     <div class="analytics-subtitle">Live registration growth &amp; member demographic tracking</div>
                 </div>
-                <div class="single-package-badge" title="Only 1 single package for Boys: ₹49 for 30 Days. Girls are 100% Free.">
+                <div class="single-package-badge" title="Only 1 single package for Boys: ₹99 for 30 Days. Girls are 100% Free.">
                     <span class="spb-tag">Single Plan</span>
                     <i class="fa-solid fa-crown"></i>
-                    <span>Boys: <b>₹49 / 30 Days</b> • Girls: <b>Free</b></span>
+                    <span>Boys: <b>₹99 / 30 Days</b> • Girls: <b>Free</b></span>
                 </div>
             </div>
 
@@ -526,9 +526,9 @@ function renderMembersAnalyticsView(container) {
                 <div class="chart-legend">
                     ${g !== 'boys' ? `<span class="legend-dot" style="background:#DB2777;"></span> Girls (Free Lifetime)` : ''}
                     ${g === 'both' ? `<span style="margin:0 6px;color:var(--text-faint);">|</span>` : ''}
-                    ${g !== 'girls' ? `<span class="legend-dot" style="background:#2563EB;"></span> Boys (₹49 / 30 Days Single Pass)` : ''}
+                    ${g !== 'girls' ? `<span class="legend-dot" style="background:#2563EB;"></span> Boys (₹99 / 30 Days Single Pass)` : ''}
                 </div>
-                <div class="analytics-tip"><i class="fa-solid fa-circle-info"></i> Fixed Single Package: 30 Days access for Boys @ ₹49</div>
+                <div class="analytics-tip"><i class="fa-solid fa-circle-info"></i> Fixed Single Package: 30 Days access for Boys @ ₹99</div>
             </div>
 
             <!-- Community Balance & City Hotspots Row -->
@@ -650,12 +650,12 @@ function renderRevenueAnalyticsView(container) {
                     <div class="analytics-title" style="color:#065F46;">
                         <i class="fa-solid fa-hand-holding-dollar" style="color:#10B981;"></i> Revenue &amp; Collections
                     </div>
-                    <div class="analytics-subtitle">Live ₹ collection from Boys ₹49 (30 Days) Single Pass transactions</div>
+                    <div class="analytics-subtitle">Live ₹ collection from Boys ₹99 (30 Days) Single Pass transactions</div>
                 </div>
-                <div class="single-package-badge" style="background:#ECFDF5;border-color:rgba(16,185,129,0.35);color:#065F46;" title="100% Fixed Single Package: ₹49 for 30 Days">
+                <div class="single-package-badge" style="background:#ECFDF5;border-color:rgba(16,185,129,0.35);color:#065F46;" title="100% Fixed Single Package: ₹99 for 30 Days">
                     <span class="spb-tag" style="background:#059669;">Single Plan Policy</span>
                     <i class="fa-solid fa-shield-check" style="color:#10B981;"></i>
-                    <span><b>₹49 for 30 Days</b> (No Other Plans)</span>
+                    <span><b>₹99 for 30 Days</b> (No Other Plans)</span>
                 </div>
             </div>
 
@@ -672,7 +672,7 @@ function renderRevenueAnalyticsView(container) {
                     <span style="font-size:11px;color:var(--text-muted);font-weight:600;">Selected:</span>
                     <b style="color:#059669;font-size:13px;">${tfLabels[tf]}</b>
                     <span style="margin:0 4px;color:var(--text-faint);">•</span>
-                    <span style="font-size:11px;color:#047857;font-weight:700;"><i class="fa-solid fa-tag"></i> Flat ₹49 / 30 Days Pass</span>
+                    <span style="font-size:11px;color:#047857;font-weight:700;"><i class="fa-solid fa-tag"></i> Flat ₹99 / 30 Days Pass</span>
                 </div>
             </div>
 
@@ -684,7 +684,7 @@ function renderRevenueAnalyticsView(container) {
                 </div>
                 <div class="akpi-item" style="border-left:3px solid #3B82F6;">
                     <span class="akpi-lbl">Boys Passes Sold</span>
-                    <span class="akpi-val">${revData.periodPasses} <small>Passes (₹49)</small></span>
+                    <span class="akpi-val">${revData.periodPasses} <small>Passes (₹99)</small></span>
                 </div>
                 <div class="akpi-item" style="border-left:3px solid #F59E0B;">
                     <span class="akpi-lbl">Package Validity</span>
@@ -719,11 +719,11 @@ function renderRevenueAnalyticsView(container) {
             <!-- Legend & Tip -->
             <div class="analytics-footer">
                 <div class="chart-legend">
-                    <span class="legend-dot" style="background:#059669;"></span> <b>Boys Single Plan:</b> ₹49 (30 Days Unlimited Access)
+                    <span class="legend-dot" style="background:#059669;"></span> <b>Boys Single Plan:</b> ₹99 (30 Days Unlimited Access)
                     <span style="margin:0 8px;color:var(--text-faint);">|</span>
                     <span style="color:#DB2777;"><i class="fa-solid fa-venus"></i> <b>Girls:</b> 100% Free Lifetime (₹0)</span>
                 </div>
-                <div class="analytics-tip"><i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Fixed Single Package: 30 Days Access @ ₹49 (No other tiers or subscriptions)</div>
+                <div class="analytics-tip"><i class="fa-solid fa-circle-check" style="color:#10B981;"></i> Fixed Single Package: 30 Days Access @ ₹99 (No other tiers or subscriptions)</div>
             </div>
 
             <!-- Payment Methods & Settlement Overview -->
@@ -734,10 +734,10 @@ function renderRevenueAnalyticsView(container) {
                         <span style="font-size:10px;font-weight:800;color:#D97706;background:#FEF3C7;padding:2px 8px;border-radius:10px;"><i class="fa-solid fa-crown"></i> 1 Plan Only</span>
                     </div>
                     <div style="font-size:13.5px;font-weight:800;color:var(--text);margin-bottom:3px;">
-                        Boys 30-Day Pass @ ₹49
+                        Boys 30-Day Pass @ ₹99
                     </div>
                     <div style="font-size:11.5px;color:var(--text-muted);line-height:1.45;">
-                        Fixed 30 days bride directory &amp; direct father call/WhatsApp access. Only ₹1.63/day. No hidden charges or other tiers. Girls 100% Free Lifetime.
+                        Fixed 30 days bride directory &amp; direct father call/WhatsApp access. Only ₹3.30/day. No hidden charges or other tiers. Girls 100% Free Lifetime.
                     </div>
                 </div>
 
@@ -820,7 +820,7 @@ function showRevenueTooltip(idx, e) {
             <span style="color:var(--text-faint);">•</span>
             <span style="color:#93C5FD;"><b>${b.passesSold}</b> pass(es)</span>
         </div>
-        <div style="font-size:11px;color:#047857;margin-top:3px;font-weight:700;"><i class="fa-solid fa-crown" style="color:#F59E0B;"></i> Single Plan: ₹49 / 30 Days Pass</div>
+        <div style="font-size:11px;color:#047857;margin-top:3px;font-weight:700;"><i class="fa-solid fa-crown" style="color:#F59E0B;"></i> Single Plan: ₹99 / 30 Days Pass</div>
         ${b.transactions.length > 0 ? `<div class="tip-total" style="font-size:10.5px;">${b.transactions.map(t => `${t.method}: ₹${t.amount}`).join(' | ')}</div>` : ''}
     `;
 

@@ -194,10 +194,71 @@ function mapProfileForSupabase(p) {
 }
 
 /**
+ * Global Purged User Cache to immediately block deleted users from appearing
+ * in any frontend view or background sync across devices & tabs
+ */
+const PURGED_USER_CACHE = new Set();
+
+function registerPurgedUserId(...idsOrEmails) {
+    idsOrEmails.forEach(val => {
+        if (val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== 'null' && String(val).trim() !== 'undefined') {
+            PURGED_USER_CACHE.add(String(val).trim().toLowerCase());
+        }
+    });
+    try {
+        const stored = JSON.parse(sessionStorage.getItem('LS_PURGED_USER_CACHE') || '[]');
+        idsOrEmails.forEach(val => {
+            if (val && String(val).trim()) {
+                const s = String(val).trim().toLowerCase();
+                if (!stored.includes(s)) stored.push(s);
+            }
+        });
+        sessionStorage.setItem('LS_PURGED_USER_CACHE', JSON.stringify(stored));
+    } catch (_) {}
+}
+
+function isUserPurged(profile) {
+    if (!profile) return true;
+    if (profile.account_status === 'deleted' || profile.accountStatus === 'deleted') return true;
+    if (profile.name === '[Deleted Account]') return true;
+    const checks = [
+        profile.id,
+        profile.userId,
+        profile.user_id,
+        profile.profileId,
+        profile.profile_id,
+        profile.email
+    ];
+    for (const c of checks) {
+        if (c !== undefined && c !== null && PURGED_USER_CACHE.has(String(c).trim().toLowerCase())) {
+            return true;
+        }
+    }
+    try {
+        const stored = JSON.parse(sessionStorage.getItem('LS_PURGED_USER_CACHE') || '[]');
+        for (const c of checks) {
+            if (c !== undefined && c !== null && stored.includes(String(c).trim().toLowerCase())) {
+                return true;
+            }
+        }
+    } catch (_) {}
+    return false;
+}
+window.registerPurgedUserId = registerPurgedUserId;
+window.isUserPurged = isUserPurged;
+window.isUserInDeletedList = isUserPurged;
+
+/**
  * Bidirectional mapper: Supabase PostgreSQL Row -> Frontend Profile Object
  */
 function mapProfileFromSupabase(row) {
     if (!row) return null;
+    if (row.account_status === 'deleted' || row.accountStatus === 'deleted' || row.name === '[Deleted Account]') {
+        return null;
+    }
+    if (typeof isUserPurged === 'function' && isUserPurged(row)) {
+        return null;
+    }
     const raw = (row.raw_data && typeof row.raw_data === 'object') ? row.raw_data : {};
     return {
         ...raw,
@@ -267,7 +328,7 @@ function mapProfileFromSupabase(row) {
 async function supabaseFetchProfiles(filters = {}) {
     const client = getSupabaseClient();
     if (!client) {
-        return window.PROFILES || [];
+        return (window.PROFILES || []).filter(p => !isUserPurged(p));
     }
 
     try {
@@ -275,6 +336,7 @@ async function supabaseFetchProfiles(filters = {}) {
             .from('profiles')
             .select('*')
             .neq('account_status', 'suspended')
+            .neq('account_status', 'deleted')
             .neq('visible', false)
             .neq('verify_status', 'rejected');
 
@@ -285,10 +347,10 @@ async function supabaseFetchProfiles(filters = {}) {
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
             console.warn('[Supabase] Profiles fetch note:', error.message);
-            return window.PROFILES || [];
+            return (window.PROFILES || []).filter(p => !isUserPurged(p));
         }
         if (Array.isArray(data)) {
-            let mapped = data.map(mapProfileFromSupabase).filter(Boolean);
+            let mapped = data.map(mapProfileFromSupabase).filter(Boolean).filter(p => !isUserPurged(p));
             if (filters.gender && filters.gender !== 'all') {
                 if (filters.gender === 'boys') {
                     mapped = mapped.filter(p => typeof isBoyGender === 'function' ? isBoyGender(p.gender) : (p.gender === 'boys' || p.gender === 'Boy'));
@@ -298,10 +360,10 @@ async function supabaseFetchProfiles(filters = {}) {
             }
             return mapped;
         }
-        return window.PROFILES || [];
+        return (window.PROFILES || []).filter(p => !isUserPurged(p));
     } catch (err) {
         console.warn('[Supabase] Profile fetch error:', err);
-        return window.PROFILES || [];
+        return (window.PROFILES || []).filter(p => !isUserPurged(p));
     }
 }
 
@@ -332,7 +394,7 @@ async function supabaseUpsertProfile(profile) {
 }
 
 /**
- * Record a successful ₹49 UPI payment in Supabase and activate 30-day pass
+ * Record a successful ₹99 UPI payment in Supabase and activate 30-day pass
  * @param {Object} paymentData { id, userId, userName, amount, method, razorpayPaymentId }
  */
 async function supabaseRecordPayment(paymentData) {
@@ -349,8 +411,8 @@ async function supabaseRecordPayment(paymentData) {
             id: paymentData.id,
             user_id: String(paymentData.userId || ''),
             user_name: paymentData.userName || 'Registered Member',
-            plan: paymentData.plan || 'Boys 30 Days Pass (₹49)',
-            amount: 49.00,
+            plan: paymentData.plan || 'Boys 30 Days Pass (₹99)',
+            amount: Number(paymentData.amount) || 99.00,
             currency: 'INR',
             method: paymentData.method || 'UPI',
             razorpay_payment_id: paymentData.razorpayPaymentId || null,
@@ -386,6 +448,7 @@ async function supabaseFetchAllProfilesForAdmin() {
         const profilesRes = await client
             .from('profiles')
             .select('*')
+            .neq('account_status', 'deleted')
             .order('created_at', { ascending: false });
 
         if (profilesRes && profilesRes.error) {
@@ -397,7 +460,8 @@ async function supabaseFetchAllProfilesForAdmin() {
         try {
             const usersRes = await client
                 .from('users')
-                .select('id, email, agreed_terms, agreed_terms_at');
+                .select('id, email, agreed_terms, agreed_terms_at')
+                .neq('status', 'Deleted');
             if (usersRes && Array.isArray(usersRes.data)) {
                 usersRes.data.forEach(u => {
                     if (u.email) userMap.set(String(u.email).toLowerCase().trim(), u);
@@ -411,6 +475,7 @@ async function supabaseFetchAllProfilesForAdmin() {
         const data = (profilesRes && Array.isArray(profilesRes.data)) ? profilesRes.data : [];
         return data.map(p => {
             const mapped = mapProfileFromSupabase(p);
+            if (!mapped || (typeof isUserPurged === 'function' && isUserPurged(mapped))) return null;
             const normEmail = (mapped.email || '').toLowerCase().trim();
             const normId = String(mapped.id || mapped.userId || '');
             const uMatch = userMap.get(normEmail) || userMap.get(normId);
@@ -423,7 +488,7 @@ async function supabaseFetchAllProfilesForAdmin() {
                 mapped.agreedTermsAt = mapped.agreedTermsAt || p.created_at || null;
             }
             return mapped;
-        });
+        }).filter(Boolean);
     } catch (e) {
         console.warn('[Supabase] Admin profiles fetch error:', e);
         return [];
@@ -554,7 +619,7 @@ async function supabaseDeleteProfile(profileId) {
  * @param {string} [email] - User Email
  * @param {string|number} [extraId] - Additional User ID or Profile ID
  */
-async function supabaseDeleteUserCompletely(id, email, extraId) {
+async function supabaseDeleteUserCompletely(id, email, extraId, options = {}) {
     const client = getSupabaseClient();
     if (!client) return { success: true, localOnly: true };
 
@@ -589,7 +654,9 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
     if (email && typeof email === 'object') {
         ingestId(email.id);
         ingestId(email.userId);
+        ingestId(email.user_id);
         ingestEmail(email.email);
+        ingestEmail(email.userEmail);
     } else {
         ingestEmail(email);
     }
@@ -599,13 +666,31 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             ingestId(extraId.id);
             ingestId(extraId.userId);
             ingestId(extraId.user_id);
+            ingestEmail(extraId.email);
+            ingestEmail(extraId.userEmail);
         } else {
             ingestId(extraId);
         }
     }
 
+    // Only if NO target was supplied (self-delete scenario without parameters), fallback to current auth user
+    if (collectedIds.size === 0 && collectedEmails.size === 0) {
+        try {
+            const { data: authData } = await client.auth.getUser();
+            if (authData?.user) {
+                if (authData.user.id) ingestId(authData.user.id);
+                if (authData.user.email) ingestEmail(authData.user.email);
+            }
+        } catch(e) {}
+    }
+
     let normEmail = Array.from(collectedEmails)[0] || '';
     let normId = Array.from(collectedIds)[0] || '';
+
+    // Immediately register with in-memory & session purged cache
+    if (typeof registerPurgedUserId === 'function') {
+        registerPurgedUserId(...Array.from(collectedIds), ...Array.from(collectedEmails));
+    }
 
     console.info(`[Supabase] Initiating COMPLETE PURGE for IDs: [${Array.from(collectedIds).join(', ')}], Emails: [${Array.from(collectedEmails).join(', ')}]`);
 
@@ -652,25 +737,21 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             } catch(e) {}
         }
 
-        // Step C: Check if there is an active session auth user ID
-        try {
-            const { data: authData } = await client.auth.getUser();
-            if (authData?.user) {
-                if (authData.user.id) ingestId(authData.user.id);
-                if (authData.user.email) ingestEmail(authData.user.email);
-            }
-        } catch(e) {}
-
         const idList = Array.from(collectedIds);
         const emailList = Array.from(collectedEmails);
         if (!normEmail && emailList.length > 0) normEmail = emailList[0];
         if (!normId && idList.length > 0) normId = idList[0];
 
+        // Register any newly discovered IDs / emails
+        if (typeof registerPurgedUserId === 'function') {
+            registerPurgedUserId(...idList, ...emailList);
+        }
+
         console.info(`[Supabase] Purging records matching IDs: [${idList.join(', ')}] and Emails: [${emailList.join(', ')}]`);
 
         // PRIORITY 0: Gather and Purge all Cloudinary Photo Assets before deleting DB records
         const photoAssetsToPurge = new Set();
-        if (typeof state !== 'undefined' && state.currentUser) {
+        if (options && options.isSelfDelete && typeof state !== 'undefined' && state.currentUser) {
             if (state.currentUser.img) photoAssetsToPurge.add(state.currentUser.img);
             if (state.currentUser.avatar_url) photoAssetsToPurge.add(state.currentUser.avatar_url);
             if (state.currentUser.photo) photoAssetsToPurge.add(state.currentUser.photo);
@@ -773,6 +854,78 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             console.warn('[Supabase] RPC purge exception:', rpcEx);
         }
 
+        // PRIORITY 1.5: Bulletproof Data-Purge Wipe (Immediate fail-safe against RLS)
+        // Wipes all personal information, contacts, documents, and sets account_status to 'deleted' and visible to false
+        const profilePurgePayload = {
+            name: '[Deleted Account]',
+            account_status: 'deleted',
+            verify_status: 'rejected',
+            visible: false,
+            featured: false,
+            img: null,
+            avatar_url: null,
+            photos: [],
+            doc_img: null,
+            doc_name: null,
+            doc_type: null,
+            email: null,
+            mobile: null,
+            own_mobile: null,
+            village: null,
+            taluka: null,
+            district: null,
+            address: null,
+            full_address: null,
+            father: null,
+            father_name: null,
+            father_occ: null,
+            father_mobile: null,
+            mother: null,
+            mother_name: null,
+            mother_occ: null,
+            sister: null,
+            brother: null,
+            hobbies: [],
+            raw_data: null,
+            updated_at: new Date().toISOString()
+        };
+
+        for (const eml of emailList) {
+            try {
+                await client.from('profiles').update(profilePurgePayload).ilike('email', eml);
+            } catch(e) {}
+        }
+        for (const uid of idList) {
+            const numUid = Number(uid);
+            if (!isNaN(numUid) && numUid > 0) {
+                try {
+                    await client.from('profiles').update(profilePurgePayload).eq('id', numUid);
+                } catch(e) {}
+            }
+            try {
+                await client.from('profiles').update(profilePurgePayload).eq('user_id', uid);
+            } catch(e) {}
+        }
+
+        const userPurgePayload = {
+            name: '[Deleted Account]',
+            status: 'Deleted',
+            role: 'deleted',
+            email: `deleted_${Date.now()}_${Math.floor(Math.random()*10000)}@deleted.local`,
+            mobile: null,
+            updated_at: new Date().toISOString()
+        };
+        for (const eml of emailList) {
+            try {
+                await client.from('users').update(userPurgePayload).ilike('email', eml);
+            } catch(e) {}
+        }
+        for (const uid of idList) {
+            try {
+                await client.from('users').update(userPurgePayload).eq('id', uid);
+            } catch(e) {}
+        }
+
         // PRIORITY 2: Direct client-side cleanup across all public tables (Bulletproof fallback & verification)
 
         // 1. Delete all chat messages (sent or received)
@@ -820,7 +973,21 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             } catch(e) {}
         }
 
-        // 4. Delete from profiles (by email and all collected IDs)
+        // 4. Delete reports
+        for (const eml of emailList) {
+            try {
+                await client.from('reports').delete().ilike('reporter_email', eml);
+                await client.from('reports').delete().ilike('target_user_email', eml);
+            } catch(e) {}
+        }
+        for (const uid of idList) {
+            try {
+                await client.from('reports').delete().eq('reporter_id', uid);
+                await client.from('reports').delete().eq('target_user_id', uid);
+            } catch(e) {}
+        }
+
+        // 5. Delete from profiles (by email and all collected IDs)
         for (const eml of emailList) {
             try {
                 await client.from('profiles').delete().ilike('email', eml);
@@ -839,7 +1006,7 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             } catch(e) {}
         }
 
-        // 5. Delete from users (by email and all collected IDs)
+        // 6. Delete from users (by email and all collected IDs)
         for (const eml of emailList) {
             try {
                 await client.from('users').delete().ilike('email', eml);
@@ -852,51 +1019,41 @@ async function supabaseDeleteUserCompletely(id, email, extraId) {
             } catch(e) {}
         }
 
-        // 6. Delete from payments (payments table stores user_id)
+        // 7. Delete from payments (payments table stores user_id)
         for (const uid of idList) {
             try {
                 await client.from('payments').delete().eq('user_id', uid);
             } catch(e) {}
         }
 
-        // 7. Clean reports from users table (reports are stored with role: 'report')
-        for (const uid of idList) {
-            try {
-                await client.from('users').delete().eq('role', 'report').ilike('suspension_reason', `%"targetUserId":${uid}%`);
-            } catch(e) {}
-        }
-
         // 8. Broadcast Realtime deletion event so ALL connected users immediately remove profile from screen
         try {
+            const purgePayload = { id: normId, email: normEmail, ids: idList, emails: emailList, time: Date.now() };
             if (typeof userPresenceChannel !== 'undefined' && userPresenceChannel) {
                 userPresenceChannel.send({
                     type: 'broadcast',
                     event: 'user_account_deleted',
-                    payload: { id: normId, email: normEmail, ids: idList, emails: emailList, time: Date.now() }
+                    payload: purgePayload
                 });
-            } else if (typeof client.channel === 'function') {
-                const bChan = client.channel(`realtime:broadcast:del_${Date.now()}`);
-                bChan.subscribe(status => {
-                    if (status === 'SUBSCRIBED') {
-                        bChan.send({
-                            type: 'broadcast',
-                            event: 'user_account_deleted',
-                            payload: { id: normId, email: normEmail, ids: idList, emails: emailList, time: Date.now() }
-                        });
-                        setTimeout(() => {
-                            try { client.removeChannel(bChan); } catch (_) {}
-                        }, 2500);
-                    }
+            }
+            if (typeof client.channel === 'function') {
+                const bChan = client.channel('realtime:presence:community');
+                bChan.send({
+                    type: 'broadcast',
+                    event: 'user_account_deleted',
+                    payload: purgePayload
                 });
             }
         } catch(bcErr) {
             console.warn('[Realtime] Broadcast delete notice:', bcErr);
         }
 
-        // 9. Terminate Supabase Auth session so token is wiped from browser
-        try {
-            await client.auth.signOut();
-        } catch(e) {}
+        // 9. Terminate Supabase Auth session ONLY if this was a self-deletion
+        if (options && options.isSelfDelete) {
+            try {
+                await client.auth.signOut();
+            } catch(e) {}
+        }
 
         console.info(`[Supabase] Complete purge successful across auth, profiles, users, interests, messages, payments, and Cloudinary.`);
         return { success: true, rpcExecuted, purgedIds: idList, purgedEmails: emailList };
@@ -1016,8 +1173,8 @@ async function supabaseFetchPaymentsForAdmin() {
             id: p.id,
             userId: p.user_id,
             userName: p.user_name || 'Member',
-            plan: p.plan || 'Boys 30 Days Pass (₹49)',
-            amount: p.amount || 49,
+            plan: p.plan || 'Boys 30 Days Pass (₹99)',
+            amount: p.amount || 99,
             date: p.date || new Date(p.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             time: p.time || new Date(p.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
             method: p.method || 'UPI',

@@ -117,8 +117,8 @@ CREATE TABLE IF NOT EXISTS public.payments (
     id VARCHAR(100) PRIMARY KEY, -- e.g. TXN_xxxxx or pay_xxxxx
     user_id TEXT,
     user_name VARCHAR(150),
-    plan VARCHAR(100) NOT NULL DEFAULT 'Boys 30 Days Pass (₹49)',
-    amount NUMERIC(10, 2) NOT NULL DEFAULT 49.00,
+    plan VARCHAR(100) NOT NULL DEFAULT 'Boys 30 Days Pass (₹99)',
+    amount NUMERIC(10, 2) NOT NULL DEFAULT 99.00,
     currency VARCHAR(10) NOT NULL DEFAULT 'INR',
     method VARCHAR(50) NOT NULL DEFAULT 'UPI',
     razorpay_payment_id VARCHAR(100),
@@ -413,6 +413,7 @@ CREATE INDEX IF NOT EXISTS idx_messages_receiver ON public.messages(receiver_ema
 CREATE INDEX IF NOT EXISTS idx_messages_receiver_id ON public.messages(receiver_id);
 CREATE INDEX IF NOT EXISTS idx_messages_receiver_read ON public.messages(receiver_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_messages_thread_created ON public.messages(thread_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_is_deleted ON public.messages(is_deleted);
 
 ALTER TABLE public.messages REPLICA IDENTITY FULL;
 ALTER TABLE public.interests REPLICA IDENTITY FULL;
@@ -589,8 +590,16 @@ BEGIN
         num_id := norm_id::bigint;
     END IF;
 
+    -- If target_user_id was numeric but target_email is empty, look up email and user_id from profiles
+    IF num_id IS NOT NULL AND norm_email = '' THEN
+        SELECT LOWER(TRIM(email)) INTO norm_email FROM public.profiles WHERE id = num_id LIMIT 1;
+    END IF;
+    IF num_id IS NOT NULL AND (norm_id = '' OR norm_id ~ '^[0-9]+$') THEN
+        SELECT user_id INTO norm_id FROM public.profiles WHERE id = num_id AND user_id IS NOT NULL AND user_id <> '' LIMIT 1;
+    END IF;
+
     -- 1. Find user in auth.users by UUID if provided, or by email
-    IF norm_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    IF norm_id IS NOT NULL AND norm_id ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
         BEGIN
             SELECT id INTO found_auth_uid FROM auth.users WHERE id = norm_id::uuid LIMIT 1;
         EXCEPTION WHEN OTHERS THEN
@@ -643,15 +652,18 @@ BEGIN
     END IF;
 
     -- 5B. Delete from reports (safe if table exists)
-    BEGIN
-        DELETE FROM public.reports 
-        WHERE (norm_email <> '' AND (LOWER(TRIM(reporter_email)) = norm_email OR LOWER(TRIM(target_user_email)) = norm_email))
-           OR (norm_id <> '' AND (reporter_id = norm_id OR target_user_id = norm_id))
-           OR (num_id IS NOT NULL AND (reporter_id = num_id::text OR target_user_id = num_id::text))
-           OR (found_auth_uid IS NOT NULL AND (reporter_id = found_auth_uid::text OR target_user_id = found_auth_uid::text));
-    EXCEPTION WHEN OTHERS THEN
-        NULL;
-    END;
+    IF to_regclass('public.reports') IS NOT NULL THEN
+        BEGIN
+            EXECUTE 'DELETE FROM public.reports 
+            WHERE ($1 <> '''' AND (LOWER(TRIM(reporter_email)) = $1 OR LOWER(TRIM(target_user_email)) = $1))
+               OR ($2 <> '''' AND (reporter_id = $2 OR target_user_id = $2))
+               OR ($3 IS NOT NULL AND (reporter_id = $3::text OR target_user_id = $3::text))
+               OR ($4 IS NOT NULL AND (reporter_id = $4::text OR target_user_id = $4::text))'
+            USING norm_email, norm_id, num_id, found_auth_uid;
+        EXCEPTION WHEN OTHERS THEN
+            NULL;
+        END;
+    END IF;
 
     -- 6. Delete from public.profiles
     DELETE FROM public.profiles 
@@ -708,7 +720,8 @@ BEGIN
         'interests_deleted', del_interests_count,
         'messages_deleted', del_messages_count,
         'payments_deleted', del_payments_count,
-        'email_logs_deleted', del_emails_count
+        'email_logs_deleted', del_emails_count,
+        'reports_deleted', del_reports_count
     );
 END;
 $$;

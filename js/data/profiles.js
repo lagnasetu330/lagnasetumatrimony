@@ -39,7 +39,7 @@ async function syncProfilesFromSupabase() {
     try {
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
-            PROFILES = remoteProfiles;
+            PROFILES = remoteProfiles.filter(p => p && (typeof isUserPurged !== 'function' || !isUserPurged(p)));
             window.PROFILES = PROFILES;
             saveCommunityProfiles();
 
@@ -90,8 +90,9 @@ function setupProfilesRealtime() {
     try {
         supabaseSubscribeToTable('profiles', 
             (newRow) => {
+                if (typeof isUserPurged === 'function' && isUserPurged(newRow)) return;
                 const prof = typeof mapProfileFromSupabase === 'function' ? mapProfileFromSupabase(newRow) : newRow;
-                if (!prof || !prof.id) return;
+                if (!prof || !prof.id || prof.accountStatus === 'deleted' || prof.account_status === 'deleted') return;
                 const idx = PROFILES.findIndex(p => p.id === prof.id);
                 if (idx === -1) {
                     PROFILES.unshift(prof);
@@ -107,8 +108,17 @@ function setupProfilesRealtime() {
                 if (typeof checkCurrentUserStatus === 'function') checkCurrentUserStatus();
             },
             (updatedRow) => {
+                if ((typeof isUserPurged === 'function' && isUserPurged(updatedRow)) || (updatedRow && (updatedRow.account_status === 'deleted' || updatedRow.visible === false))) {
+                    handleRemoteAccountPurge(updatedRow.id, updatedRow.email, updatedRow);
+                    return;
+                }
                 const prof = typeof mapProfileFromSupabase === 'function' ? mapProfileFromSupabase(updatedRow) : updatedRow;
-                if (!prof || !prof.id) return;
+                if (!prof || !prof.id || prof.accountStatus === 'deleted' || prof.account_status === 'deleted') {
+                    if (updatedRow && updatedRow.id) {
+                        handleRemoteAccountPurge(updatedRow.id, updatedRow.email, updatedRow);
+                    }
+                    return;
+                }
                 const idx = PROFILES.findIndex(p => p.id === prof.id);
                 if (idx !== -1) {
                     PROFILES[idx] = { ...PROFILES[idx], ...prof };
@@ -174,6 +184,10 @@ function handleRemoteAccountPurge(delId, delEmail, rawPayload = {}) {
     const ids = Array.isArray(rawPayload.ids) ? rawPayload.ids.map(String) : (normId ? [normId] : []);
     const emails = Array.isArray(rawPayload.emails) ? rawPayload.emails.map(e => String(e).trim().toLowerCase()) : (normEmail ? [normEmail] : []);
 
+    if (typeof registerPurgedUserId === 'function') {
+        registerPurgedUserId(...ids, ...emails);
+    }
+
     console.info(`[Realtime Purge] Processing account deletion for IDs: [${ids.join(', ')}], Emails: [${emails.join(', ')}]`);
 
     // 1. Remove from in-memory PROFILES and localStorage
@@ -209,6 +223,17 @@ function handleRemoteAccountPurge(delId, delEmail, rawPayload = {}) {
         }
     }
 
+    // 3b. If currently chatting with this deleted user, close chat screen immediately!
+    const chatScreen = document.getElementById('scr-chat');
+    if (chatScreen && chatScreen.classList.contains('active')) {
+        const viewingChatId = String(state.activeChatId || '');
+        if (ids.some(id => id && id === viewingChatId) || (emails.length > 0 && emails.includes((state.activeChatEmail || '').toLowerCase()))) {
+            if (typeof goBack === 'function') goBack();
+            else if (typeof go === 'function') go('scr-inbox');
+            if (typeof showToast === 'function') showToast('This user account is no longer active.');
+        }
+    }
+
     // 4. Check if currently logged-in user is the one deleted
     if (typeof state !== 'undefined' && state.currentUser) {
         const myId = String(state.currentUser.id || state.currentUser.userId || '');
@@ -238,6 +263,7 @@ function handleRemoteAccountPurge(delId, delEmail, rawPayload = {}) {
     if (typeof renderHome === 'function' && document.getElementById('homeGirlsList')) renderHome();
     if (typeof renderBrowse === 'function' && document.getElementById('browseList')) renderBrowse();
     if (typeof renderFavorites === 'function' && document.getElementById('favContent')) renderFavorites();
+    if (typeof syncUserChatAndInterests === 'function' && typeof state !== 'undefined' && state.currentUser) syncUserChatAndInterests();
 }
 window.handleRemoteAccountPurge = handleRemoteAccountPurge;
 
@@ -271,7 +297,7 @@ function checkCurrentUserStatus() {
 const FAQS = [
     ['How do I register?', 'Tap "Create account" on the welcome screen and complete all 3 steps: community, personal & family details, and address.'],
     ['Is Lagna Setu free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
-    ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹49, giving direct contact to verified community brides\' families.'],
+    ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹99, giving direct contact to verified community brides\' families.'],
     ['How do I contact a profile?', 'You can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request.'],
     ['Is my personal phone number visible to everyone?', 'No. Your personal registration number is kept strictly private for Admin review only. Only your father\'s contact number is shown to verified members.'],
     ['How do multi-photo profiles work?', 'Profiles with 2 or 3 photos display a photo counter badge. Tap on the photo to open the high-resolution photo carousel.'],

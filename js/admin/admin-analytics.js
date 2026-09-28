@@ -185,7 +185,7 @@ async function renderAnalyticsPage(isManualRefresh) {
                 var stx=String(txn).slice(0,18)+(String(txn).length>18?'&hellip;':'');
                 rv+='<tr><td class="ap-td-num">'+(i+1)+'</td>';
                 rv+='<td class="ap-td-name"><div class="ap-member-cell"><div class="ap-avatar ap-avatar-green">'+(unm?unm.charAt(0).toUpperCase():'?')+'</div><div><div class="ap-member-name">'+apEsc(unm||'Member')+'</div><div class="ap-member-sub">'+apEsc(String(uid).slice(0,20))+'</div></div></div></td>';
-                rv+='<td><span class="ap-amount-cell">&#8377;'+(Number(p.amount)||49)+'</span></td>';
+                rv+='<td><span class="ap-amount-cell">&#8377;'+(Number(p.amount)||99)+'</span></td>';
                 rv+='<td class="ap-td-plan">'+apEsc(p.plan||'Boys 30 Days Pass')+'</td>';
                 rv+='<td><span class="ap-badge ap-badge-method"><i class="fa-solid fa-bolt"></i> '+apEsc(p.method||'UPI')+'</span></td>';
                 rv+='<td><span class="ap-date-cell">'+(d?apFmtDate(d):(p.date||'&mdash;'))+'</span></td>';
@@ -240,11 +240,11 @@ async function renderAnalyticsPage(isManualRefresh) {
 
         /* Table 2: Revenue */
         H += '<div class="ap-section" style="margin-top:20px;">';
-        H += '<div class="ap-section-header"><div class="ap-section-icon" style="background:#ECFDF5;color:#059669;"><i class="fa-solid fa-indian-rupee-sign"></i></div><div><div class="ap-section-title" style="color:#065F46;">Revenue &amp; Collections</div><div class="ap-section-sub">Boys &#8377;49 pass payments received</div></div><div class="ap-section-badge" style="background:#ECFDF5;color:#059669;">&#8377;'+totalRev+'</div></div>';
+        H += '<div class="ap-section-header"><div class="ap-section-icon" style="background:#ECFDF5;color:#059669;"><i class="fa-solid fa-indian-rupee-sign"></i></div><div><div class="ap-section-title" style="color:#065F46;">Revenue &amp; Collections</div><div class="ap-section-sub">Boys &#8377;99 pass payments received</div></div><div class="ap-section-badge" style="background:#ECFDF5;color:#059669;">&#8377;'+totalRev+'</div></div>';
         H += '<div class="ap-summary-strip">';
         H += '<div class="ap-summary-card" style="border-left:3px solid #10B981;background:linear-gradient(135deg,#ECFDF5,#F0FDF4);"><div class="ap-summary-val" style="color:#059669;font-size:20px;">&#8377;'+totalRev+'</div><div class="ap-summary-lbl">Total Earned</div></div>';
         H += '<div class="ap-summary-card" style="border-left:3px solid #3B82F6;"><div class="ap-summary-val">'+revPay.length+'</div><div class="ap-summary-lbl">Passes Sold</div></div>';
-        H += '<div class="ap-summary-card" style="border-left:3px solid #F59E0B;"><div class="ap-summary-val">&#8377;49</div><div class="ap-summary-lbl">Per Pass</div></div>';
+        H += '<div class="ap-summary-card" style="border-left:3px solid #F59E0B;"><div class="ap-summary-val">&#8377;99</div><div class="ap-summary-lbl">Per Pass</div></div>';
         H += '<div class="ap-summary-card" style="border-left:3px solid #8B5CF6;"><div class="ap-summary-val" style="color:#7C3AED;font-size:13px;">'+apTfLabel(revTf)+'</div><div class="ap-summary-lbl">Period</div></div>';
         H += '</div>';
         H += '<div class="ap-pills-row">'+apPillsHtml(revTf,'apSetRevTf')+'</div>';

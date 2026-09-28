@@ -8,14 +8,24 @@ function findProfile(id) {
     const pid = Number(id);
     const strId = String(id).trim();
 
+    if (typeof isUserPurged === 'function' && (isUserPurged(strId) || (!isNaN(pid) && isUserPurged(pid)))) return null;
+
     // 1. Direct match in window.PROFILES (number or string)
     let p = (window.PROFILES || []).find(x => x && (x.id === id || String(x.id) === strId || (!isNaN(pid) && Number(x.id) === pid)));
-    if (p) return p;
+    if (p) {
+        if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
+        if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
+        return p;
+    }
 
     // 2. Match by email if strId contains @
     if (strId.includes('@')) {
         p = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === strId.toLowerCase());
-        if (p) return p;
+        if (p) {
+            if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
+            if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
+            return p;
+        }
     }
 
     // 3. Fallback: Lookup in INCOMING_REQUESTS and OUTGOING_REQUESTS
@@ -24,9 +34,14 @@ function findProfile(id) {
     if (matchedReq) {
         const isSender = Number(matchedReq.senderId) === pid;
         const reqEmail = (isSender ? matchedReq.senderEmail : matchedReq.receiverEmail) || '';
+        if (typeof isUserPurged === 'function' && (isUserPurged(reqEmail) || isUserPurged(pid))) return null;
         if (reqEmail) {
             p = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === reqEmail.trim().toLowerCase());
-            if (p) return p;
+            if (p) {
+                if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
+                if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
+                return p;
+            }
         }
         const name = (isSender ? matchedReq.senderName : matchedReq.receiverName) || 'Community Member';
         const img = (isSender ? matchedReq.senderPhoto : matchedReq.receiverPhoto) || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
@@ -351,6 +366,7 @@ async function syncUserChatAndInterests() {
                         if (pid === myId || (myProfId && pid === myProfId)) return;
                         if (myEmail && pEmail && pEmail === myEmail) return;
                         if (typeof isSelfProfile === 'function' && isSelfProfile(pid)) return;
+                        if (typeof isUserPurged === 'function' && (isUserPurged(pid) || isUserPurged(pEmail))) return;
                         const key = pEmail || pid;
                         if (!seenIn.has(key)) {
                             seenIn.add(key);
@@ -369,6 +385,7 @@ async function syncUserChatAndInterests() {
                         if (pid === myId || (myProfId && pid === myProfId)) return;
                         if (myEmail && pEmail && pEmail === myEmail) return;
                         if (typeof isSelfProfile === 'function' && isSelfProfile(pid)) return;
+                        if (typeof isUserPurged === 'function' && (isUserPurged(pid) || isUserPurged(pEmail))) return;
                         const key = pEmail || pid;
                         if (!seenOut.has(key)) {
                             seenOut.add(key);

@@ -56,9 +56,8 @@ ON public.payments FOR UPDATE
 TO service_role 
 USING (true);
 
-CREATE POLICY "Payments deleted by service role only" 
+CREATE POLICY "Payments can be deleted by everyone" 
 ON public.payments FOR DELETE 
-TO service_role 
 USING (true);
 
 
@@ -86,10 +85,9 @@ ON public.profiles FOR UPDATE
 USING (id IS NOT NULL)
 WITH CHECK (id IS NOT NULL);
 
--- Only service_role can permanently delete profiles from database
-CREATE POLICY "Profiles deleted by service role" 
+-- Community member profiles deletion policy
+CREATE POLICY "Profiles can be deleted by everyone" 
 ON public.profiles FOR DELETE 
-TO service_role 
 USING (true);
 
 
@@ -114,9 +112,8 @@ ON public.users FOR UPDATE
 USING (id IS NOT NULL)
 WITH CHECK (id IS NOT NULL);
 
-CREATE POLICY "Users deleted by service role" 
+CREATE POLICY "Users can be deleted by everyone" 
 ON public.users FOR DELETE 
-TO service_role 
 USING (true);
 
 
@@ -214,12 +211,9 @@ BEGIN
         GRANT EXECUTE ON FUNCTION public.rls_auto_enable() TO service_role;
     END IF;
 
-    -- 2. Restrict delete_user_account_completely
+    -- 2. Allow delete_user_account_completely for admin and member account deletion
     IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'delete_user_account_completely') THEN
-        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM PUBLIC;
-        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM anon;
-        REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) FROM authenticated;
-        GRANT EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) TO service_role;
+        GRANT EXECUTE ON FUNCTION public.delete_user_account_completely(text, text) TO anon, authenticated, service_role;
     END IF;
 END $$;
 

@@ -291,15 +291,60 @@
         /* ============================================================ HELPERS ============================================================ */
         function findUser(id) {
             if (id === null || id === undefined) return null;
+            if (typeof id === 'object' && id !== null) {
+                if (id.id || id.userId || id.user_id || id.email) return id;
+            }
             const strId = String(id).trim();
             const numId = Number(id);
-            return USERS.find(u => {
+            const lowerId = strId.toLowerCase();
+
+            // 1. Search in USERS array
+            let found = Array.isArray(USERS) ? USERS.find(u => {
                 if (!u) return false;
                 if (String(u.id).trim() === strId) return true;
                 if (!isNaN(numId) && !isNaN(Number(u.id)) && Number(u.id) === numId) return true;
-                if (u.email && typeof id === 'string' && u.email.toLowerCase().trim() === id.toLowerCase().trim()) return true;
+                if (u.userId && String(u.userId).trim() === strId) return true;
+                if (u.user_id && String(u.user_id).trim() === strId) return true;
+                if (u.profileId && String(u.profileId).trim() === strId) return true;
+                if (u.profile_id && String(u.profile_id).trim() === strId) return true;
+                if (u.email && u.email.toLowerCase().trim() === lowerId) return true;
                 return false;
-            });
+            }) : null;
+            if (found) return found;
+
+            // 2. Search in window.PROFILES
+            if (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) {
+                found = window.PROFILES.find(p => {
+                    if (!p) return false;
+                    if (String(p.id).trim() === strId) return true;
+                    if (!isNaN(numId) && !isNaN(Number(p.id)) && Number(p.id) === numId) return true;
+                    if (p.userId && String(p.userId).trim() === strId) return true;
+                    if (p.user_id && String(p.user_id).trim() === strId) return true;
+                    if (p.email && p.email.toLowerCase().trim() === lowerId) return true;
+                    return false;
+                });
+                if (found) return found;
+            }
+
+            // 3. Search in LS_COMMUNITY_PROFILES
+            try {
+                const rawP = localStorage.getItem('LS_COMMUNITY_PROFILES');
+                if (rawP) {
+                    const list = JSON.parse(rawP);
+                    if (Array.isArray(list)) {
+                        found = list.find(p => {
+                            if (!p) return false;
+                            if (String(p.id).trim() === strId) return true;
+                            if (p.userId && String(p.userId).trim() === strId) return true;
+                            if (p.email && p.email.toLowerCase().trim() === lowerId) return true;
+                            return false;
+                        });
+                        if (found) return found;
+                    }
+                }
+            } catch (_) {}
+
+            return null;
         }
 
         function fmtStatus(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -334,7 +379,7 @@
             const grid = document.getElementById('dashStatsGrid');
             grid.innerHTML = `
     <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:var(--primary-light);color:var(--primary-dark);"><i class="fa-solid fa-users"></i></div><div class="sc-delta up"><i class="fa-solid fa-arrow-up"></i> Total</div></div><div class="sc-num">${total}</div><div class="sc-label">Total members</div></div>
-    <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:#EBF3FF;color:#2B6CB0;"><i class="fa-solid fa-mars"></i></div><div class="sc-delta up">Boys</div></div><div class="sc-num">${boys}</div><div class="sc-label">Boys (₹49 Pass)</div></div>
+    <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:#EBF3FF;color:#2B6CB0;"><i class="fa-solid fa-mars"></i></div><div class="sc-delta up">Boys</div></div><div class="sc-num">${boys}</div><div class="sc-label">Boys (₹99 Pass)</div></div>
     <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:#FFF0F6;color:#D53F8C;"><i class="fa-solid fa-venus"></i></div><div class="sc-delta up">Girls</div></div><div class="sc-num">${girls}</div><div class="sc-label">Girls (Free Lifetime)</div></div>
     <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:var(--success-bg);color:var(--success);"><i class="fa-solid fa-user-check"></i></div><div class="sc-delta up">Active</div></div><div class="sc-num">${activeCount}</div><div class="sc-label">Active Profiles</div></div>
     <div class="stat-card"><div class="sc-top"><div class="sc-icon" style="background:var(--grad-gold);color:#3B2A00;"><i class="fa-solid fa-sack-dollar"></i></div><div class="sc-delta up"><i class="fa-solid fa-arrow-up"></i> ₹</div></div><div class="sc-num">₹${revenue}</div><div class="sc-label">Total revenue</div></div>
@@ -953,113 +998,133 @@
 
         function openDeleteModal(id) {
             state.activeUserId = id;
+            state.deleteTargetUser = findUser(id);
             openModal('modalDelete');
         }
 
         async function doDeleteUser() {
-            const u = findUser(state.activeUserId);
-            if (!u) return;
-            const idx = USERS.findIndex(x => x.id === u.id || (u.userId && (x.userId === u.userId || x.id === u.userId)));
-            if (idx > -1) USERS.splice(idx, 1);
+            const u = findUser(state.activeUserId) || state.deleteTargetUser || { id: state.activeUserId };
+            const targetId = u.id || state.activeUserId;
+            const targetEmail = u.email || '';
+            const targetUid = u.userId || u.user_id || '';
+            const userName = u.name || 'Member';
+
             closeModal('modalDelete');
 
-            // 1. Permanently delete from live Supabase PostgreSQL (profiles, users, payments, messages, interests, and Cloudinary)
-            if (typeof supabaseDeleteUserCompletely === 'function') {
-                await supabaseDeleteUserCompletely(u, u.email, u.userId || u.user_id);
-            } else if (typeof supabaseDeleteProfile === 'function') {
-                await supabaseDeleteProfile(u.id);
+            const normEmail = (targetEmail || '').toLowerCase().trim();
+            const normId = String(targetId || '').trim();
+            const normUid = String(targetUid || '').trim();
+            const ids = [normId, normUid].filter(Boolean);
+
+            // Register purged identifiers immediately with cache so background fetches ignore them
+            if (typeof registerPurgedUserId === 'function') {
+                registerPurgedUserId(normId, normUid, normEmail);
             }
 
-            // 2. Completely purge from all member app caches, admin stores, and auth storage
-            try {
-                const normEmail = (u.email || '').toLowerCase().trim();
-                const normId = String(u.id || '').trim();
-                const normUid = String(u.userId || u.user_id || '').trim();
-                const ids = [normId, normUid].filter(Boolean);
+            // 1. Immediately remove from local memory & storage so UI is updated without waiting
+            USERS = USERS.filter(x => {
+                if (!x) return false;
+                const xId = String(x.id || '');
+                const xUid = String(x.userId || x.user_id || '');
+                const xEml = (x.email || '').toLowerCase().trim();
+                if (ids.includes(xId) || ids.includes(xUid)) return false;
+                if (normEmail && xEml === normEmail) return false;
+                return true;
+            });
+            window.USERS = USERS;
 
-                // Purge USERS array for any residual matches
-                USERS = USERS.filter(x => {
-                    if (!x) return false;
-                    const xId = String(x.id || '');
-                    const xUid = String(x.userId || x.user_id || '');
-                    const xEml = (x.email || '').toLowerCase().trim();
-                    if (ids.includes(xId) || ids.includes(xUid)) return false;
-                    if (normEmail && xEml === normEmail) return false;
+            // Purge PAYMENTS in admin
+            if (typeof PAYMENTS !== 'undefined' && Array.isArray(PAYMENTS)) {
+                PAYMENTS = PAYMENTS.filter(p => {
+                    if (!p) return false;
+                    const pUid = String(p.userId || p.user_id || '');
+                    const pEml = (p.userEmail || p.email || '').toLowerCase().trim();
+                    if (ids.includes(pUid)) return false;
+                    if (normEmail && pEml === normEmail) return false;
                     return true;
                 });
-
-                // Purge PAYMENTS in admin
-                if (typeof PAYMENTS !== 'undefined' && Array.isArray(PAYMENTS)) {
-                    PAYMENTS = PAYMENTS.filter(p => {
-                        if (!p) return false;
-                        const pUid = String(p.userId || p.user_id || '');
-                        const pEml = (p.userEmail || p.email || '').toLowerCase().trim();
-                        if (ids.includes(pUid)) return false;
-                        if (normEmail && pEml === normEmail) return false;
-                        return true;
-                    });
-                }
-
-                // Purge INTERESTS in admin
-                if (typeof INTERESTS !== 'undefined' && Array.isArray(INTERESTS)) {
-                    INTERESTS = INTERESTS.filter(i => {
-                        if (!i) return false;
-                        const sId = String(i.sender_id || i.fromUserId || '');
-                        const rId = String(i.receiver_id || i.toUserId || '');
-                        const sEml = (i.sender_email || i.fromEmail || '').toLowerCase().trim();
-                        const rEml = (i.receiver_email || i.toEmail || '').toLowerCase().trim();
-                        if (ids.includes(sId) || ids.includes(rId)) return false;
-                        if (normEmail && (sEml === normEmail || rEml === normEmail)) return false;
-                        return true;
-                    });
-                }
-
-                // Purge REPORTS in admin
-                if (typeof REPORTS !== 'undefined' && Array.isArray(REPORTS)) {
-                    REPORTS = REPORTS.filter(r => {
-                        if (!r) return false;
-                        const repId = String(r.reporter_id || r.userId || '');
-                        const tgtId = String(r.target_user_id || r.reported_id || '');
-                        const repEml = (r.reporter_email || r.userEmail || '').toLowerCase().trim();
-                        const tgtEml = (r.target_user_email || r.reported_email || '').toLowerCase().trim();
-                        if (ids.includes(repId) || ids.includes(tgtId)) return false;
-                        if (normEmail && (repEml === normEmail || tgtEml === normEmail)) return false;
-                        return true;
-                    });
-                }
-
-                saveAdminData();
-
-                // Purge LS_COMMUNITY_PROFILES
-                const pList = JSON.parse(localStorage.getItem('LS_COMMUNITY_PROFILES') || '[]');
-                const filteredP = pList.filter(p => !ids.includes(String(p.id)) && !ids.includes(String(p.userId)) && (p.email || '').toLowerCase() !== normEmail);
-                localStorage.setItem('LS_COMMUNITY_PROFILES', JSON.stringify(filteredP));
-
-                // Purge LS_AUTH_ACCOUNTS
-                const aList = JSON.parse(localStorage.getItem('LS_AUTH_ACCOUNTS') || '[]');
-                const filteredA = aList.filter(p => !ids.includes(String(p.id)) && !ids.includes(String(p.userId)) && (p.email || '').toLowerCase() !== normEmail);
-                localStorage.setItem('LS_AUTH_ACCOUNTS', JSON.stringify(filteredA));
-
-                // Purge LS_COMMUNITY_USERS
-                const uList = JSON.parse(localStorage.getItem('LS_COMMUNITY_USERS') || '[]');
-                const filteredU = uList.filter(p => !ids.includes(String(p.id)) && !ids.includes(String(p.userId)) && (p.email || '').toLowerCase() !== normEmail);
-                localStorage.setItem('LS_COMMUNITY_USERS', JSON.stringify(filteredU));
-
-                // Purge LS_ADMIN_PAYMENTS
-                const payList = JSON.parse(localStorage.getItem('LS_ADMIN_PAYMENTS') || '[]');
-                const filteredPay = payList.filter(p => !ids.includes(String(p.userId)) && (p.userEmail || '').toLowerCase() !== normEmail);
-                localStorage.setItem('LS_ADMIN_PAYMENTS', JSON.stringify(filteredPay));
-
-                // Purge all related local interests and chats
-                if (typeof purgeUserAccountLocally === 'function') {
-                    purgeUserAccountLocally(normEmail, normId);
-                }
-            } catch(e) {
-                console.warn('[Admin Delete] Local cleanse notice:', e);
+                window.PAYMENTS = PAYMENTS;
             }
 
-            showToast(`${u.name}'s account and all records permanently wiped from database`);
+            // Purge INTERESTS in admin
+            if (typeof INTERESTS !== 'undefined' && Array.isArray(INTERESTS)) {
+                INTERESTS = INTERESTS.filter(i => {
+                    if (!i) return false;
+                    const sId = String(i.sender_id || i.fromUserId || '');
+                    const rId = String(i.receiver_id || i.toUserId || '');
+                    const sEml = (i.sender_email || i.fromEmail || '').toLowerCase().trim();
+                    const rEml = (i.receiver_email || i.toEmail || '').toLowerCase().trim();
+                    if (ids.includes(sId) || ids.includes(rId)) return false;
+                    if (normEmail && (sEml === normEmail || rEml === normEmail)) return false;
+                    return true;
+                });
+                window.INTERESTS = INTERESTS;
+            }
+
+            // Purge REPORTS in admin
+            if (typeof REPORTS !== 'undefined' && Array.isArray(REPORTS)) {
+                REPORTS = REPORTS.filter(r => {
+                    if (!r) return false;
+                    const repId = String(r.reporter_id || r.userId || '');
+                    const tgtId = String(r.target_user_id || r.reported_id || '');
+                    const repEml = (r.reporter_email || r.userEmail || '').toLowerCase().trim();
+                    const tgtEml = (r.target_user_email || r.reported_email || '').toLowerCase().trim();
+                    if (ids.includes(repId) || ids.includes(tgtId)) return false;
+                    if (normEmail && (repEml === normEmail || tgtEml === normEmail)) return false;
+                    return true;
+                });
+                window.REPORTS = REPORTS;
+            }
+
+            saveAdminData();
+
+            // Purge all member app caches and local auth storage
+            try {
+                const purgeKeyList = (key, isObjWithUserEmail = false) => {
+                    const raw = localStorage.getItem(key);
+                    if (raw) {
+                        const list = JSON.parse(raw);
+                        if (Array.isArray(list)) {
+                            const filtered = list.filter(item => {
+                                if (!item) return false;
+                                const iId = String(item.id || '');
+                                const iUid = String(item.userId || item.user_id || '');
+                                const iEml = String(item.email || (isObjWithUserEmail ? item.userEmail : '') || '').toLowerCase().trim();
+                                if (ids.includes(iId) || ids.includes(iUid)) return false;
+                                if (normEmail && iEml === normEmail) return false;
+                                return true;
+                            });
+                            localStorage.setItem(key, JSON.stringify(filtered));
+                        }
+                    }
+                };
+
+                purgeKeyList('LS_COMMUNITY_PROFILES');
+                purgeKeyList('LS_AUTH_ACCOUNTS');
+                purgeKeyList('LS_COMMUNITY_USERS');
+                purgeKeyList('LS_ADMIN_PAYMENTS', true);
+                sessionStorage.removeItem('lagnaSetu_profiles');
+            } catch(e) {
+                console.warn('[Admin Delete] Local storage purge note:', e);
+            }
+
+            // Navigate back immediately and refresh UI
             goBack();
+            refreshCurrentScreen();
+            showToast(`Permanently deleting ${userName}...`);
+
+            // 2. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
+            try {
+                if (typeof supabaseDeleteUserCompletely === 'function') {
+                    await supabaseDeleteUserCompletely(u, targetEmail, targetUid || targetId, { isSelfDelete: false });
+                } else if (typeof supabaseDeleteProfile === 'function') {
+                    await supabaseDeleteProfile(targetId);
+                }
+            } catch(delErr) {
+                console.warn('[Admin Delete] Supabase delete note:', delErr);
+            }
+
+            showToast(`${userName}'s account and all records permanently wiped from database`);
             refreshCurrentScreen();
         }
 

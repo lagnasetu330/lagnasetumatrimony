@@ -215,6 +215,10 @@ function purgeUserAccountLocally(email, id) {
 
     console.warn(`[LagnaSetu] Purging account locally for email: ${normEmail}, id: ${normId}`);
 
+    if (typeof registerPurgedUserId === 'function') {
+        registerPurgedUserId(normEmail, normId);
+    }
+
     // 1. Purge from LS_AUTH_ACCOUNTS
     try {
         const raw = localStorage.getItem('LS_AUTH_ACCOUNTS');
@@ -347,15 +351,13 @@ function purgeUserAccountLocally(email, id) {
         });
     } catch(e) {}
 
-    // 6. Terminate session unconditionally and wipe all session/auth tokens
-    if (typeof state !== 'undefined') {
-        const isCurrent = (!normEmail && !normId) || (
-            state.currentUser && (
-                (normEmail && state.currentUser.email && state.currentUser.email.toLowerCase() === normEmail) ||
-                (normId && (String(state.currentUser.id) === normId || String(state.currentUser.userId) === normId))
-            )
+    // 6. Terminate session ONLY if the currently logged-in user is the one being purged
+    if (typeof state !== 'undefined' && state.currentUser) {
+        const isCurrent = (
+            (normEmail && state.currentUser.email && state.currentUser.email.toLowerCase() === normEmail) ||
+            (normId && (String(state.currentUser.id) === normId || String(state.currentUser.userId) === normId))
         );
-        if (isCurrent || !state.currentUser) {
+        if (isCurrent) {
             state.currentUser = null;
             state.profileComplete = false;
             state.membershipPaid = false;
@@ -1026,7 +1028,7 @@ async function doLogin() {
             return;
         }
 
-        // RULE 3: If Boy -> Must have active 30-Day Pass (₹49)
+        // RULE 3: If Boy -> Must have active 30-Day Pass (₹99)
         matchedUser.gender = 'Boy';
         const pStatus = checkBoyPassStatus(matchedUser);
         if (pStatus.active) {
@@ -1042,9 +1044,9 @@ async function doLogin() {
             go('scr-membership');
             openModal('modalPaywall');
             if (pStatus.reason === 'expired') {
-                showToast('Your 30-Day Pass has expired! Pay ₹49 via UPI to renew.');
+                showToast('Your 30-Day Pass has expired! Pay ₹99 via UPI to renew.');
             } else {
-                showToast('Boys ₹49 Pass required: Pay via UPI to enter home.');
+                showToast('Boys ₹99 Pass required: Pay via UPI to enter home.');
             }
         }
         return;
@@ -1091,9 +1093,9 @@ function enterHome() {
             go('scr-membership', true);
             openModal('modalPaywall');
             if (passStatus.reason === 'expired') {
-                showToast('Your 30-Day Pass has expired! Pay ₹49 via UPI to enter.');
+                showToast('Your 30-Day Pass has expired! Pay ₹99 via UPI to enter.');
             } else {
-                showToast('Boys ₹49 Pass required: Pay via UPI to access community brides.');
+                showToast('Boys ₹99 Pass required: Pay via UPI to access community brides.');
             }
             return;
         }

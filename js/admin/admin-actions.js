@@ -70,7 +70,7 @@ window.escapeHtml = escapeHtmlAdmin;
             row.className = 'row-item';
             const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
             const isGirl = checkGirl(u.gender);
-            const payBadge = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> Free</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹49</span>' : '<span class="status-badge pending">Unpaid</span>');
+            const payBadge = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> Free</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99</span>' : '<span class="status-badge pending">Unpaid</span>');
             const statusBadge = u.accountStatus === 'active' ? '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active</span>' : '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended</span>';
             const termsBadge = '<span class="status-badge" style="background:rgba(46,196,182,0.12);color:#2EC4B6;border:1px solid rgba(46,196,182,0.3);font-size:10px;padding:2px 7px;font-weight:700;" title="Terms & Privacy Policy Agreed"><i class="fa-solid fa-shield-halved"></i> Terms Agreed</span>';
             const photoCount = (Array.isArray(u.photos) && u.photos.length > 0) ? u.photos.length : 1;
@@ -118,7 +118,7 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!u) return;
             const el = document.getElementById('userDetailContent');
             const isGirl = u.gender === 'girls' || u.gender === 'Girl';
-            const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹49 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
+            const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
             const statusBadge = u.accountStatus === 'active' ? '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active Account</span>' : '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>';
             const termsBadgeDetail = '<span class="status-badge" style="background:rgba(46,196,182,0.12);color:#2EC4B6;border:1px solid rgba(46,196,182,0.35);font-weight:700;"><i class="fa-solid fa-shield-halved"></i> Terms Agreed</span>';
 

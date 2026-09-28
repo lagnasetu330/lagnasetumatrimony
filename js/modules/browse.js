@@ -764,8 +764,15 @@ function setTab(t) {
 function updateHomeStats() {
     syncGenderUI();
     const list = (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) ? window.PROFILES : [];
-    // Count active, non-suspended, visible profiles
-    const activeProfiles = list.filter(p => p && p.accountStatus !== 'suspended' && p.visible !== false);
+    // Count active, non-suspended, non-deleted, visible profiles
+    const activeProfiles = list.filter(p => p && 
+        p.accountStatus !== 'suspended' && 
+        p.accountStatus !== 'deleted' && 
+        p.account_status !== 'deleted' && 
+        p.name !== '[Deleted Account]' && 
+        p.visible !== false && 
+        (typeof isUserPurged !== 'function' || !isUserPurged(p))
+    );
     
     let girlsCount = 0;
     let boysCount = 0;
@@ -797,7 +804,7 @@ function updateHomeStats() {
                 planEl.textContent = 'Free';
             } else {
                 const pass = (typeof checkBoyPassStatus === 'function') ? checkBoyPassStatus(state.currentUser) : { active: state.currentUser.paymentStatus === 'Active' };
-                planEl.textContent = pass.active ? '₹49 Pass' : 'Unpaid';
+                planEl.textContent = pass.active ? '₹99 Pass' : 'Unpaid';
             }
         } else {
             planEl.textContent = 'Free';
@@ -850,7 +857,8 @@ function renderHome() {
     const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
 
     const feedProfiles = (window.PROFILES || []).filter(p => {
-        if (!p || p.accountStatus === 'suspended' || p.visible === false) return false;
+        if (!p || p.accountStatus === 'suspended' || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]' || p.visible === false) return false;
+        if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
         if (typeof isSelfProfile === 'function' && isSelfProfile(p)) return false;
         if (state.currentUser) {
             const myId = Number(state.currentUser.id || 0);
@@ -1330,9 +1338,10 @@ function renderBrowse(query) {
             if (myEmail && p.email && p.email.trim().toLowerCase() === myEmail) return false;
         }
 
-        // 0. Account Status & Visibility (Admin Moderation)
-        if (p.accountStatus === 'suspended') return false;
+        // 0. Account Status & Visibility (Admin Moderation & Deletion)
+        if (p.accountStatus === 'suspended' || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return false;
         if (p.visible === false) return false;
+        if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
 
         // 1. Strict Matrimonial Gender Isolation Rule:
         // A logged-in boy can ONLY see girls. Never show any boy profiles to a boy.
@@ -1565,6 +1574,8 @@ function renderFavorites() {
     const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
 
     const list = PROFILES.filter(p => {
+        if (!p || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return false;
+        if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
         if (!state.favorites.has(p.id)) return false;
         if (isUserBoy && !checkGirl(p.gender)) return false;
         if (isUserGirl && !checkBoy(p.gender)) return false;

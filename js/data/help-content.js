@@ -7,7 +7,7 @@ const DEFAULT_HOW_IT_WORKS = [
     { title: 'Upload photos', desc: 'Upload up to 3 high-resolution photos to complete your trusted profile.' },
     { title: 'Mobile OTP verification', desc: 'Confirm your mobile number with a fast, secure 6-digit OTP code.' },
     { title: 'Instant profile activation', desc: 'Your profile goes live immediately for community members to see.' },
-    { title: 'Membership pass', desc: 'Community girls: 100% Lifetime Free · Boys: ₹49 for 30 Days Pass.' },
+    { title: 'Membership pass', desc: 'Community girls: 100% Lifetime Free · Boys: ₹99 for 30 Days Pass.' },
     { title: 'Explore profiles', desc: 'Browse verified eligible brides and grooms from your community.' },
     { title: 'Send interest', desc: 'Send an interest request to profiles you like and start connecting.' },
     { title: 'Connect & chat', desc: 'Once accepted, connect directly via phone call, WhatsApp, or in-app chat.' }
@@ -16,8 +16,8 @@ const DEFAULT_HOW_IT_WORKS = [
 const DEFAULT_FAQS = [
     ['How do I register?', 'Members create an account, verify their phone/email by OTP, select community, and complete personal, family, and address details.'],
     ['Is membership free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
-    ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹49, giving direct contact to verified community brides\' families.'],
-    ['What happens after 30 days of membership?', 'After 30 days, your account remains active, but browsing candidate profiles is locked until you renew the ₹49 pass.'],
+    ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹99, giving direct contact to verified community brides\' families.'],
+    ['What happens after 30 days of membership?', 'After 30 days, your account remains active, but browsing candidate profiles is locked until you renew the ₹99 pass.'],
     ['How do members contact each other?', 'A member can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request to unlock chat.'],
     ['Is a member\'s phone number public?', 'No. A member\'s own mobile number is kept strictly private for Admin review only. Only the father\'s contact number is shown on the public profile.'],
     ['How do multi-photo profiles work?', 'Members can upload up to 3 high-resolution photos. Admin and verified members can view all photos in the photo gallery carousel.'],

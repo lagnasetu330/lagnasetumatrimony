@@ -14,7 +14,7 @@ var state = {
     activeReportId: null,
     activeProfileId: null,
     profileComplete: false, // false until member submits profile
-    membershipPaid: false,  // false for boys before paying ₹49 pass
+    membershipPaid: false,  // false for boys before paying ₹99 pass
     filters: {
         gender: 'all',
         caste: 'All', // Default: show all communities, no restriction
