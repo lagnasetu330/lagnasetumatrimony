@@ -590,7 +590,11 @@ function checkBoyPassStatus(user) {
     if (!user) return { active: false, reason: 'no_user' };
 
     // 1. Anti-Gender-Spoofing Protection (Prevents DevTools gender: 'Girl' bypass)
-    if (user.genderToken) {
+    if (user.profileComplete && !user.genderToken && typeof computeSecureToken === 'function') {
+        console.warn('[Security Guard] Missing cryptographic gender signature.');
+        return { active: false, reason: 'unverified_gender', daysLeft: 0 };
+    }
+    if (user.genderToken && typeof computeSecureToken === 'function') {
         const expectedGenderToken = computeSecureToken('gender', user.id, user.email, user.gender);
         if (user.genderToken !== expectedGenderToken) {
             console.warn('[Security Guard] Tampering detected: gender token signature mismatch.');
@@ -611,12 +615,14 @@ function checkBoyPassStatus(user) {
 
     // 2. Anti-Tamper Cryptographic Payment Signature Check
     // Prevents setting paymentStatus = 'Active' or manipulating expiry in browser console
-    if (user.paymentToken) {
-        const expectedPayToken = computeSecureToken('payment', user.id, user.email, user.planExpiry);
-        if (user.paymentToken !== expectedPayToken) {
-            console.warn('[Security Guard] Tampering detected: payment token signature mismatch.');
-            return { active: false, reason: 'tampered', daysLeft: 0 };
-        }
+    if (!user.paymentToken) {
+        console.warn('[Security Guard] Missing payment cryptographic token for active boy pass.');
+        return { active: false, reason: 'unverified_token', daysLeft: 0 };
+    }
+    const expectedPayToken = computeSecureToken('payment', user.id, user.email, user.planExpiry);
+    if (user.paymentToken !== expectedPayToken) {
+        console.warn('[Security Guard] Tampering detected: payment token signature mismatch.');
+        return { active: false, reason: 'tampered', daysLeft: 0 };
     }
     
     const expiry = new Date(user.planExpiry);

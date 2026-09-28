@@ -249,6 +249,27 @@ window.isUserPurged = isUserPurged;
 window.isUserInDeletedList = isUserPurged;
 
 /**
+ * Anti-Scraping / Inspect Privacy Masking Helpers
+ */
+function maskPhoneNumber(phone) {
+    if (!phone) return '—';
+    const clean = String(phone).trim().replace(/\s+/g, '');
+    if (clean.length < 7) return '••••••';
+    return clean.slice(0, 3) + '•••••' + clean.slice(-2);
+}
+
+function maskEmailAddress(email) {
+    if (!email || typeof email !== 'string' || !email.includes('@')) return '••••••@gmail.com';
+    const parts = email.split('@');
+    const name = parts[0];
+    const domain = parts[1] || 'gmail.com';
+    if (name.length <= 2) return `${name[0]}•••@${domain}`;
+    return `${name[0]}••••${name.slice(-1)}@${domain}`;
+}
+window.maskPhoneNumber = maskPhoneNumber;
+window.maskEmailAddress = maskEmailAddress;
+
+/**
  * Bidirectional mapper: Supabase PostgreSQL Row -> Frontend Profile Object
  */
 function mapProfileFromSupabase(row) {
@@ -260,6 +281,26 @@ function mapProfileFromSupabase(row) {
         return null;
     }
     const raw = (row.raw_data && typeof row.raw_data === 'object') ? row.raw_data : {};
+
+    // Privacy Guard: Allow unmasked contact ONLY for current logged-in user viewing their own account
+    const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
+    const isSelf = curUser && (
+        (curUser.id && (String(curUser.id) === String(row.id) || String(curUser.id) === String(row.user_id) || String(curUser.id) === String(raw.userId))) ||
+        (curUser.email && row.email && curUser.email.trim().toLowerCase() === row.email.trim().toLowerCase())
+    );
+
+    const rawFatherMobile = row.father_mobile || raw.fatherMobile || raw.father_mobile || '';
+    const rawOwnMobile = row.own_mobile || raw.ownMobile || row.own_mobile || row.mobile || '';
+    const rawEmail = row.email || raw.email || '';
+    const rawFullAddress = row.full_address || raw.fullAddress || raw.address || '';
+
+    // Mask sensitive contact details for public directory feed
+    const fatherMobile = isSelf ? rawFatherMobile : maskPhoneNumber(rawFatherMobile);
+    const ownMobile = isSelf ? rawOwnMobile : maskPhoneNumber(rawOwnMobile);
+    const mobile = ownMobile;
+    const email = isSelf ? rawEmail : maskEmailAddress(rawEmail);
+    const fullAddress = isSelf ? rawFullAddress : (row.village || row.city ? `${row.village || row.city}${row.district ? ', Dist. ' + row.district : ''}` : 'Gujarat, India');
+
     return {
         ...raw,
         id: row.id,
@@ -272,7 +313,7 @@ function mapProfileFromSupabase(row) {
         village: row.village || raw.village || raw.city || '',
         taluka: row.taluka || raw.taluka || '',
         district: row.district || raw.district || '',
-        fullAddress: row.full_address || raw.fullAddress || raw.address || '',
+        fullAddress: fullAddress,
         occ: row.occupation || raw.occ || raw.occupation || '',
         occupation: row.occupation || raw.occupation || raw.occ || '',
         education: row.education || raw.education || '',
@@ -285,8 +326,8 @@ function mapProfileFromSupabase(row) {
         hobbies: Array.isArray(row.hobbies) ? row.hobbies : (raw.hobbies || []),
         father: row.father || raw.father || '',
         fatherOcc: row.father_occ || raw.fatherOcc || raw.father_occ || '',
-        fatherMobile: row.father_mobile || raw.fatherMobile || raw.father_mobile || '',
-        ownMobile: row.own_mobile || raw.ownMobile || raw.own_mobile || '',
+        fatherMobile: fatherMobile,
+        ownMobile: ownMobile,
         mother: row.mother || raw.mother || '',
         motherOcc: row.mother_occ || raw.motherOcc || raw.mother_occ || '',
         sister: row.sister || raw.sister || '—',
@@ -306,8 +347,8 @@ function mapProfileFromSupabase(row) {
             const single = (row.img || raw.img || row.photo || raw.photo || '').trim();
             return single ? [single] : [def];
         })(),
-        email: row.email || raw.email || '',
-        mobile: row.mobile || raw.mobile || row.own_mobile || '',
+        email: email,
+        mobile: mobile,
         verifyStatus: row.verify_status || raw.verifyStatus || 'approved',
         paymentStatus: row.payment_status || raw.paymentStatus || 'unpaid',
         accountStatus: row.account_status || raw.accountStatus || 'active',
@@ -366,6 +407,54 @@ async function supabaseFetchProfiles(filters = {}) {
         return (window.PROFILES || []).filter(p => !isUserPurged(p));
     }
 }
+
+/**
+ * Fetch unmasked contact details on-demand for authorized users
+ * (Girl viewing Boy, or Boy with verified 30-Day pass viewing Girl)
+ * @param {string|number} profileId
+ */
+async function supabaseFetchAuthorizedContact(profileId) {
+    const client = getSupabaseClient();
+    if (!client) {
+        const local = (typeof findProfile === 'function') ? findProfile(profileId) : null;
+        if (local) {
+            return {
+                fatherMobile: local.fatherMobile || local.father_mobile || '',
+                ownMobile: local.ownMobile || local.mobile || '',
+                email: local.email || '',
+                fullAddress: local.fullAddress || local.address || ''
+            };
+        }
+        return null;
+    }
+
+    try {
+        const numId = Number(profileId);
+        let query = client.from('profiles').select('id, email, mobile, own_mobile, father_mobile, full_address, address');
+        if (!isNaN(numId) && numId > 0) {
+            query = query.eq('id', numId);
+        } else {
+            query = query.eq('user_id', String(profileId));
+        }
+
+        const { data, error } = await query.maybeSingle();
+        if (error || !data) {
+            console.warn('[Supabase] Authorized contact fetch note:', error?.message);
+            return null;
+        }
+
+        return {
+            fatherMobile: data.father_mobile || '',
+            ownMobile: data.own_mobile || data.mobile || '',
+            email: data.email || '',
+            fullAddress: data.full_address || data.address || ''
+        };
+    } catch (e) {
+        console.warn('[Supabase] Authorized contact fetch error:', e);
+        return null;
+    }
+}
+window.supabaseFetchAuthorizedContact = supabaseFetchAuthorizedContact;
 
 /**
  * Upsert member profile in Supabase
@@ -2796,6 +2885,7 @@ window.supabaseAuthSignUp = supabaseAuthSignUp;
 window.supabaseAuthSignIn = supabaseAuthSignIn;
 window.supabaseAuthSignOut = supabaseAuthSignOut;
 window.supabaseFetchProfiles = supabaseFetchProfiles;
+window.supabaseFetchAuthorizedContact = supabaseFetchAuthorizedContact;
 window.supabaseUpsertProfile = supabaseUpsertProfile;
 window.supabaseRecordPayment = supabaseRecordPayment;
 window.supabaseSendEmailOtp = supabaseSendEmailOtp;

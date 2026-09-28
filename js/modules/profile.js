@@ -117,6 +117,14 @@ function submitProfileCompletion() {
     state.profileComplete = true;
     state.filters.caste = 'All'; // Default view shows all communities
 
+    // Anti-Tamper: Seal cryptographic gender & payment signature immediately
+    if (typeof computeSecureToken === 'function') {
+        state.currentUser.genderToken = computeSecureToken('gender', state.currentUser.id, state.currentUser.email, state.currentUser.gender);
+        if (state.currentUser.paymentStatus === 'Active' && state.currentUser.planExpiry) {
+            state.currentUser.paymentToken = computeSecureToken('payment', state.currentUser.id, state.currentUser.email, state.currentUser.planExpiry);
+        }
+    }
+
     // Update users table in Supabase so profile_complete = true is recorded live
     if (typeof supabaseUpsertUser === 'function') {
         supabaseUpsertUser({
@@ -150,6 +158,8 @@ function submitProfileCompletion() {
                 accounts[uIdx].address = state.regData.address;
                 accounts[uIdx].fullAddress = state.regData.address;
                 accounts[uIdx].profileComplete = true;
+                accounts[uIdx].genderToken = state.currentUser.genderToken;
+                if (state.currentUser.paymentToken) accounts[uIdx].paymentToken = state.currentUser.paymentToken;
                 if (isGirl) accounts[uIdx].paymentStatus = 'Free';
                 saveStoredAccounts(accounts);
             }
@@ -383,12 +393,25 @@ function processSuccessfulPayment(txnId, upiMethod) {
 
 function processMockPayment() {
     closeModal('modalRazorpayCheckout');
-    // If real Razorpay key is present, mock payments are strictly disabled
-    if (window.RAZORPAY_KEY_ID && !window.RAZORPAY_KEY_ID.includes('demo')) {
-        showToast('Live mode active. Please complete payment via official Razorpay checkout.');
-        openRazorpayCheckout();
+
+    // Anti-Bypass Guard: Strictly disable mock payments in production environments
+    const isLiveProduction = window.IS_PRODUCTION === true || (
+        typeof window.location !== 'undefined' &&
+        window.location.hostname &&
+        window.location.hostname !== 'localhost' &&
+        window.location.hostname !== '127.0.0.1' &&
+        !window.location.protocol.startsWith('file:') &&
+        !window.ALLOW_MOCK_PAYMENTS
+    );
+
+    if (isLiveProduction || (window.RAZORPAY_KEY_ID && !window.RAZORPAY_KEY_ID.includes('demo'))) {
+        showToast('Live Mode: Mock payments are disabled. Please complete payment via official UPI gateway.');
+        if (typeof openRazorpayCheckout === 'function') {
+            openRazorpayCheckout();
+        }
         return;
     }
+
     const upiInput = document.getElementById('upiCustomVpaInput');
     const customVpa = upiInput ? upiInput.value.trim() : '';
     const methodStr = customVpa ? `UPI (${customVpa})` : `UPI (${selectedUpiApp || 'Google Pay'})`;
@@ -645,9 +668,10 @@ function openProfile(id) {
     }
     
     // Strict Boy Paywall Protection: NEVER open girl profile for an unpaid boy
+    let passCheck = null;
     const isBoy = isUserBoy;
     if (isBoy) {
-        const passCheck = typeof checkBoyPassStatus === 'function' 
+        passCheck = typeof checkBoyPassStatus === 'function' 
             ? checkBoyPassStatus(state.currentUser) 
             : { active: state.currentUser.paymentStatus === 'Active' };
         if (!passCheck.active) {
@@ -749,6 +773,33 @@ function openProfile(id) {
     go('scr-profile');
     const interestBtn = document.getElementById('fullInterestBtn');
     setInterestBtnState(interestBtn, p.id);
+
+    // Authorized On-Demand Contact Reveal:
+    // If viewer is an authorized Girl or a Boy with verified active pass, fetch real unmasked contact
+    const isViewerAuthorized = isUserGirl || (isUserBoy && passCheck && passCheck.active);
+    if (isViewerAuthorized && typeof supabaseFetchAuthorizedContact === 'function') {
+        supabaseFetchAuthorizedContact(p.id).then(contact => {
+            if (contact && contact.fatherMobile && !contact.fatherMobile.includes('•••')) {
+                p.fatherMobile = contact.fatherMobile;
+                p.father_mobile = contact.fatherMobile;
+                if (contact.ownMobile) p.ownMobile = contact.ownMobile;
+                if (contact.email) p.email = contact.email;
+                if (contact.fullAddress) {
+                    p.fullAddress = contact.fullAddress;
+                    const addrEl = document.querySelector('#scr-profile .detail-row [style*="max-width:60%"]');
+                    if (addrEl) addrEl.textContent = contact.fullAddress;
+                }
+                const waBtn = document.querySelector('#scr-profile .contact-btn.wa');
+                const callBtn = document.querySelector('#scr-profile .contact-btn.call');
+                if (waBtn) {
+                    waBtn.onclick = () => quickWhatsApp(contact.fatherMobile, p.name);
+                }
+                if (callBtn) {
+                    callBtn.onclick = () => quickCall(contact.fatherMobile);
+                }
+            }
+        }).catch(err => console.warn('[Security Guard] Authorized contact note:', err));
+    }
 }
 
 function toggleFullFav(id) {
