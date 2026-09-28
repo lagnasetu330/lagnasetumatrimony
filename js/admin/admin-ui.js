@@ -31,27 +31,59 @@
                 .replace(/'/g, '&#039;');
         }
 
-        let adminGlobalLoaderTimer = null;
-        function showGlobalLoader(text = 'Loading Admin Console...', minDuration = 280) {
+        let _adminLoaderStartTime = 0;
+        let _adminLoaderSafetyTimer = null;
+
+        function showGlobalLoader(text = 'Loading Admin Console...', minDuration = 0) {
             const loader = document.getElementById('globalPageLoader');
             const txtEl = document.getElementById('globalLoaderText');
             if (txtEl) txtEl.textContent = text;
-            if (loader) loader.classList.add('active');
-            if (minDuration > 0) {
-                clearTimeout(adminGlobalLoaderTimer);
-                adminGlobalLoaderTimer = setTimeout(() => {
-                    hideGlobalLoader();
-                }, minDuration);
+            if (loader) {
+                loader.classList.add('active');
+                loader.style.opacity = '1';
+                loader.style.visibility = 'visible';
+                loader.style.pointerEvents = 'all';
             }
+            _adminLoaderStartTime = Date.now();
+
+            clearTimeout(_adminLoaderSafetyTimer);
+            _adminLoaderSafetyTimer = setTimeout(() => {
+                hideGlobalLoader(true);
+            }, 10000);
         }
 
-        function hideGlobalLoader() {
-            clearTimeout(adminGlobalLoaderTimer);
-            const loader = document.getElementById('globalPageLoader');
-            if (loader) loader.classList.remove('active');
-            const preloadStyle = document.getElementById('spa-preload-css');
-            if (preloadStyle) preloadStyle.remove();
-            document.documentElement.classList.remove('bypassing-splash');
+        function hideGlobalLoader(force = false) {
+            clearTimeout(_adminLoaderSafetyTimer);
+            const doHide = () => {
+                const loader = document.getElementById('globalPageLoader');
+                if (loader) {
+                    loader.classList.remove('active');
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                    loader.style.pointerEvents = 'none';
+                }
+                const routeLoader = document.getElementById('adminGlobalLoader');
+                if (routeLoader) {
+                    routeLoader.classList.remove('open');
+                    routeLoader.style.display = 'none';
+                }
+                const preloadStyle = document.getElementById('spa-preload-css');
+                if (preloadStyle) preloadStyle.remove();
+                document.documentElement.classList.remove('bypassing-splash');
+            };
+
+            if (force) {
+                doHide();
+                return;
+            }
+
+            const elapsed = Date.now() - _adminLoaderStartTime;
+            const minWait = 350;
+            if (elapsed < minWait) {
+                setTimeout(doHide, minWait - elapsed);
+            } else {
+                doHide();
+            }
         }
 
         function go(id, replace) {
@@ -702,9 +734,11 @@
             const physicalVal = u.physical || 'Normal';
             pickAdminEditDropdown('adminEditDdPhysical', 'adminEditPhysical', physicalVal, physicalVal);
 
-            document.getElementById('adminEditOwnMobile').value = u.ownMobile || u.mobile || '';
-            document.getElementById('adminEditEmail').value = u.email || '';
-            document.getElementById('adminEditFatherMobile').value = u.fatherMobile || '';
+            const unmaskedOwn = (typeof getAdminUnmaskedPhone === 'function') ? getAdminUnmaskedPhone(u, 'own') : (u.rawOwnMobile || u.ownMobile || u.mobile || '');
+            const unmaskedFather = (typeof getAdminUnmaskedPhone === 'function') ? getAdminUnmaskedPhone(u, 'father') : (u.rawFatherMobile || u.fatherMobile || '');
+            document.getElementById('adminEditOwnMobile').value = (unmaskedOwn && unmaskedOwn !== '—' && !unmaskedOwn.includes('••')) ? unmaskedOwn : (u.mobile || '');
+            document.getElementById('adminEditEmail').value = u.rawEmail || u.email || (u.raw_data && u.raw_data.email) || '';
+            document.getElementById('adminEditFatherMobile').value = (unmaskedFather && unmaskedFather !== '—' && !unmaskedFather.includes('••')) ? unmaskedFather : '';
             document.getElementById('adminEditFather').value = u.father || u.fatherName || '';
             document.getElementById('adminEditFatherOcc').value = u.fatherOcc || '';
             document.getElementById('adminEditMother').value = u.mother || u.motherName || '';
@@ -719,7 +753,7 @@
             openModal('modalAdminEditUser');
         }
 
-        function saveAdminUserEdit() {
+        async function saveAdminUserEdit() {
             const id = document.getElementById('adminEditUserId').value;
             const u = findUser(id);
             if (!u) {
@@ -761,7 +795,7 @@
             const district = document.getElementById('adminEditDistrict').value.trim();
             const address = document.getElementById('adminEditAddress').value.trim();
 
-            // Update user properties in USERS array
+            // Update user in-memory model
             u.name = name;
             u.gender = gender;
             u.age = age;
@@ -778,9 +812,12 @@
             u.physical = physical;
 
             u.ownMobile = ownMobile;
+            u.rawOwnMobile = ownMobile;
             u.mobile = ownMobile;
             u.email = email;
+            u.rawEmail = email;
             u.fatherMobile = fatherMobile;
+            u.rawFatherMobile = fatherMobile;
 
             u.father = father;
             u.fatherName = father;
@@ -798,71 +835,25 @@
             u.fullAddress = address;
             u.address = address;
 
-            // 1. Save to admin local storage
-            saveAdminData();
-
-            // 2. Synchronize to member app localStorage cache (LS_COMMUNITY_PROFILES & LS_COMMUNITY_USERS)
-            try {
-                const normEmail = (u.email || '').toLowerCase().trim();
-                const normId = String(u.id);
-                const pList = JSON.parse(localStorage.getItem('LS_COMMUNITY_PROFILES') || '[]');
-                const pIdx = pList.findIndex(p => String(p.id) === normId || (p.email && normEmail && String(p.email).toLowerCase().trim() === normEmail));
-                if (pIdx !== -1) {
-                    Object.assign(pList[pIdx], {
-                        name: u.name,
-                        gender: u.gender,
-                        age: u.age,
-                        dob: u.dob,
-                        community: u.community,
-                        caste: u.community,
-                        education: u.education,
-                        occupation: u.occupation,
-                        occ: u.occ,
-                        income: u.income,
-                        height: u.height,
-                        weight: u.weight,
-                        marital: u.marital,
-                        physical: u.physical,
-                        ownMobile: u.ownMobile,
-                        mobile: u.ownMobile,
-                        email: u.email,
-                        fatherMobile: u.fatherMobile,
-                        father: u.father,
-                        fatherName: u.father,
-                        fatherOcc: u.fatherOcc,
-                        mother: u.mother,
-                        motherName: u.mother,
-                        motherOcc: u.motherOcc,
-                        sister: u.sister,
-                        brother: u.brother,
-                        village: u.village,
-                        city: u.village,
-                        taluka: u.taluka,
-                        district: u.district,
-                        fullAddress: u.fullAddress,
-                        address: u.fullAddress
-                    });
-                }
-            } catch (e) {
-                console.warn('[Admin Edit] Edit notice:', e);
-            }
-
-            // 3. Persist live changes directly to Supabase PostgreSQL database
-            if (typeof supabaseAdminUpdateMember === 'function') {
-                supabaseAdminUpdateMember(u.id, u).catch(err => {
-                    console.warn('[Supabase] Member edit update notice:', err);
-                });
-            } else if (typeof supabaseUpsertProfile === 'function') {
-                supabaseUpsertProfile(u).catch(err => {
-                    console.warn('[Supabase] Member upsert notice:', err);
-                });
-            }
-
             closeModal('modalAdminEditUser');
-            showToast('Member profile updated successfully');
-            openUserDetail(u.id);
-            renderUsers();
-            if (typeof renderDashboard === 'function') renderDashboard();
+            showGlobalLoader('Saving member updates to Supabase...');
+
+            try {
+                // Persist live changes directly to Supabase PostgreSQL database
+                if (typeof supabaseAdminUpdateMember === 'function') {
+                    await supabaseAdminUpdateMember(u.id, u);
+                } else if (typeof supabaseUpsertProfile === 'function') {
+                    await supabaseUpsertProfile(u);
+                }
+            } catch (err) {
+                console.warn('[Supabase] Member edit update note:', err);
+            } finally {
+                hideGlobalLoader();
+                showToast('Member profile updated successfully');
+                openUserDetail(u.id);
+                renderUsers();
+                if (typeof renderDashboard === 'function') renderDashboard();
+            }
         }
 
         function openAdminPhotoPreview(url, title, meta) {
@@ -951,11 +942,12 @@
         async function doSuspendToggle() {
             const u = findUser(state.activeUserId);
             if (!u) return;
-            u.accountStatus = u.accountStatus === 'active' ? 'suspended' : 'active';
+            const willSuspend = u.accountStatus === 'active';
+            u.accountStatus = willSuspend ? 'suspended' : 'active';
             if (u.accountStatus === 'suspended') u.visible = false;
             else u.visible = true;
             closeModal('modalSuspend');
-            refreshCurrentScreen();
+            showGlobalLoader(willSuspend ? 'Suspending member in Supabase...' : 'Reactivating member in Supabase...');
 
             // Sync to live Supabase PostgreSQL
             if (typeof supabaseUpdateProfileStatus === 'function') {
@@ -969,10 +961,16 @@
                     console.info('[Admin] Member status successfully updated in Supabase:', u.id, u.accountStatus);
                 } catch(err) {
                     console.warn('[Supabase] Suspend sync note:', err);
+                } finally {
+                    hideGlobalLoader();
+                    refreshCurrentScreen();
+                    showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
                 }
+            } else {
+                hideGlobalLoader();
+                refreshCurrentScreen();
+                showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
             }
-
-            showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
         }
 
         function openDeleteModal(id) {
@@ -1093,6 +1091,7 @@
             showToast(`Permanently deleting ${userName}...`);
 
             // 2. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
+            showGlobalLoader(`Permanently deleting ${userName} from Supabase...`);
             try {
                 if (typeof supabaseDeleteUserCompletely === 'function') {
                     await supabaseDeleteUserCompletely(u, targetEmail, targetUid || targetId, { isSelfDelete: false });
@@ -1101,6 +1100,8 @@
                 }
             } catch(delErr) {
                 console.warn('[Admin Delete] Supabase delete note:', delErr);
+            } finally {
+                hideGlobalLoader();
             }
 
             // Sync fresh data from Supabase to verify complete purge

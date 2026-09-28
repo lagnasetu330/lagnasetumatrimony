@@ -917,3 +917,52 @@ window.resetInactivityTimer = resetInactivityTimer;
 window.clearInactivityTimer = clearInactivityTimer;
 window.setInactivityTimeoutForTesting = setInactivityTimeoutForTesting;
 
+/* ============================================================ LIVE GLOBAL LOADER ============================================================ */
+let _globalLoaderTimer = null;
+function showGlobalLoader(msg = 'Syncing data with cloud...') {
+    if (typeof document === 'undefined') return;
+    let loader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.id = 'pageRouteLoader';
+        loader.className = 'page-route-loader';
+        loader.innerHTML = `
+            <div style="width:56px;height:56px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;color:var(--primary,#E63946);font-size:26px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);border:2px solid var(--secondary,#F1A7A7);">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+            </div>
+            <div id="pageRouteLoaderText" style="font-weight:700;font-size:13px;color:var(--primary-dark,#202124);letter-spacing:.02em;background:rgba(255,255,255,0.95);padding:7px 18px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);">
+                ${escapeHtml(msg)}
+            </div>
+        `;
+        document.body.appendChild(loader);
+    }
+    const txt = document.getElementById('pageRouteLoaderText') || document.getElementById('adminGlobalLoaderText') || loader.querySelector('div:last-child');
+    if (txt) txt.textContent = msg;
+    loader.classList.add('open');
+    loader.style.display = 'flex';
+
+    // Auto-safety: clear after 8s so UI never locks indefinitely
+    clearTimeout(_globalLoaderTimer);
+    _globalLoaderTimer = setTimeout(() => {
+        hideGlobalLoader();
+    }, 8000);
+}
+
+function hideGlobalLoader() {
+    clearTimeout(_globalLoaderTimer);
+    if (typeof document === 'undefined') return;
+    const loader = document.getElementById('pageRouteLoader') || document.getElementById('adminGlobalLoader');
+    if (loader) {
+        loader.classList.remove('open');
+        setTimeout(() => {
+            if (!loader.classList.contains('open')) {
+                loader.style.display = 'none';
+            }
+        }, 180);
+    }
+}
+
+window.showGlobalLoader = showGlobalLoader;
+window.hideGlobalLoader = hideGlobalLoader;
+
+

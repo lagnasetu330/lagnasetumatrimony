@@ -318,7 +318,6 @@ function processSuccessfulPayment(txnId, upiMethod) {
 
     // 1. Record in LS_ADMIN_PAYMENTS for admin sync (100% UPI via Razorpay)
     try {
-        const payments = JSON.parse(localStorage.getItem('LS_ADMIN_PAYMENTS') || '[]');
         const newTxn = {
             id: txnId || ('RZP_UPI_' + Math.floor(10000 + Math.random() * 90000)),
             userId: state.currentUser.id,
@@ -330,49 +329,15 @@ function processSuccessfulPayment(txnId, upiMethod) {
             method: upiMethod || ('UPI (' + (selectedUpiApp || 'UPI') + ')'),
             status: 'success'
         };
-        payments.unshift(newTxn);
-        localStorage.setItem('LS_ADMIN_PAYMENTS', JSON.stringify(payments));
 
-        // 2. Update user paymentStatus, planStart, planExpiry, profileComplete in accounts store
-        const storedUsers = JSON.parse(localStorage.getItem('LS_COMMUNITY_USERS') || '[]');
-        const uIdx = storedUsers.findIndex(u => u.id === state.currentUser.id || (u.email && state.currentUser.email && u.email.toLowerCase() === state.currentUser.email.toLowerCase()));
-        if (uIdx !== -1) {
-            storedUsers[uIdx].paymentStatus = 'Active';
-            storedUsers[uIdx].planStart = state.currentUser.planStart;
-            storedUsers[uIdx].planExpiry = state.currentUser.planExpiry;
-            storedUsers[uIdx].paymentToken = state.currentUser.paymentToken;
-            storedUsers[uIdx].genderToken = state.currentUser.genderToken;
-            storedUsers[uIdx].lastTxnId = txnId;
-            storedUsers[uIdx].profileComplete = true;
-            localStorage.setItem('LS_COMMUNITY_USERS', JSON.stringify(storedUsers));
-        }
-        if (typeof getStoredAccounts === 'function' && typeof saveStoredAccounts === 'function') {
-            const accounts = getStoredAccounts();
-            const aIdx = accounts.findIndex(u => u.id === state.currentUser.id || (u.email && state.currentUser.email && u.email.toLowerCase() === state.currentUser.email.toLowerCase()));
-            if (aIdx !== -1) {
-                accounts[aIdx].paymentStatus = 'Active';
-                accounts[aIdx].planStart = state.currentUser.planStart;
-                accounts[aIdx].planExpiry = state.currentUser.planExpiry;
-                accounts[aIdx].paymentToken = state.currentUser.paymentToken;
-                accounts[aIdx].genderToken = state.currentUser.genderToken;
-                accounts[aIdx].lastTxnId = txnId;
-                accounts[aIdx].profileComplete = true;
-                saveStoredAccounts(accounts);
-            }
-        }
+        // Purge any legacy localStorage payment and notif cache
+        try {
+            localStorage.removeItem('LS_ADMIN_PAYMENTS');
+            localStorage.removeItem('LS_ADMIN_NOTIFS');
+            localStorage.removeItem('LS_COMMUNITY_USERS');
+        } catch (_) {}
 
-        // 3. Add real-time notification to LS_ADMIN_NOTIFS
-        const notifs = JSON.parse(localStorage.getItem('LS_ADMIN_NOTIFS') || '[]');
-        notifs.unshift({
-            icon: 'fa-bolt',
-            txt: 'UPI Payment received — ' + newTxn.id,
-            sub: (state.currentUser.name || 'Member') + ' paid ₹99 via ' + newTxn.method + ' for Boys 30 Days Pass.',
-            time: 'Just now',
-            unread: true
-        });
-        localStorage.setItem('LS_ADMIN_NOTIFS', JSON.stringify(notifs));
-
-        // 4. Record payment in Supabase PostgreSQL live
+        // Record payment in Supabase PostgreSQL live
         if (typeof supabaseRecordPayment === 'function') {
             supabaseRecordPayment({
                 id: newTxn.id,

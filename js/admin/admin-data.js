@@ -322,6 +322,9 @@ async function saveCastesData() {
  */
 async function syncAdminDataFromSupabase() {
     try {
+        if (typeof showGlobalLoader === 'function') {
+            showGlobalLoader('Loading live admin data from Supabase...');
+        }
         // ── USERS (profiles) ──────────────────────────────────────────────────
         if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
             const remoteProfiles = await supabaseFetchAllProfilesForAdmin();
@@ -404,6 +407,10 @@ async function syncAdminDataFromSupabase() {
         syncAdminNotifsFromDatabase();
     } catch (err) {
         console.warn('[Admin] Supabase sync notice:', err);
+    } finally {
+        if (typeof hideGlobalLoader === 'function') {
+            hideGlobalLoader();
+        }
     }
 }
 

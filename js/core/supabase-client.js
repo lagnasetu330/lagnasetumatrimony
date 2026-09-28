@@ -272,7 +272,7 @@ window.maskEmailAddress = maskEmailAddress;
 /**
  * Bidirectional mapper: Supabase PostgreSQL Row -> Frontend Profile Object
  */
-function mapProfileFromSupabase(row) {
+function mapProfileFromSupabase(row, forAdmin = false) {
     if (!row) return null;
     if (row.account_status === 'deleted' || row.accountStatus === 'deleted' || row.name === '[Deleted Account]') {
         return null;
@@ -282,24 +282,32 @@ function mapProfileFromSupabase(row) {
     }
     const raw = (row.raw_data && typeof row.raw_data === 'object') ? row.raw_data : {};
 
-    // Privacy Guard: Allow unmasked contact ONLY for current logged-in user viewing their own account
+    // Privacy Guard: Allow unmasked contact for self viewing or when accessed by administrator
     const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
     const isSelf = curUser && (
         (curUser.id && (String(curUser.id) === String(row.id) || String(curUser.id) === String(row.user_id) || String(curUser.id) === String(raw.userId))) ||
         (curUser.email && row.email && curUser.email.trim().toLowerCase() === row.email.trim().toLowerCase())
     );
 
+    const isAdmin = forAdmin || (typeof window !== 'undefined' && (
+        window.location.pathname.includes('admin') ||
+        typeof ADMIN_CREDS !== 'undefined' ||
+        typeof isSessionValidSync === 'function'
+    ));
+
+    const canViewUnmasked = isSelf || isAdmin;
+
     const rawFatherMobile = row.father_mobile || raw.fatherMobile || raw.father_mobile || '';
     const rawOwnMobile = row.own_mobile || raw.ownMobile || row.own_mobile || row.mobile || '';
     const rawEmail = row.email || raw.email || '';
-    const rawFullAddress = row.full_address || raw.fullAddress || raw.address || '';
+    const rawFullAddress = row.full_address || raw.fullAddress || row.address || '';
 
-    // Mask sensitive contact details for public directory feed
-    const fatherMobile = isSelf ? rawFatherMobile : maskPhoneNumber(rawFatherMobile);
-    const ownMobile = isSelf ? rawOwnMobile : maskPhoneNumber(rawOwnMobile);
-    const mobile = ownMobile;
-    const email = isSelf ? rawEmail : maskEmailAddress(rawEmail);
-    const fullAddress = isSelf ? rawFullAddress : (row.village || row.city ? `${row.village || row.city}${row.district ? ', Dist. ' + row.district : ''}` : 'Gujarat, India');
+    // Mask sensitive contact details for public directory feed, but provide full raw details to Admin
+    const fatherMobile = canViewUnmasked ? rawFatherMobile : maskPhoneNumber(rawFatherMobile);
+    const ownMobile = canViewUnmasked ? rawOwnMobile : maskPhoneNumber(rawOwnMobile);
+    const mobile = canViewUnmasked ? (rawOwnMobile || rawFatherMobile) : ownMobile;
+    const email = canViewUnmasked ? rawEmail : maskEmailAddress(rawEmail);
+    const fullAddress = canViewUnmasked ? rawFullAddress : (row.village || row.city ? `${row.village || row.city}${row.district ? ', Dist. ' + row.district : ''}` : 'Gujarat, India');
 
     return {
         ...raw,
@@ -328,6 +336,12 @@ function mapProfileFromSupabase(row) {
         fatherOcc: row.father_occ || raw.fatherOcc || raw.father_occ || '',
         fatherMobile: fatherMobile,
         ownMobile: ownMobile,
+        rawFatherMobile: rawFatherMobile,
+        rawOwnMobile: rawOwnMobile,
+        rawEmail: rawEmail,
+        rawFullAddress: rawFullAddress,
+        mobile: mobile,
+        email: email,
         mother: row.mother || raw.mother || '',
         motherOcc: row.mother_occ || raw.motherOcc || raw.mother_occ || '',
         sister: row.sister || raw.sister || '—',
@@ -563,7 +577,7 @@ async function supabaseFetchAllProfilesForAdmin() {
 
         const data = (profilesRes && Array.isArray(profilesRes.data)) ? profilesRes.data : [];
         return data.map(p => {
-            const mapped = mapProfileFromSupabase(p);
+            const mapped = mapProfileFromSupabase(p, true);
             if (!mapped || (typeof isUserPurged === 'function' && isUserPurged(mapped))) return null;
             const normEmail = (mapped.email || '').toLowerCase().trim();
             const normId = String(mapped.id || mapped.userId || '');
@@ -664,6 +678,66 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         return { success: !error, data };
     } catch (e) {
         return { success: false, error: e };
+    }
+}
+
+/**
+ * Live check if a user is currently suspended directly from Supabase PostgreSQL
+ * Checks both profiles (account_status) and users (status) tables
+ * @param {string|number} userId 
+ * @param {string} email 
+ * @returns {Promise<{suspended: boolean, reason: string|null}>}
+ */
+async function supabaseCheckUserSuspended(userId, email) {
+    const client = getSupabaseClient();
+    if (!client) return { suspended: false, reason: null };
+
+    try {
+        const normEmail = email ? String(email).trim().toLowerCase() : '';
+        const numId = Number(userId);
+        const resolvedId = !isNaN(numId) ? numId : userId;
+
+        // 1. Check profiles table first
+        let pQuery = client.from('profiles').select('id, email, account_status, suspension_reason');
+        if (normEmail) {
+            pQuery = pQuery.eq('email', normEmail);
+        } else if (resolvedId) {
+            pQuery = pQuery.eq('id', resolvedId);
+        }
+
+        const { data: pData } = await pQuery.maybeSingle();
+        if (pData) {
+            if (pData.account_status === 'suspended') {
+                return {
+                    suspended: true,
+                    reason: pData.suspension_reason || 'Account suspended by administrator for policy violation.'
+                };
+            }
+            if (pData.account_status === 'active') {
+                return { suspended: false, reason: null };
+            }
+        }
+
+        // 2. Check users table as fallback
+        let uQuery = client.from('users').select('id, email, status, suspension_reason');
+        if (normEmail) {
+            uQuery = uQuery.eq('email', normEmail);
+        } else if (userId) {
+            uQuery = uQuery.eq('id', String(userId));
+        }
+
+        const { data: uData } = await uQuery.maybeSingle();
+        if (uData && (uData.status === 'Suspended' || uData.status === 'suspended')) {
+            return {
+                suspended: true,
+                reason: uData.suspension_reason || 'Account suspended by administrator for policy violation.'
+            };
+        }
+
+        return { suspended: false, reason: null };
+    } catch (e) {
+        console.warn('[Supabase] Check user suspended error:', e);
+        return { suspended: false, reason: null };
     }
 }
 
@@ -3060,6 +3134,7 @@ window.supabaseGetAppSetting = supabaseGetAppSetting;
 window.supabaseSetAppSetting = supabaseSetAppSetting;
 window.supabaseGetAllAppSettings = supabaseGetAllAppSettings;
 window.supabaseSubscribeAppSettings = supabaseSubscribeAppSettings;
+window.supabaseCheckUserSuspended = supabaseCheckUserSuspended;
 
 
 

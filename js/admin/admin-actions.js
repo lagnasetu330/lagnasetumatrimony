@@ -66,6 +66,24 @@ window.escapeHtml = escapeHtmlAdmin;
             }
         }
 
+        function getAdminUnmaskedPhone(u, type = 'own') {
+            if (!u) return '—';
+            const isMasked = (str) => !str || String(str).includes('••••') || String(str).includes('***');
+            if (type === 'own') {
+                const candidates = [u.rawOwnMobile, u.own_mobile, u.raw_data?.own_mobile, u.raw_data?.ownMobile, u.raw_data?.mobile, u.ownMobile, u.mobile];
+                for (const c of candidates) {
+                    if (c && !isMasked(c)) return String(c);
+                }
+            } else {
+                const candidates = [u.rawFatherMobile, u.father_mobile, u.raw_data?.father_mobile, u.raw_data?.fatherMobile, u.fatherMobile, u.raw_data?.mobile, u.mobile];
+                for (const c of candidates) {
+                    if (c && !isMasked(c)) return String(c);
+                }
+            }
+            return u.rawOwnMobile || u.ownMobile || u.rawFatherMobile || u.fatherMobile || u.mobile || '—';
+        }
+        window.getAdminUnmaskedPhone = getAdminUnmaskedPhone;
+
         function userRow(u) {
             const row = document.createElement('div');
             row.className = 'row-item';
@@ -78,11 +96,15 @@ window.escapeHtml = escapeHtmlAdmin;
             const photoBadge = photoCount > 1 ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--primary);font-weight:700;"><i class="fa-solid fa-camera"></i> ${photoCount}</span> • ` : '';
             const occEdu = [u.occ || u.occupation, u.education].filter(Boolean).join(' · ');
 
+            const ownPhone = getAdminUnmaskedPhone(u, 'own');
+            const fatherPhone = getAdminUnmaskedPhone(u, 'father');
+            const phoneToDisplay = (ownPhone !== '—' && !ownPhone.includes('••')) ? ownPhone : ((fatherPhone !== '—' && !fatherPhone.includes('••')) ? fatherPhone : '');
+
             row.innerHTML = `
     <img class="ravatar" src="${u.img || ((u.photos && u.photos[0]) || '')}" alt="${escapeHtmlAdmin(u.name || '')}">
     <div class="rbody">
       <div class="rtitle">${escapeHtmlAdmin(u.name || '')}${u.accountStatus === 'suspended' ? ' <span style="color:var(--error);font-size:11px;font-weight:800;">(Suspended)</span>' : ''}</div>
-      <div class="rsub">${photoBadge}<i class="fa-solid fa-location-dot"></i> ${escapeHtmlAdmin(u.village || u.city || '')} • ${isGirl ? 'Girl' : 'Boy'}${occEdu ? ` • ${escapeHtmlAdmin(occEdu)}` : ''}</div>
+      <div class="rsub">${photoBadge}${phoneToDisplay ? `<strong style="color:var(--primary);letter-spacing:0.3px;"><i class="fa-solid fa-phone" style="font-size:10px;"></i> ${escapeHtmlAdmin(phoneToDisplay)}</strong> • ` : ''}<i class="fa-solid fa-location-dot"></i> ${escapeHtmlAdmin(u.village || u.city || '')} • ${isGirl ? 'Girl' : 'Boy'}${occEdu ? ` • ${escapeHtmlAdmin(occEdu)}` : ''}</div>
     </div>
     <div class="rmeta">
       ${statusBadge}
@@ -249,9 +271,9 @@ window.escapeHtml = escapeHtmlAdmin;
     <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-house"></i> Full Address</div><div class="dval">${escapeHtmlAdmin(u.fullAddress || u.address || ((u.city || u.village || '') + (u.district ? ', ' + u.district : '')) || '—')}</div></div>
 
     <div class="section-label">Contact Information</div>
-    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-envelope"></i> Email</div><div class="dval">${escapeHtmlAdmin(u.email || '—')}</div></div>
-    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-mobile-screen"></i> Own Mobile (Internal)</div><div class="dval">${escapeHtmlAdmin(u.ownMobile || u.mobile || '—')}<span class="privacy-tag"><i class="fa-solid fa-eye-slash"></i> Admin only</span></div></div>
-    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-phone"></i> Father's Mobile</div><div class="dval">${escapeHtmlAdmin(u.fatherMobile || '—')}<span class="privacy-tag" style="background:var(--success-bg);color:var(--success);"><i class="fa-solid fa-eye"></i> Public Contact</span></div></div>
+    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-envelope"></i> Email</div><div class="dval"><strong style="font-size:14px;color:var(--text);">${escapeHtmlAdmin(u.rawEmail || u.email || (u.raw_data && u.raw_data.email) || '—')}</strong></div></div>
+    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-mobile-screen"></i> Own Mobile (Internal)</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--primary);">${escapeHtmlAdmin(getAdminUnmaskedPhone(u, 'own'))}</strong><span class="privacy-tag"><i class="fa-solid fa-user-shield"></i> Admin view</span></div></div>
+    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-phone"></i> Father's Mobile</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--text);">${escapeHtmlAdmin(getAdminUnmaskedPhone(u, 'father'))}</strong><span class="privacy-tag" style="background:var(--success-bg);color:var(--success);"><i class="fa-solid fa-phone-volume"></i> Public Contact</span></div></div>
     <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-calendar-days"></i> Registered Date</div><div class="dval">${escapeHtmlAdmin(u.registered || '—')}</div></div>
 
     <div class="section-label">Interests & Matches <span class="sl-action" onclick="setInterestTab('pending');go('scr-interests')">View all</span></div>

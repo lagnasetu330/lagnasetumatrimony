@@ -58,10 +58,16 @@ function go(id, replace = false) {
         }
     }
 
-    // 2. Account status interceptor
+    // 2. Account status interceptor (Strict blocking modal for suspended users)
     if (state.currentUser && state.currentUser.status === 'Suspended') {
-        openModal('modalSuspended');
-        return;
+        if (id !== 'scr-welcome') {
+            if (typeof enforceUserSuspendedModal === 'function') {
+                enforceUserSuspendedModal(state.currentUser.suspensionReason);
+            } else if (typeof openModal === 'function') {
+                openModal('modalSuspended');
+            }
+            return;
+        }
     }
 
     // 3. Profile completion gatekeeper: only prompts if a logged-in user hasn't completed their profile

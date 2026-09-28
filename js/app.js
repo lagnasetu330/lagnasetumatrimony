@@ -21,21 +21,30 @@ function initApp() {
     }
 
     // Live validation against Supabase Single Source of Truth
-    if (state.currentUser && state.currentUser.email && typeof supabaseCheckUserExists === 'function') {
-        supabaseCheckUserExists(state.currentUser.email).then(check => {
-            if (check && check.online && !check.exists) {
-                console.warn('[LagnaSetu] Active session user was deleted in Supabase. Logging out.');
-                if (typeof purgeUserAccountLocally === 'function') {
-                    purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
-                } else {
-                    state.currentUser = null;
-                    state.profileComplete = false;
-                    sessionStorage.clear();
+    if (state.currentUser && state.currentUser.email) {
+        if (typeof checkCurrentUserStatus === 'function') {
+            checkCurrentUserStatus();
+        }
+        if (typeof supabaseCheckUserExists === 'function') {
+            supabaseCheckUserExists(state.currentUser.email).then(check => {
+                if (check && check.online && !check.exists) {
+                    console.warn('[LagnaSetu] Active session user was deleted in Supabase. Logging out.');
+                    if (typeof purgeUserAccountLocally === 'function') {
+                        purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
+                    } else {
+                        state.currentUser = null;
+                        state.profileComplete = false;
+                        sessionStorage.clear();
+                    }
+                    if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
+                    if (typeof go === 'function') go('scr-welcome', true);
+                } else if (check && check.online && check.isSuspended) {
+                    if (typeof enforceUserSuspendedModal === 'function') {
+                        enforceUserSuspendedModal(check.suspensionReason);
+                    }
                 }
-                if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
-                if (typeof go === 'function') go('scr-welcome', true);
-            }
-        }).catch(e => {});
+            }).catch(e => {});
+        }
     }
 
     checkMaintenanceMode();
@@ -136,8 +145,17 @@ function initApp() {
                 targetScreen = 'scr-home';
             }
 
+            // Route Guard 0: Suspended Account Check (Strict non-dismissible modal)
+            if (state.currentUser && state.currentUser.status === 'Suspended') {
+                targetScreen = 'scr-home';
+                setTimeout(() => {
+                    if (typeof enforceUserSuspendedModal === 'function') {
+                        enforceUserSuspendedModal(state.currentUser.suspensionReason);
+                    }
+                }, 100);
+            }
             // Route Guard A: Incomplete Profile Check
-            if (!state.profileComplete) {
+            else if (!state.profileComplete) {
                 if (!INCOMPLETE_ALLOWED.has(targetScreen)) {
                     targetScreen = 'scr-reg-caste';
                     setTimeout(() => { if (typeof openModal === 'function') openModal('modalCompleteProfile'); }, 350);

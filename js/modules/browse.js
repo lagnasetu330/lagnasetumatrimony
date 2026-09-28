@@ -538,12 +538,18 @@ function saveEditProfile() {
         }
     } catch(e) { console.warn(e); }
 
+    // Show live loader during cloud save
+    if (typeof showGlobalLoader === 'function') {
+        showGlobalLoader('Saving profile updates to cloud...');
+    }
+
     // Sync to Supabase PostgreSQL live
+    const promises = [];
     if (typeof supabaseUpsertProfile === 'function' && myProfile) {
-        supabaseUpsertProfile(myProfile).catch(err => console.warn('[Supabase] Edit sync notice:', err));
+        promises.push(supabaseUpsertProfile(myProfile).catch(err => console.warn('[Supabase] Edit sync notice:', err)));
     }
     if (typeof supabaseUpsertUser === 'function' && state.currentUser) {
-        supabaseUpsertUser({
+        promises.push(supabaseUpsertUser({
             id: String(state.currentUser.id || state.currentUser.userId || myProfile?.id),
             email: state.currentUser.email || myProfile?.email,
             name: fullName,
@@ -553,14 +559,17 @@ function saveEditProfile() {
             status: state.currentUser.status || 'Active',
             profileComplete: true,
             paymentStatus: state.currentUser.paymentStatus || 'Unpaid'
-        }).catch(err => console.warn('[Supabase] User edit sync notice:', err));
+        }).catch(err => console.warn('[Supabase] User edit sync notice:', err)));
     }
 
-    saveCommunityProfiles();
-    saveSessionState();
-    updateHeaderUserDisplay();
-    showToast('Profile updated successfully! ✨');
-    go('scr-home');
+    Promise.all(promises).finally(() => {
+        if (typeof hideGlobalLoader === 'function') hideGlobalLoader();
+        saveCommunityProfiles();
+        saveSessionState();
+        updateHeaderUserDisplay();
+        showToast('Profile updated successfully! ✨');
+        go('scr-home');
+    });
 }
 
 
@@ -1479,12 +1488,13 @@ async function syncFavoritesToDatabase() {
     const email = state.currentUser.email.toLowerCase().trim();
     const favArray = Array.from(state.favorites || []);
     
-    // Persistent localStorage tied to user email
+    // Purge any legacy localStorage cache
     try {
-        localStorage.setItem('LS_USER_FAVORITES_' + email, JSON.stringify(favArray));
+        localStorage.removeItem('LS_USER_FAVORITES_' + email);
+        localStorage.removeItem('LS_FAVORITES_' + email);
     } catch(e) {}
 
-    // Cloud persistence via Supabase
+    // Cloud persistence via Supabase Single Source of Truth
     if (typeof supabaseSaveUserFavorites === 'function') {
         const uid = state.currentUser.id || state.currentUser.userId;
         supabaseSaveUserFavorites(uid, email, favArray).catch(e => console.warn('[Supabase] Fav save note:', e));
@@ -1496,28 +1506,12 @@ async function restoreUserFavorites(email, uid) {
     if (!email) return;
     const normEmail = email.toLowerCase().trim();
     
-    // 1. Instant local restore from persistent storage
-    try {
-        const localFavs = localStorage.getItem('LS_USER_FAVORITES_' + normEmail) || localStorage.getItem('LS_FAVORITES_' + normEmail);
-        if (localFavs) {
-            const parsed = JSON.parse(localFavs);
-            if (Array.isArray(parsed)) {
-                parsed.forEach(id => state.favorites.add(id));
-                saveSessionState();
-                if (typeof updateHomeStats === 'function') updateHomeStats();
-                const favEl = document.getElementById('favCountHome');
-                if (favEl) favEl.textContent = state.favorites.size;
-            }
-        }
-    } catch(e) {}
-
-    // 2. Cloud restore from Supabase
+    // Cloud restore directly from Supabase
     if (typeof supabaseFetchUserFavorites === 'function') {
         try {
             const cloudFavs = await supabaseFetchUserFavorites(uid, normEmail);
             if (Array.isArray(cloudFavs) && cloudFavs.length > 0) {
                 cloudFavs.forEach(id => state.favorites.add(id));
-                localStorage.setItem('LS_USER_FAVORITES_' + normEmail, JSON.stringify(Array.from(state.favorites)));
                 saveSessionState();
                 if (typeof updateHomeStats === 'function') updateHomeStats();
                 const favEl = document.getElementById('favCountHome');

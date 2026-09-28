@@ -6,18 +6,8 @@ const LS_PROFILES_KEY = 'LS_COMMUNITY_PROFILES';
 
 function loadCommunityProfiles() {
     try {
-        const raw = localStorage.getItem(LS_PROFILES_KEY) || localStorage.getItem('lagnaSetu_profiles');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-                // Filter out any leftover mock dummy profiles (those with mock IDs 1 to 15 from old demo data)
-                const realOnly = parsed.filter(p => p && p.id && (typeof p.id === 'string' || p.id > 1000));
-                if (realOnly.length !== parsed.length) {
-                    localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(realOnly));
-                }
-                return realOnly;
-            }
-        }
+        localStorage.removeItem(LS_PROFILES_KEY);
+        localStorage.removeItem('lagnaSetu_profiles');
     } catch(e) {}
     return [];
 }
@@ -26,7 +16,7 @@ let PROFILES = loadCommunityProfiles();
 
 function saveCommunityProfiles() {
     try {
-        localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(PROFILES));
+        localStorage.removeItem(LS_PROFILES_KEY);
         sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
     } catch(e) {}
 }
@@ -37,6 +27,9 @@ function saveCommunityProfiles() {
 async function syncProfilesFromSupabase() {
     if (typeof supabaseFetchProfiles !== 'function') return;
     try {
+        if (typeof showGlobalLoader === 'function') {
+            showGlobalLoader('Loading verified profiles from Supabase...');
+        }
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
             PROFILES = remoteProfiles.filter(p => p && (typeof isUserPurged !== 'function' || !isUserPurged(p)));
@@ -79,6 +72,10 @@ async function syncProfilesFromSupabase() {
         }
     } catch (err) {
         console.warn('[Profiles] Supabase sync note:', err);
+    } finally {
+        if (typeof hideGlobalLoader === 'function') {
+            hideGlobalLoader();
+        }
     }
 }
 
@@ -108,12 +105,34 @@ function setupProfilesRealtime() {
                 if (typeof checkCurrentUserStatus === 'function') checkCurrentUserStatus();
             },
             (updatedRow) => {
-                if ((typeof isUserPurged === 'function' && isUserPurged(updatedRow)) || (updatedRow && (updatedRow.account_status === 'deleted' || updatedRow.visible === false))) {
+                if (!updatedRow) return;
+                // Live check if current user was updated (e.g. suspended or reactivated)
+                if (typeof state !== 'undefined' && state.currentUser) {
+                    const myId = String(state.currentUser.id || state.currentUser.profileId || '');
+                    const myEmail = (state.currentUser.email || '').trim().toLowerCase();
+                    const rowId = String(updatedRow.id || '');
+                    const rowEmail = (updatedRow.email || '').trim().toLowerCase();
+                    if ((rowId && rowId === myId) || (rowEmail && rowEmail === myEmail)) {
+                        if (updatedRow.account_status === 'suspended') {
+                            state.currentUser.status = 'Suspended';
+                            state.currentUser.suspensionReason = updatedRow.suspension_reason || 'Account suspended by administrator.';
+                            if (typeof saveSessionState === 'function') saveSessionState();
+                            if (typeof enforceUserSuspendedModal === 'function') enforceUserSuspendedModal(state.currentUser.suspensionReason);
+                            return;
+                        } else if (updatedRow.account_status === 'active' || updatedRow.account_status === 'Active') {
+                            state.currentUser.status = 'Active';
+                            if (typeof saveSessionState === 'function') saveSessionState();
+                            if (typeof dismissUserSuspendedModal === 'function') dismissUserSuspendedModal();
+                        }
+                    }
+                }
+
+                if ((typeof isUserPurged === 'function' && isUserPurged(updatedRow)) || (updatedRow && updatedRow.account_status === 'deleted')) {
                     handleRemoteAccountPurge(updatedRow.id, updatedRow.email, updatedRow);
                     return;
                 }
                 const prof = typeof mapProfileFromSupabase === 'function' ? mapProfileFromSupabase(updatedRow) : updatedRow;
-                if (!prof || !prof.id || prof.accountStatus === 'deleted' || prof.account_status === 'deleted') {
+                if (!prof || !prof.id || prof.accountStatus === 'deleted' || prof.account_status === 'deleted' || prof.accountStatus === 'suspended') {
                     if (updatedRow && updatedRow.id) {
                         handleRemoteAccountPurge(updatedRow.id, updatedRow.email, updatedRow);
                     }
@@ -148,8 +167,13 @@ function setupProfilesRealtime() {
                 if (state.currentUser && (String(state.currentUser.id) === String(updatedUser.id) || (updatedUser.email && state.currentUser.email && state.currentUser.email.toLowerCase() === updatedUser.email.toLowerCase()))) {
                     if (updatedUser.status === 'Suspended') {
                         state.currentUser.status = 'Suspended';
-                        if (typeof showToast === 'function') showToast('Your account has been suspended by the administrator.');
-                        if (typeof checkCurrentUserStatus === 'function') checkCurrentUserStatus();
+                        state.currentUser.suspensionReason = updatedUser.suspension_reason || 'Account suspended by administrator.';
+                        if (typeof saveSessionState === 'function') saveSessionState();
+                        if (typeof enforceUserSuspendedModal === 'function') enforceUserSuspendedModal(state.currentUser.suspensionReason);
+                    } else if (updatedUser.status === 'Active') {
+                        state.currentUser.status = 'Active';
+                        if (typeof saveSessionState === 'function') saveSessionState();
+                        if (typeof dismissUserSuspendedModal === 'function') dismissUserSuspendedModal();
                     }
                 }
             },
@@ -276,21 +300,63 @@ if (typeof window !== 'undefined') {
     });
 }
 
-function checkCurrentUserStatus() {
-    if (!state.currentUser) {
-        const notice = document.getElementById('userSuspendedNotice');
-        if (notice) notice.style.display = 'none';
+/**
+ * Enforce non-dismissible suspended modal for suspended accounts
+ */
+function enforceUserSuspendedModal(reason) {
+    if (typeof state !== 'undefined' && state.currentUser) {
+        state.currentUser.status = 'Suspended';
+        state.currentUser.suspensionReason = reason || state.currentUser.suspensionReason || 'Violation of community guidelines or pending verification.';
+    }
+    const modal = document.getElementById('modalSuspended');
+    if (modal) {
+        modal.classList.add('open');
+        modal.style.display = 'flex';
+        const reasonEl = document.getElementById('suspensionReasonText');
+        if (reasonEl && reason) {
+            reasonEl.textContent = reason;
+        }
+    }
+}
+
+/**
+ * Dismiss suspended modal upon admin reactivation
+ */
+function dismissUserSuspendedModal() {
+    if (typeof state !== 'undefined' && state.currentUser && state.currentUser.status === 'Suspended') {
+        state.currentUser.status = 'Active';
+    }
+    const modal = document.getElementById('modalSuspended');
+    if (modal) {
+        modal.classList.remove('open');
+        modal.style.display = 'none';
+    }
+}
+window.enforceUserSuspendedModal = enforceUserSuspendedModal;
+window.dismissUserSuspendedModal = dismissUserSuspendedModal;
+
+async function checkCurrentUserStatus() {
+    if (!state.currentUser || !state.currentUser.email) {
+        dismissUserSuspendedModal();
         return;
     }
-    const myProfile = PROFILES.find(p => p.id === state.currentUser?.id) || PROFILES.find(p => p.name === state.currentUser?.name);
-    const notice = document.getElementById('userSuspendedNotice');
-    if (myProfile && myProfile.accountStatus === 'suspended') {
-        state.currentUser.status = 'Suspended';
-        state.currentUser.suspensionReason = myProfile.suspensionReason || 'Account suspended by administrator for policy violation.';
-        if (notice) notice.style.display = 'block';
-    } else {
-        state.currentUser.status = 'Active';
-        if (notice) notice.style.display = 'none';
+
+    // Direct live query to Supabase PostgreSQL (Single Source of Truth)
+    if (typeof supabaseCheckUserSuspended === 'function') {
+        try {
+            const myId = state.currentUser.id || state.currentUser.profileId;
+            const myEmail = state.currentUser.email;
+            const res = await supabaseCheckUserSuspended(myId, myEmail);
+            if (res && res.suspended) {
+                enforceUserSuspendedModal(res.reason);
+                return;
+            } else {
+                state.currentUser.status = 'Active';
+                dismissUserSuspendedModal();
+            }
+        } catch (e) {
+            console.warn('[Status] check error:', e);
+        }
     }
 }
 

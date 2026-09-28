@@ -332,26 +332,55 @@ function updateHeaderUserDisplay() {
     }
 }
 
-let globalLoaderTimer = null;
-function showGlobalLoader(text = 'Loading...', minDuration = 240) {
+let _globalLoaderStartTime = 0;
+let _globalLoaderSafetyTimer = null;
+
+function showGlobalLoader(text = 'Loading...', minDuration = 0) {
     const loader = document.getElementById('globalPageLoader');
     const txtEl = document.getElementById('globalLoaderText');
     if (txtEl) txtEl.textContent = text;
-    if (loader) loader.classList.add('active');
-    if (minDuration > 0) {
-        clearTimeout(globalLoaderTimer);
-        globalLoaderTimer = setTimeout(() => {
-            hideGlobalLoader();
-        }, minDuration);
+    if (loader) {
+        loader.classList.add('active');
+        loader.style.opacity = '1';
+        loader.style.visibility = 'visible';
+        loader.style.pointerEvents = 'all';
     }
+    _globalLoaderStartTime = Date.now();
+
+    // Auto-safety timer: clear after 10s so UI never locks indefinitely
+    clearTimeout(_globalLoaderSafetyTimer);
+    _globalLoaderSafetyTimer = setTimeout(() => {
+        hideGlobalLoader(true);
+    }, 10000);
 }
-function hideGlobalLoader() {
-    clearTimeout(globalLoaderTimer);
-    const loader = document.getElementById('globalPageLoader');
-    if (loader) loader.classList.remove('active');
-    const preloadStyle = document.getElementById('spa-preload-css');
-    if (preloadStyle) preloadStyle.remove();
-    document.documentElement.classList.remove('bypassing-splash');
+
+function hideGlobalLoader(force = false) {
+    clearTimeout(_globalLoaderSafetyTimer);
+    const doHide = () => {
+        const loader = document.getElementById('globalPageLoader');
+        if (loader) {
+            loader.classList.remove('active');
+            loader.style.opacity = '0';
+            loader.style.visibility = 'hidden';
+            loader.style.pointerEvents = 'none';
+        }
+        const preloadStyle = document.getElementById('spa-preload-css');
+        if (preloadStyle) preloadStyle.remove();
+        document.documentElement.classList.remove('bypassing-splash');
+    };
+
+    if (force) {
+        doHide();
+        return;
+    }
+
+    const elapsed = Date.now() - _globalLoaderStartTime;
+    const minWait = 350;
+    if (elapsed < minWait) {
+        setTimeout(doHide, minWait - elapsed);
+    } else {
+        doHide();
+    }
 }
 
 window.saveSessionState = saveSessionState;

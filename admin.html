@@ -1324,6 +1324,14 @@
                         Caste</button>
                 </div>
             </div>
+        <!-- ============================================================ ADMIN GLOBAL LIVE LOADER ============================================================ -->
+        <div class="page-route-loader" id="adminGlobalLoader">
+            <div style="width:58px;height:58px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#E63946;font-size:26px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);border:2px solid #F1A7A7;">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+            </div>
+            <div id="adminGlobalLoaderText" style="font-weight:700;font-size:13px;color:#202124;letter-spacing:.02em;background:rgba(255,255,255,0.96);padding:7px 18px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);">
+                Syncing admin data with Supabase...
+            </div>
         </div>
 
     </div>
@@ -1332,6 +1340,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Cloudinary Image CDN -->
     <script src="js/utils/cloudinary.js?v=3.6"></script>
+    <script src="js/utils/helpers.js?v=3.8"></script>
     <!-- Admin Modular Scripts -->
     <script src="js/core/supabase-client.js?v=3.8"></script>
     <script src="js/admin/admin-security.js?v=3.6"></script>

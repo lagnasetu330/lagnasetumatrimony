@@ -880,23 +880,6 @@
                     </div>
                 </div>
 
-                <div class="card" id="userSuspendedNotice"
-                    style="display:none;margin-top:16px;background:#FBEAEA;border:1.5px solid #E63946;box-shadow:none;">
-                    <div style="display:flex;align-items:flex-start;gap:12px;">
-                        <div
-                            style="width:38px;height:38px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;color:#D64545;flex-shrink:0;">
-                            <i class="fa-solid fa-ban"></i>
-                        </div>
-                        <div style="flex:1;">
-                            <div style="font-weight:800;font-size:13px;color:#D64545;">Account Temporarily Suspended
-                            </div>
-                            <div style="font-size:11.5px;color:var(--text);margin-top:3px;">Your account has been
-                                temporarily suspended by the community admin team. Please contact email
-                                <b>lagnasetu330@gmail.com</b> or WhatsApp <b>+91 97263 62863</b>.
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="search-bar" style="margin-top:20px;" onclick="setTab('girls');go('scr-browse');">
                     <i class="fa-solid fa-magnifying-glass"></i>
@@ -1605,22 +1588,38 @@
         </div>
 
         <!-- ============================================================ ACCOUNT SUSPENDED MODAL (NON-DISMISSIBLE) ============================================================ -->
-        <div class="modal-backdrop modal-center" id="modalSuspended" style="z-index:9999;">
-            <div class="modal-card" style="border: 2px solid var(--error);">
+        <div class="modal-backdrop modal-center" id="modalSuspended" style="z-index:9999;pointer-events:all;" onclick="event.stopPropagation()">
+            <div class="modal-card" style="border: 2px solid var(--error);text-align:center;padding:26px 20px;max-width:390px;" onclick="event.stopPropagation()">
                 <div class="modal-icon-circle"
-                    style="background:rgba(214,69,69,0.15);color:var(--error);font-size:32px;">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    style="background:rgba(214,69,69,0.15);color:var(--error);font-size:36px;margin:0 auto 16px;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                    <i class="fa-solid fa-ban"></i>
                 </div>
-                <div class="h-display h-lg" style="color:var(--error);">Account Suspended</div>
-                <p class="p-muted" style="margin-top:10px;line-height:1.5;">Your account is suspended.<br><b
-                        style="color:var(--text);">Reason: <span id="suspensionReasonText">Violation of community
-                            terms</span></b></p>
-                <p class="p-muted" style="font-size:12px;margin-top:10px;">Please contact Lagna Setu admin support if
-                    you believe this is an error.</p>
-                <a href="https://wa.me/919726362863" target="_blank" class="btn btn-primary"
-                    style="margin-top:18px;text-decoration:none;">
-                    <i class="fa-brands fa-whatsapp"></i> Contact Admin Support
-                </a>
+                <div class="h-display h-lg" style="color:var(--error);font-size:20px;">Account Suspended</div>
+                <p class="p-muted" style="margin-top:10px;line-height:1.6;font-size:13px;">
+                    તમારું એકાઉન્ટ એડમિન દ્વારા અસ્થાયી રૂપે સસ્પેન્ડ કરવામાં આવ્યું છે.<br>
+                    <span style="font-size:11.5px;color:var(--text-muted);">(Your account has been temporarily suspended by community admin.)</span>
+                </p>
+                <div style="background:#FBEAEA;border:1px dashed #E63946;border-radius:12px;padding:10px 14px;margin:14px 0;text-align:left;">
+                    <div style="font-size:11px;font-weight:700;color:var(--error);text-transform:uppercase;letter-spacing:0.5px;">Reason:</div>
+                    <div id="suspensionReasonText" style="font-size:12.5px;color:#202124;font-weight:600;margin-top:2px;">
+                        Violation of community guidelines or pending verification.
+                    </div>
+                </div>
+                <p class="p-muted" style="font-size:12px;margin-bottom:14px;">
+                    Please contact Lagna Setu Admin for review &amp; reactivation:
+                </p>
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    <a href="https://wa.me/919726362863?text=Hello%20Lagna%20Setu%20Admin,%20my%20account%20has%20been%20suspended.%20Please%20help%20me%20review%20and%20reactivate%20it." target="_blank" class="btn btn-primary"
+                        style="background:#25D366;border:none;box-shadow:0 8px 18px -4px rgba(37,211,102,0.45);text-decoration:none;font-weight:700;">
+                        <i class="fa-brands fa-whatsapp" style="font-size:18px;"></i> Contact on WhatsApp
+                    </a>
+                    <a href="mailto:lagnasetu330@gmail.com?subject=Suspended%20Account%20Reactivation%20Request" class="btn btn-outline" style="font-size:13px;padding:12px;">
+                        <i class="fa-solid fa-envelope"></i> Email: lagnasetu330@gmail.com
+                    </a>
+                    <button class="btn btn-danger" onclick="doLogout()" style="margin-top:4px;font-size:13px;padding:12px;">
+                        <i class="fa-solid fa-right-from-bracket"></i> Log Out
+                    </button>
+                </div>
             </div>
         </div>
 
