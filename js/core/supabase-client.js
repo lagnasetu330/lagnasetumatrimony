@@ -1434,6 +1434,12 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
             },
             receiverData: {
                 name: receiverProfile?.name || 'Member',
+                age: receiverProfile?.age || '',
+                caste: receiverProfile?.community || receiverProfile?.caste || '',
+                city: receiverProfile?.city || receiverProfile?.village || '',
+                district: receiverProfile?.district || '',
+                occupation: receiverProfile?.occ || receiverProfile?.occupation || '',
+                education: receiverProfile?.education || '',
                 photo: realReceiverPhoto
             }
         }).catch(e => console.warn('[EmailService] Status dispatch error:', e));

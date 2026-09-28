@@ -259,7 +259,7 @@ function getInterestReceivedEmailHtml(sender, receiver) {
 function getInterestAcceptedEmailHtml(sender, receiver) {
     const title = `🎉 Good News! Your Interest was Accepted!`;
     const preheader = `Congratulations! ${receiver.name} has accepted your interest request on Lagna Setu. Safe Chat is now unlocked!`;
-    const appLink = EMAIL_CONFIG.appUrl;
+    const appLink = EMAIL_CONFIG.appUrl + (EMAIL_CONFIG.appUrl.includes('?') ? '&' : '?') + 'tab=chat';
 
     const avatarHtml = renderEmailAvatar(receiver.photo || receiver.img, receiver.name, 88, '#2E9D62');
 
@@ -295,9 +295,21 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
             
             <!-- 3. Member Name -->
             <h3 style="font-size:19px;font-weight:700;color:#202124;margin:0 0 10px 0;text-align:center;">
-              ${safeEmailText(receiver.name)}
+              ${safeEmailText(receiver.name)}${receiver.age ? ', ' + safeEmailText(receiver.age) + ' Yrs' : ''}
             </h3>
             
+            <!-- 4. Member Details Box -->
+            ${(receiver.caste || receiver.city || receiver.occupation) ? `
+            <table border="0" cellpadding="0" cellspacing="0" align="center" width="100%" style="max-width:400px;background:#ffffff;border:1px solid #ECE5F5;border-radius:12px;margin:0 auto 14px auto;">
+              <tr>
+                <td style="padding:14px 18px;font-size:13px;color:#5F5B67;line-height:1.7;text-align:left;">
+                  ${receiver.caste ? `<div><b style="color:#202124;">Community:</b> ${safeEmailText(receiver.caste)}</div>` : ''}
+                  ${receiver.education || receiver.occupation ? `<div><b style="color:#202124;">Education &amp; Work:</b> ${safeEmailText(receiver.education || 'Graduate')}${receiver.occupation ? ' · ' + safeEmailText(receiver.occupation) : ''}</div>` : ''}
+                  ${receiver.city ? `<div><b style="color:#202124;">Location:</b> ${safeEmailText(receiver.city)}${receiver.district ? ', ' + safeEmailText(receiver.district) : ''}</div>` : ''}
+                </td>
+              </tr>
+            </table>` : ''}
+
             <div style="font-size:13.5px;color:#2E9D62;font-weight:700;margin-bottom:6px;text-align:center;">
               🎉 Safe text messaging is now unlocked!
             </div>
@@ -312,8 +324,8 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
 
       <!-- CTA Button -->
       <div style="text-align:center;margin:24px 0;">
-        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 34px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
-          Start Chatting Now
+        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #2E9D62 0%, #1E7E48 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 34px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(46,157,98,0.28);">
+          💬 Start Chatting on Lagna Setu
         </a>
       </div>
 
@@ -343,24 +355,33 @@ function getInterestDeclinedEmailHtml(sender, receiver) {
       </div>
       
       <p style="font-size:14.5px;line-height:1.6;color:#5F5B67;margin:0 0 20px 0;">
-        Thank you for using Lagna Setu Matrimony. <b>${safeEmailText(receiver.name)}</b>'s family has reviewed your profile and has politely chosen not to move forward at this time.
+        Thank you for being an active member of Lagna Setu. We are writing to update you that <b>${safeEmailText(receiver.name)}</b>'s family has reviewed your profile and has politely chosen not to move forward at this time.
       </p>
 
-      <div style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:14px;padding:16px;margin-bottom:24px;">
-        <p style="margin:0;font-size:13.5px;color:#5F5B67;line-height:1.6;">
-          In matrimonial partner search, every family has distinct preferences regarding sub-caste, horoscope, or location. Please do not be disheartened!
-        </p>
-      </div>
+      <!-- Respectful Reassurance Box -->
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:16px;margin-bottom:24px;">
+        <tr>
+          <td style="padding:22px 20px;text-align:center;">
+            <div style="font-size:26px;margin-bottom:8px;">🕊️</div>
+            <h4 style="margin:0 0 8px 0;font-size:15px;font-weight:700;color:#202124;">A Gentle Note on Matchmaking</h4>
+            <p style="margin:0;font-size:13.5px;color:#5F5B67;line-height:1.65;max-width:420px;margin:0 auto;">
+              In matrimonial partner search, every family considers specific preferences such as horoscope compatibility, sub-caste traditions, or location. A decline is purely a matter of mutual preferences — please do not be discouraged!
+            </p>
+          </td>
+        </tr>
+      </table>
 
+      <!-- CTA Button -->
       <div style="text-align:center;margin:24px 0;">
-        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 32px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
+        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 34px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
           Browse Other Compatible Profiles
         </a>
       </div>
 
-      <p style="text-align:center;font-size:12.5px;color:#A29DAF;margin:0;">
-        New verified profiles join Lagna Setu regularly. We wish you the very best in finding your ideal life partner soon.
-      </p>
+      <!-- Encouragement Box -->
+      <div style="background:#FAF8FC;border-left:3px solid #7B2CBF;border-radius:8px;padding:12px 16px;font-size:12.5px;color:#726E7A;line-height:1.55;">
+        ✨ <b>Keep Searching:</b> New verified profiles join Lagna Setu every single day. Your ideal life partner is just a step away!
+      </div>
     `;
 
     return {
