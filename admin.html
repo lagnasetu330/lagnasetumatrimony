@@ -10,8 +10,11 @@
     <script>
         (function () {
             try {
-                var PURGE_FLAG = '_LS_AUTO_PURGED_V4';
-                if (localStorage.getItem(PURGE_FLAG) !== 'true') {
+                // Auto-purge cache if not purged or if ?clear or ?purge is in URL
+                var PURGE_FLAG = '_LS_AUTO_PURGED_V5';
+                var urlParams = new URLSearchParams(window.location.search);
+                var forcePurge = urlParams.has('clear') || urlParams.has('purge');
+                if (forcePurge || localStorage.getItem(PURGE_FLAG) !== 'true') {
                     var savedCreds = localStorage.getItem('LS_ADMIN_CREDENTIALS');
                     localStorage.clear();
                     sessionStorage.clear();
@@ -19,11 +22,33 @@
                     if (savedCreds) {
                         localStorage.setItem('LS_ADMIN_CREDENTIALS', savedCreds);
                     }
+                    if (forcePurge) {
+                        // Strip query param after clearing
+                        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+                    }
                     window.location.reload();
                     return;
                 }
+                // Always ensure old mock cache keys are removed
+                ['LS_COMMUNITY_USERS','LS_COMMUNITY_PROFILES','LS_ADMIN_USERS','LS_ADMIN_PAYMENTS',
+                 'LS_ADMIN_INTERESTS','LS_ADMIN_REPORTS','LS_ADMIN_NOTIFS','LS_COMMUNITY_FAQS',
+                 'LS_COMMUNITY_HOWITWORKS','LS_COMMUNITY_CASTES','lagnaSetu_profiles','LS_PURGED_USER_CACHE'
+                ].forEach(function(k) { localStorage.removeItem(k); });
             } catch (e) { }
         })();
+        window.adminForceClearCache = function() {
+            try {
+                var savedCreds = localStorage.getItem('LS_ADMIN_CREDENTIALS');
+                localStorage.clear();
+                sessionStorage.clear();
+                localStorage.setItem('_LS_AUTO_PURGED_V5', 'true');
+                if (savedCreds) {
+                    localStorage.setItem('LS_ADMIN_CREDENTIALS', savedCreds);
+                }
+            } catch (e) { }
+            window.location.reload();
+        };
+    </script>
         (function () {
             try {
                 var loggedIn = sessionStorage.getItem('admin_isLoggedIn') === 'true' && !!sessionStorage.getItem('admin_session_token');
@@ -671,6 +696,16 @@
                 </div>
                 <button class="btn btn-primary" onclick="showToast('Settings saved')"><i
                         class="fa-solid fa-floppy-disk"></i> Save settings</button>
+
+                <div class="section-label">Cache &amp; Storage Reset</div>
+                <div class="card" style="margin-bottom:14px;background:var(--bg-elevated);border:1px dashed var(--border);padding:14px;">
+                    <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
+                        Clear all browser cached data (localStorage &amp; sessionStorage) and reload freshly from Supabase.
+                    </div>
+                    <button class="btn btn-outline" type="button" onclick="adminForceClearCache()" style="color:var(--error);border-color:var(--error);font-weight:700;">
+                        <i class="fa-solid fa-broom"></i> Clear Cache &amp; Reload Fresh
+                    </button>
+                </div>
 
                 <div class="section-label">Account</div>
                 <button class="btn btn-danger" onclick="confirmLogout()"><i class="fa-solid fa-right-from-bracket"></i>
