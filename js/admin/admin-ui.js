@@ -126,10 +126,15 @@
 
         function showToast(msg) {
             const t = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = msg;
+            if (!t) return;
+            const msgEl = document.getElementById('toastMsg');
+            if (msgEl) msgEl.textContent = msg || '';
             t.classList.add('show');
             clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+            // Adaptive duration: 2.8s base, extending up to 5.5s for longer messages
+            const textLen = String(msg || '').length;
+            const duration = Math.min(5500, Math.max(2800, textLen * 50));
+            toastTimer = setTimeout(() => t.classList.remove('show'), duration);
         }
 
         function openModal(id) { document.getElementById(id).classList.add('open'); }
