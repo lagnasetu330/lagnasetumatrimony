@@ -47,7 +47,9 @@ function initApp() {
         }
     }
 
-    checkMaintenanceMode();
+    if (typeof checkMaintenanceMode === 'function') {
+        checkMaintenanceMode();
+    }
     if (typeof supabaseSubscribeMaintenance === 'function') {
         supabaseSubscribeMaintenance((isMaint) => {
             const modal = document.getElementById('modalMaintenance');

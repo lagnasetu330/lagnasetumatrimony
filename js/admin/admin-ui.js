@@ -31,9 +31,9 @@
                 .replace(/'/g, '&#039;');
         }
 
-        let _adminLoaderStartTime = 0;
-        let _adminLoaderAutoHideTimer = null;
-        let _adminLoaderSafetyTimer = null;
+        var _adminLoaderStartTime = 0;
+        var _adminLoaderAutoHideTimer = null;
+        var _adminLoaderSafetyTimer = null;
 
         function showGlobalLoader(text = 'Loading Admin Console...', minDuration = 0) {
             if (typeof document === 'undefined') return;
@@ -208,7 +208,7 @@
         }
 
         /* ============================================================ TOAST / MODALS ============================================================ */
-        let toastTimer;
+        var toastTimer;
 
         function showToast(msg) {
             const t = document.getElementById('toast');

@@ -333,9 +333,9 @@ function updateHeaderUserDisplay() {
 }
 
 /* ============================================================ UNIFIED GLOBAL LOADER ============================================================ */
-let _globalLoaderStartTime = 0;
-let _globalLoaderAutoHideTimer = null;
-let _globalLoaderSafetyTimer = null;
+var _globalLoaderStartTime = 0;
+var _globalLoaderAutoHideTimer = null;
+var _globalLoaderSafetyTimer = null;
 
 function showGlobalLoader(text = 'Loading...', minDuration = 0) {
     if (typeof document === 'undefined') return;

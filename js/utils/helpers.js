@@ -11,7 +11,7 @@ function escapeHtml(str) {
 
 
 /* ============================================================ TOAST ============================================================ */
-let toastTimer;
+var toastTimer;
 function showToast(msg) {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -60,7 +60,8 @@ function closeIfOverlay() { go(state.currentUser ? 'scr-home' : 'scr-welcome'); 
 
 /* ============================================================ SPLASH & SPA PAGE RELOAD RESTORATION ============================================================ */
 /* ============================================================ MAINTENANCE MODE ============================================================ */
-const LS_COMMUNITY_MAINTENANCE = 'LS_COMMUNITY_MAINTENANCE';
+var LS_COMMUNITY_MAINTENANCE = window.LS_COMMUNITY_MAINTENANCE || 'LS_COMMUNITY_MAINTENANCE';
+window.LS_COMMUNITY_MAINTENANCE = LS_COMMUNITY_MAINTENANCE;
 
 async function checkMaintenanceMode() {
     const modal = document.getElementById('modalMaintenance');
@@ -918,9 +919,9 @@ window.clearInactivityTimer = clearInactivityTimer;
 window.setInactivityTimeoutForTesting = setInactivityTimeoutForTesting;
 
 /* ============================================================ UNIFIED GLOBAL LOADER ============================================================ */
-let _globalLoaderStartTime = 0;
-let _globalLoaderAutoHideTimer = null;
-let _globalLoaderSafetyTimer = null;
+var _globalLoaderStartTime = 0;
+var _globalLoaderAutoHideTimer = null;
+var _globalLoaderSafetyTimer = null;
 
 function showGlobalLoader(text = 'Loading...', minDuration = 0) {
     if (typeof document === 'undefined') return;
