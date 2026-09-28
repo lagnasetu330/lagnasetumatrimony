@@ -1,9 +1,10 @@
 -- ==============================================================================
 -- LAGNA SETU — COMPLETE A TO Z USER PURGE (AUTHENTICATION + DATABASE)
 -- Resolves:
---   1. "column reference target_user_id is ambiguous" (42702) error
---   2. Guarantees 100% permanent wipe from Supabase Authentication -> Users (auth.users)
---   3. Deletes all associated profiles, users, messages, payments, interests,
+--   1. Removes invalid p.user_email column reference in payments table
+--   2. Resolves column ambiguity in reports table
+--   3. Guarantees 100% permanent wipe from Supabase Authentication -> Users (auth.users)
+--   4. Deletes all associated profiles, users, messages, payments, interests,
 --      reports, and email_logs across the entire database
 -- ==============================================================================
 
@@ -50,7 +51,6 @@ BEGIN
     LOOP
         found_auth_uid := auth_rec.id;
         
-        -- Delete auth dependencies in cascade order
         BEGIN
             DELETE FROM auth.mfa_amr_claims WHERE session_id IN (SELECT id FROM auth.sessions WHERE user_id = found_auth_uid);
         EXCEPTION WHEN OTHERS THEN NULL; END;
@@ -85,7 +85,7 @@ BEGIN
         EXCEPTION WHEN OTHERS THEN NULL; END;
     END LOOP;
 
-    -- Fail-safe: if auth user still exists by email, purge directly
+    -- Fail-safe: Direct email deletion in auth.users
     IF del_auth_count = 0 AND norm_email <> '' THEN
         BEGIN
             DELETE FROM auth.refresh_tokens WHERE session_id IN (SELECT id FROM auth.sessions WHERE user_id IN (SELECT id FROM auth.users WHERE LOWER(TRIM(email)) = norm_email));
@@ -113,12 +113,11 @@ BEGIN
        OR (found_auth_uid IS NOT NULL AND (i.sender_id::text = found_auth_uid::text OR i.receiver_id::text = found_auth_uid::text));
     GET DIAGNOSTICS del_interests_count = ROW_COUNT;
 
-    -- 4. Delete payments
+    -- 4. Delete payments (Valid column: p.user_id only!)
     DELETE FROM public.payments p
     WHERE (norm_id <> '' AND p.user_id = norm_id)
        OR (num_id IS NOT NULL AND p.user_id = num_id::text)
-       OR (found_auth_uid IS NOT NULL AND p.user_id = found_auth_uid::text)
-       OR (norm_email <> '' AND LOWER(TRIM(p.user_email)) = norm_email);
+       OR (found_auth_uid IS NOT NULL AND p.user_id = found_auth_uid::text);
     GET DIAGNOSTICS del_payments_count = ROW_COUNT;
 
     -- 5. Delete email_logs
@@ -127,7 +126,7 @@ BEGIN
         GET DIAGNOSTICS del_emails_count = ROW_COUNT;
     END IF;
 
-    -- 6. Delete reports (Table alias 'r' completely resolves ambiguity!)
+    -- 6. Delete reports
     IF to_regclass('public.reports') IS NOT NULL THEN
         DELETE FROM public.reports r
         WHERE (norm_email <> '' AND (LOWER(TRIM(r.reporter_email)) = norm_email OR LOWER(TRIM(r.target_user_email)) = norm_email))
@@ -146,9 +145,9 @@ BEGIN
     -- 8. Delete users table record
     DELETE FROM public.users u
     WHERE (norm_email <> '' AND LOWER(TRIM(u.email)) = norm_email)
-       OR (num_id IS NOT NULL AND u.id = num_id)
-       OR (norm_id <> '' AND u.id::text = norm_id)
-       OR (found_auth_uid IS NOT NULL AND u.id::text = found_auth_uid::text);
+       OR (num_id IS NOT NULL AND (u.id = num_id::text OR u.id = norm_id))
+       OR (norm_id <> '' AND u.id = norm_id)
+       OR (found_auth_uid IS NOT NULL AND u.id = found_auth_uid::text);
     GET DIAGNOSTICS del_users_count = ROW_COUNT;
 
     RETURN jsonb_build_object(
