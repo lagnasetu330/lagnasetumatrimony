@@ -67,8 +67,8 @@ function renderEmailAvatar(photoUrl, name, size = 88, borderColor = '#7B2CBF') {
 
     const cleanPhoto = (photoUrl && typeof photoUrl === 'string') ? photoUrl.trim() : '';
 
-    // Check if valid image URL is available (exclude dummy unsplash photos)
-    if (cleanPhoto && cleanPhoto.length > 10 && !cleanPhoto.includes('unsplash.com')) {
+    // Check if valid image URL is available
+    if (cleanPhoto && (cleanPhoto.startsWith('http://') || cleanPhoto.startsWith('https://'))) {
         let finalUrl = cleanPhoto;
         // Apply face-center cropping if Cloudinary URL
         if (finalUrl.includes('res.cloudinary.com') && !finalUrl.includes('c_fill')) {
