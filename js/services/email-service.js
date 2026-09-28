@@ -94,7 +94,7 @@ function renderEmailAvatar(photoUrl, name, size = 96, borderColor = '#7B2CBF') {
 /**
  * Generate Branded Lagna Setu Email HTML Wrapper (100% Uniform with App UI)
  */
-function wrapEmailTemplate(title, preheader, bodyContent, badgeText = '✦ SACRED COMMUNITY MATRIMONY ✦') {
+function wrapEmailTemplate(title, preheader, bodyContent) {
     return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -108,70 +108,57 @@ function wrapEmailTemplate(title, preheader, bodyContent, badgeText = '✦ SACRE
     body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #FAF8FC; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
     @media screen and (max-width: 600px) {
       .email-container { width: 100% !important; margin: auto !important; border-radius: 16px !important; }
-      .header-pad { padding: 30px 18px 26px !important; }
-      .content-pad { padding: 26px 18px !important; }
+      .header-pad { padding: 24px 18px 20px !important; }
+      .content-pad { padding: 24px 20px !important; }
       .profile-table td { display: block !important; width: 100% !important; text-align: center !important; }
       .avatar-wrap { margin: 0 auto 16px !important; }
       .btn-action { width: 100% !important; box-sizing: border-box !important; }
     }
   </style>
 </head>
-<body style="margin:0;padding:26px 12px;background-color:#FAF8FC;">
+<body style="margin:0;padding:28px 12px;background-color:#FAF8FC;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <!-- Preheader Text (Hidden Preview) -->
   <span style="display:none;font-size:1px;color:#FAF8FC;max-height:0px;overflow:hidden;mso-hide:all;">${safeEmailText(preheader)}</span>
 
   <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
     <tr>
       <td align="center">
-        <table class="email-container" border="0" cellpadding="0" cellspacing="0" width="580" style="max-width:580px;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 14px 44px rgba(123,44,191,0.12);border:1.5px solid #ECE5F5;">
+        <table class="email-container" border="0" cellpadding="0" cellspacing="0" width="520" style="max-width:520px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(123,44,191,0.08);border:1px solid #ECE5F5;">
           
-          <!-- ================= HEADER POSTER ================= -->
+          <!-- BRAND HEADER (Clean, Elegant & Simple) -->
           <tr>
-            <td class="header-pad" align="center" style="background:linear-gradient(135deg, #5A189A 0%, #7B2CBF 50%, #9D4EDD 100%);padding:38px 24px 30px;text-align:center;">
-              
-              <!-- Auspicious Tagline Pill -->
-              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin-bottom:14px;">
+            <td class="header-pad" align="center" style="padding:32px 24px 22px;text-align:center;border-bottom:1px solid #F3EDF8;background:#ffffff;">
+              <table border="0" cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                  <td style="background:rgba(244,180,0,0.18);border:1px solid #F4B400;border-radius:30px;padding:4px 16px;font-size:11px;font-weight:800;color:#FFF275;letter-spacing:1.5px;text-transform:uppercase;">
-                    ${badgeText}
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Brand Emblem (LS Saffron-Gold Medal) -->
-              <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin:0 auto 14px;">
-                <tr>
-                  <td align="center" style="width:68px;height:68px;background:linear-gradient(135deg, #FFF08A 0%, #F4B400 50%, #DDA200 100%);border-radius:50%;border:3px solid #FFFFFF;box-shadow:0 8px 24px rgba(0,0,0,0.25);text-align:center;vertical-align:middle;">
-                    <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:24px;font-weight:900;color:#5A189A;line-height:68px;letter-spacing:1px;">
+                  <td align="center">
+                    <div style="width:46px;height:46px;line-height:46px;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);border-radius:12px;color:#ffffff;font-size:18px;font-weight:800;text-align:center;margin:0 auto 10px;box-shadow:0 4px 14px rgba(123,44,191,0.22);letter-spacing:0.5px;">
                       LS
+                    </div>
+                    <div style="font-size:21px;font-weight:800;color:#202124;letter-spacing:-0.2px;line-height:1.2;">
+                      Lagna Setu
+                    </div>
+                    <div style="font-size:12.5px;font-weight:500;color:#726E7A;margin-top:3px;">
+                      Gujarati Matrimony Community
                     </div>
                   </td>
                 </tr>
               </table>
-
-              <!-- Poster Brand Title -->
-              <h1 style="margin:0;font-size:26px;font-weight:800;color:#FFFFFF;letter-spacing:0.5px;line-height:1.2;">
-                LAGNA SETU
-              </h1>
-              <div style="font-size:12.5px;font-weight:700;color:#F0E4FA;letter-spacing:1.5px;text-transform:uppercase;margin-top:5px;">
-                Trusted & Secure Community Matrimony
-              </div>
             </td>
           </tr>
 
-          <!-- ================= MAIN CONTENT BODY ================= -->
+          <!-- MAIN CONTENT BODY -->
           <tr>
-            <td class="content-pad" style="padding:34px 30px;background-color:#FFFFFF;color:#202124;">
+            <td class="content-pad" style="padding:32px 36px 28px;background-color:#ffffff;color:#202124;">
               ${bodyContent}
             </td>
           </tr>
 
-          <!-- ================= FOOTER ================= -->
+          <!-- FOOTER -->
           <tr>
-            <td style="background:#FAF8FC;padding:26px 20px;text-align:center;font-size:12px;color:#726E7A;border-top:1.5px solid #ECE5F5;line-height:1.6;">
-              <p style="margin:0 0 6px 0;font-weight:800;color:#5A189A;font-size:13px;">Lagna Setu Community Matrimony Platform</p>
-              <p style="margin:0 0 6px 0;">This is an automated matrimonial notification. Your privacy and security are our highest priority.</p>
-              <p style="margin:0;font-size:11px;color:#A29DAF;">© ${new Date().getFullYear()} Lagna Setu Matrimony. All rights reserved.</p>
+            <td style="background:#FAF8FC;padding:20px 24px;text-align:center;font-size:12px;color:#726E7A;border-top:1px solid #ECE5F5;line-height:1.6;">
+              <p style="margin:0 0 4px 0;font-weight:700;color:#202124;">Lagna Setu Help &amp; Support</p>
+              <p style="margin:0 0 6px 0;">Need assistance? Email: <a href="mailto:lagnasetu330@gmail.com" style="color:#7B2CBF;text-decoration:none;font-weight:700;">lagnasetu330@gmail.com</a></p>
+              <p style="margin:0;font-size:11px;color:#A29DAF;">© ${new Date().getFullYear()} Lagna Setu Matrimony Community. All rights reserved.</p>
             </td>
           </tr>
 
@@ -188,42 +175,42 @@ function wrapEmailTemplate(title, preheader, bodyContent, badgeText = '✦ SACRE
  */
 function getInterestReceivedEmailHtml(sender, receiver) {
     const title = `💍 Matrimonial Interest from ${safeEmailText(sender.name)}`;
-    const preheader = `${sender.name} (${sender.community || sender.caste || 'Member'}) has expressed interest in your matrimonial profile on Lagna Setu!`;
+    const preheader = `${sender.name} (${sender.community || sender.caste || 'Member'}) has expressed interest in your profile on Lagna Setu!`;
     const appLink = EMAIL_CONFIG.appUrl;
 
-    const avatarHtml = renderEmailAvatar(sender.photo || sender.img, sender.name, 96, '#7B2CBF');
+    const avatarHtml = renderEmailAvatar(sender.photo || sender.img, sender.name, 90, '#7B2CBF');
 
     const body = `
-      <div style="font-size:19px;font-weight:800;color:#5A189A;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:700;color:#202124;margin-bottom:8px;">
         Hello ${safeEmailText(receiver.name)},
       </div>
       
-      <p style="font-size:15px;line-height:1.65;color:#202124;margin:0 0 24px 0;">
+      <p style="font-size:14.5px;line-height:1.6;color:#5F5B67;margin:0 0 22px 0;">
         Great news! A verified member on Lagna Setu has expressed interest in your profile by sending an <b style="color:#7B2CBF;">"I'm Interested"</b> request.
       </p>
 
       <!-- Member Profile Card -->
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:linear-gradient(180deg, #FAF8FC 0%, #F5EEFC 100%);border:1.5px solid #E4D5F7;border-radius:18px;margin-bottom:26px;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:16px;margin-bottom:24px;">
         <tr>
-          <td style="padding:22px;">
+          <td style="padding:20px;">
             <table border="0" cellpadding="0" cellspacing="0" width="100%" class="profile-table">
               <tr>
-                <td width="106" class="avatar-wrap" style="vertical-align:top;padding-right:18px;">
+                <td width="96" class="avatar-wrap" style="vertical-align:top;padding-right:18px;">
                   ${avatarHtml}
                 </td>
                 <td style="vertical-align:top;">
-                  <span style="display:inline-block;background:#7B2CBF;color:#FFFFFF;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;margin-bottom:8px;letter-spacing:0.5px;">
+                  <span style="display:inline-block;background:#E7F5EC;color:#2E9D62;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;margin-bottom:8px;">
                     ✓ Verified Profile
                   </span>
                   
-                  <h3 style="font-size:19px;font-weight:800;color:#202124;margin:0 0 6px 0;">
+                  <h3 style="font-size:18px;font-weight:700;color:#202124;margin:0 0 6px 0;">
                     ${safeEmailText(sender.name)}${sender.age ? ', ' + safeEmailText(sender.age) + ' Yrs' : ''}
                   </h3>
                   
-                  <div style="font-size:13.5px;color:#555555;line-height:1.6;">
-                    <div><b style="color:#5A189A;">Community / Caste:</b> ${safeEmailText(sender.caste || sender.community || 'Community Member')}</div>
-                    <div><b style="color:#5A189A;">Education / Profession:</b> ${safeEmailText(sender.education || 'Graduate')} · ${safeEmailText(sender.occ || sender.occupation || 'Professional')}</div>
-                    <div><b style="color:#5A189A;">Location / City:</b> ${safeEmailText(sender.city || sender.village || 'Gujarat')}${sender.district ? ', ' + safeEmailText(sender.district) : ''}</div>
+                  <div style="font-size:13px;color:#5F5B67;line-height:1.65;">
+                    <div><b style="color:#202124;">Community:</b> ${safeEmailText(sender.caste || sender.community || 'Community Member')}</div>
+                    <div><b style="color:#202124;">Education &amp; Work:</b> ${safeEmailText(sender.education || 'Graduate')} · ${safeEmailText(sender.occ || sender.occupation || 'Professional')}</div>
+                    <div><b style="color:#202124;">Location:</b> ${safeEmailText(sender.city || sender.village || 'Gujarat')}${sender.district ? ', ' + safeEmailText(sender.district) : ''}</div>
                   </div>
                 </td>
               </tr>
@@ -233,21 +220,21 @@ function getInterestReceivedEmailHtml(sender, receiver) {
       </table>
 
       <!-- CTA Button -->
-      <div style="text-align:center;margin:30px 0 26px;">
-        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:15px 36px;border-radius:30px;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(123,44,191,0.35);letter-spacing:0.3px;">
-          View Profile & Respond
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 32px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
+          View Profile &amp; Respond
         </a>
       </div>
 
       <!-- Family Guidance / Safety Tip -->
-      <div style="background:#F0E4FA;border-left:4px solid #7B2CBF;border-radius:10px;padding:14px 18px;font-size:13px;color:#5A189A;line-height:1.55;">
-        <b>💡 Family Guidance:</b> You can log in to the Lagna Setu platform to view this member's complete family background, education, and photos. If you find the match suitable, simply accept the request to unlock secure text messaging immediately.
+      <div style="background:#FAF8FC;border-left:3px solid #7B2CBF;border-radius:8px;padding:12px 16px;font-size:12.5px;color:#726E7A;line-height:1.55;">
+        💡 <b>Next Steps:</b> Log in to Lagna Setu to view their full family background and photo gallery. If you find the match suitable, simply accept to unlock safe text chat immediately.
       </div>
     `;
 
     return {
         subject: `💍 [Lagna Setu] ${sender.name} has expressed interest in your profile`,
-        html: wrapEmailTemplate(title, preheader, body, '✦ NEW INTEREST RECEIVED ✦')
+        html: wrapEmailTemplate(title, preheader, body)
     };
 }
 
@@ -259,41 +246,41 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
     const preheader = `Congratulations! ${receiver.name} has accepted your interest request on Lagna Setu. Safe Chat is now unlocked!`;
     const appLink = EMAIL_CONFIG.appUrl;
 
-    const avatarHtml = renderEmailAvatar(receiver.photo || receiver.img, receiver.name, 96, '#2E9D62');
+    const avatarHtml = renderEmailAvatar(receiver.photo || receiver.img, receiver.name, 90, '#2E9D62');
 
     const body = `
-      <div style="font-size:19px;font-weight:800;color:#5A189A;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:700;color:#202124;margin-bottom:8px;">
         Congratulations ${safeEmailText(sender.name)}! 🎉
       </div>
       
-      <p style="font-size:15px;line-height:1.65;color:#202124;margin:0 0 24px 0;">
+      <p style="font-size:14.5px;line-height:1.6;color:#5F5B67;margin:0 0 22px 0;">
         We are delighted to let you know that <b style="color:#7B2CBF;">${safeEmailText(receiver.name)}</b> has accepted your <b>"I'm Interested"</b> request!
       </p>
 
       <!-- Matched Profile Card -->
-      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:linear-gradient(180deg, #FAF8FC 0%, #F0FAF4 100%);border:1.5px solid #C4EED0;border-radius:18px;margin-bottom:26px;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#FAF8FC;border:1px solid #D1F2D9;border-radius:16px;margin-bottom:24px;">
         <tr>
-          <td style="padding:22px;">
+          <td style="padding:20px;">
             <table border="0" cellpadding="0" cellspacing="0" width="100%" class="profile-table">
               <tr>
-                <td width="106" class="avatar-wrap" style="vertical-align:top;padding-right:18px;">
+                <td width="96" class="avatar-wrap" style="vertical-align:top;padding-right:18px;">
                   ${avatarHtml}
                 </td>
                 <td style="vertical-align:top;">
-                  <span style="display:inline-block;background:#2E9D62;color:#FFFFFF;font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px;margin-bottom:8px;letter-spacing:0.5px;">
+                  <span style="display:inline-block;background:#E7F5EC;color:#2E9D62;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;margin-bottom:8px;">
                     ✓ Match Accepted · Chat Unlocked
                   </span>
                   
-                  <h3 style="font-size:19px;font-weight:800;color:#202124;margin:0 0 6px 0;">
+                  <h3 style="font-size:18px;font-weight:700;color:#202124;margin:0 0 4px 0;">
                     ${safeEmailText(receiver.name)}
                   </h3>
                   
-                  <div style="font-size:13.5px;color:#2E9D62;font-weight:700;margin-top:4px;">
+                  <div style="font-size:13px;color:#2E9D62;font-weight:700;margin-top:4px;">
                     🎉 Safe text messaging is now unlocked!
                   </div>
                   
-                  <div style="font-size:13px;color:#666666;margin-top:6px;line-height:1.5;">
-                    You can now visit the Lagna Setu platform to start a direct, respectful conversation with this member.
+                  <div style="font-size:12.5px;color:#5F5B67;margin-top:4px;line-height:1.5;">
+                    You can now visit Lagna Setu to start a direct, respectful conversation with this member.
                   </div>
                 </td>
               </tr>
@@ -303,21 +290,21 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
       </table>
 
       <!-- CTA Button -->
-      <div style="text-align:center;margin:30px 0 26px;">
-        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:15px 36px;border-radius:30px;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(123,44,191,0.35);letter-spacing:0.3px;">
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 32px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
           Start Chatting Now
         </a>
       </div>
 
       <!-- Etiquette Tip -->
-      <div style="background:#F0E4FA;border-left:4px solid #7B2CBF;border-radius:10px;padding:14px 18px;font-size:13px;color:#5A189A;line-height:1.55;">
-        <b>💬 Conversation Etiquette:</b> Kindly maintain a polite, clear, and respectful conversation to build a wonderful mutual understanding between both families.
+      <div style="background:#FAF8FC;border-left:3px solid #2E9D62;border-radius:8px;padding:12px 16px;font-size:12.5px;color:#726E7A;line-height:1.55;">
+        💬 <b>Conversation Etiquette:</b> Please maintain a polite, clear, and respectful conversation to build positive mutual understanding between both families.
       </div>
     `;
 
     return {
         subject: `🎉 [Lagna Setu] Good news! ${receiver.name} accepted your interest (Chat Unlocked)`,
-        html: wrapEmailTemplate(title, preheader, body, '✦ MATCH ACCEPTED · CHAT UNLOCKED ✦')
+        html: wrapEmailTemplate(title, preheader, body)
     };
 }
 
@@ -330,34 +317,34 @@ function getInterestDeclinedEmailHtml(sender, receiver) {
     const appLink = EMAIL_CONFIG.appUrl;
 
     const body = `
-      <div style="font-size:19px;font-weight:800;color:#5A189A;margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:700;color:#202124;margin-bottom:8px;">
         Hello ${safeEmailText(sender.name)},
       </div>
       
-      <p style="font-size:15px;line-height:1.65;color:#202124;margin:0 0 20px 0;">
-        Thank you for being a part of Lagna Setu Matrimony. <b>${safeEmailText(receiver.name)}</b>'s family has reviewed your profile and has politely chosen not to move forward at this time.
+      <p style="font-size:14.5px;line-height:1.6;color:#5F5B67;margin:0 0 20px 0;">
+        Thank you for using Lagna Setu Matrimony. <b>${safeEmailText(receiver.name)}</b>'s family has reviewed your profile and has politely chosen not to move forward at this time.
       </p>
 
-      <div style="background:#FAF8FC;border:1.5px solid #ECE5F5;border-radius:14px;padding:18px;margin-bottom:24px;">
-        <p style="margin:0;font-size:14px;color:#666666;line-height:1.6;">
-          In matrimonial partner search, every family has distinct preferences regarding horoscope, sub-caste, or location. Please do not be disheartened!
+      <div style="background:#FAF8FC;border:1px solid #ECE5F5;border-radius:14px;padding:16px;margin-bottom:24px;">
+        <p style="margin:0;font-size:13.5px;color:#5F5B67;line-height:1.6;">
+          In matrimonial partner search, every family has distinct preferences regarding sub-caste, horoscope, or location. Please do not be disheartened!
         </p>
       </div>
 
-      <div style="text-align:center;margin:28px 0 24px;">
-        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:15px 36px;border-radius:30px;font-size:15px;font-weight:800;box-shadow:0 8px 24px rgba(123,44,191,0.35);">
+      <div style="text-align:center;margin:24px 0;">
+        <a href="${appLink}" target="_blank" class="btn-action" style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#FFFFFF !important;text-decoration:none;padding:13px 32px;border-radius:12px;font-size:14.5px;font-weight:700;box-shadow:0 4px 14px rgba(123,44,191,0.25);">
           Browse Other Compatible Profiles
         </a>
       </div>
 
-      <p style="text-align:center;font-size:13px;color:#888888;margin:0;">
-        Thousands of newly verified profiles join Lagna Setu regularly. We wish you the very best in finding your ideal life partner soon.
+      <p style="text-align:center;font-size:12.5px;color:#A29DAF;margin:0;">
+        New verified profiles join Lagna Setu regularly. We wish you the very best in finding your ideal life partner soon.
       </p>
     `;
 
     return {
         subject: `ℹ️ [Lagna Setu] Update on your interest request (${receiver.name})`,
-        html: wrapEmailTemplate(title, preheader, body, '✦ MATRIMONIAL STATUS UPDATE ✦')
+        html: wrapEmailTemplate(title, preheader, body)
     };
 }
 
