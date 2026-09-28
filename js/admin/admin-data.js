@@ -241,7 +241,7 @@ function loadAdminData() {
         const storedUsers = localStorage.getItem(LS_USERS_KEY);
         if (storedUsers) {
             const parsed = JSON.parse(storedUsers);
-            USERS = Array.isArray(parsed) ? parsed.filter(u => u && u.id && (typeof u.id === 'string' || u.id > 1000)) : [];
+            USERS = Array.isArray(parsed) ? parsed.filter(u => u && u.id && (typeof u.id === 'string' || u.id > 1000) && u.accountStatus !== 'deleted' && u.name !== '[Deleted Account]') : [];
         } else {
             USERS = [];
         }
@@ -252,7 +252,7 @@ function loadAdminData() {
                 if (storedP) {
                     const parsedP = JSON.parse(storedP);
                     if (Array.isArray(parsedP) && parsedP.length > 0) {
-                        USERS = parsedP;
+                        USERS = parsedP.filter(u => u && u.accountStatus !== 'deleted' && u.name !== '[Deleted Account]');
                     }
                 }
             } catch (_) {}
