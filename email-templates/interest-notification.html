@@ -58,31 +58,42 @@
                 Great news! A verified member on Lagna Setu has expressed interest in your profile by sending an <b style="color:#7B2CBF;">"I'm Interested"</b> request.
               </p>
 
-              <!-- Member Profile Card -->
-              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FAF8FC; border: 1px solid #ECE5F5; border-radius: 16px; margin: 0 0 24px;">
+              <!-- Member Profile Card (Centered & Mobile-Optimized) -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FAF8FC; border: 1px solid #ECE5F5; border-radius: 18px; margin: 0 0 24px;">
                 <tr>
-                  <td style="padding: 20px;">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%" class="profile-table">
+                  <td align="center" style="padding: 26px 20px; text-align: center;">
+                    
+                    <!-- 1. Centered Avatar -->
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" style="margin: 0 auto 14px auto;">
                       <tr>
-                        <td width="96" class="avatar-wrap" style="vertical-align: top; padding-right: 18px;">
-                          <img src="{{sender_photo}}" alt="{{sender_name}}" width="90" height="90" style="width: 90px; height: 90px; border-radius: 16px; object-fit: cover; display: block; border: 2.5px solid #7B2CBF; box-shadow: 0 4px 14px rgba(123, 44, 191, 0.18);" onerror="this.style.display='none';" />
-                        </td>
-                        <td style="vertical-align: top;">
-                          <span style="display: inline-block; background-color: #E7F5EC; color: #2E9D62; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; margin-bottom: 8px;">
-                            ✓ Verified Profile
-                          </span>
-                          
-                          <h3 style="font-size: 18px; font-weight: 700; color: #202124; margin: 0 0 6px 0;">
-                            {{sender_name}}
-                          </h3>
-                          
-                          <div style="font-size: 13px; color: #5F5B67; line-height: 1.65;">
-                            <div><b style="color: #202124;">Community:</b> {{sender_caste}}</div>
-                            <div><b style="color: #202124;">Location:</b> {{sender_city}}</div>
-                          </div>
+                        <td align="center">
+                          <img src="{{sender_photo}}" alt="{{sender_name}}" width="88" height="88" align="center" style="width: 88px; height: 88px; border-radius: 20px; object-fit: cover; display: block; margin: 0 auto; border: 2.5px solid #7B2CBF; box-shadow: 0 6px 18px rgba(123, 44, 191, 0.18);" onerror="this.style.display='none';" />
                         </td>
                       </tr>
                     </table>
+
+                    <!-- 2. Verified Badge -->
+                    <div style="margin-bottom: 10px; text-align: center;">
+                      <span style="display: inline-block; background-color: #E7F5EC; color: #2E9D62; font-size: 11.5px; font-weight: 700; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.3px;">
+                        ✓ Verified Profile
+                      </span>
+                    </div>
+                    
+                    <!-- 3. Member Name -->
+                    <h3 style="font-size: 19px; font-weight: 700; color: #202124; margin: 0 0 14px 0; text-align: center;">
+                      {{sender_name}}
+                    </h3>
+                    
+                    <!-- 4. Details Box -->
+                    <table border="0" cellpadding="0" cellspacing="0" align="center" width="100%" style="max-width: 400px; background-color: #ffffff; border: 1px solid #ECE5F5; border-radius: 12px; margin: 0 auto;">
+                      <tr>
+                        <td style="padding: 14px 18px; font-size: 13px; color: #5F5B67; line-height: 1.7; text-align: left;">
+                          <div><b style="color: #202124;">Community:</b> {{sender_caste}}</div>
+                          <div><b style="color: #202124;">Location:</b> {{sender_city}}</div>
+                        </td>
+                      </tr>
+                    </table>
+
                   </td>
                 </tr>
               </table>
