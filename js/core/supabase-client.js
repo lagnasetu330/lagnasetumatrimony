@@ -1269,8 +1269,24 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
     }
 
     const senderEmail = (senderProfile.email || '').trim().toLowerCase();
-    const receiverEmail = (receiverProfile.email || '').trim().toLowerCase();
+    let receiverEmail = (receiverProfile.email || '').trim().toLowerCase();
     const interestId = `int_${senderId}_${receiverId}`;
+
+    // Production Fallback: Ensure receiver email is fetched from Supabase if absent in current profile object
+    if (!receiverEmail && client && receiverId) {
+        try {
+            const { data: recRow } = await client
+                .from('profiles')
+                .select('email')
+                .eq('id', receiverId)
+                .maybeSingle();
+            if (recRow && recRow.email) {
+                receiverEmail = recRow.email.trim().toLowerCase();
+            }
+        } catch (e) {
+            console.warn('[Supabase] Receiver email fallback fetch note:', e);
+        }
+    }
 
     const realSenderPhoto = getSafeProfilePhoto(senderProfile);
     const realReceiverPhoto = getSafeProfilePhoto(receiverProfile);
@@ -1417,7 +1433,28 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
     }
 
     // Send email notification to sender regarding accept / decline
-    const senderEmail = (senderProfile?.email || '').trim().toLowerCase();
+    let senderEmail = (senderProfile?.email || '').trim().toLowerCase();
+    let senderName = senderProfile?.name || 'Member';
+
+    // Production Fallback: If senderEmail is missing, fetch from stored interest row in Supabase
+    if (!senderEmail && client && interestId) {
+        try {
+            const { data: intRow } = await client
+                .from('interests')
+                .select('sender_email, sender_name')
+                .eq('id', interestId)
+                .maybeSingle();
+            if (intRow && intRow.sender_email) {
+                senderEmail = intRow.sender_email.trim().toLowerCase();
+                if ((!senderName || senderName === 'Member') && intRow.sender_name) {
+                    senderName = intRow.sender_name;
+                }
+            }
+        } catch (e) {
+            console.warn('[Supabase] Sender email fallback fetch note:', e);
+        }
+    }
+
     if (senderEmail && typeof sendMatrimonialEmailNotification === 'function') {
         const notifType = newStatus === 'accepted' ? 'INTEREST_ACCEPTED' : 'INTEREST_DECLINED';
         const realReceiverPhoto = getSafeProfilePhoto(receiverProfile);
@@ -1426,9 +1463,9 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
         sendMatrimonialEmailNotification({
             type: notifType,
             toEmail: senderEmail,
-            toName: senderProfile.name,
+            toName: senderName,
             senderData: {
-                name: senderProfile.name,
+                name: senderName,
                 email: senderEmail,
                 photo: realSenderPhoto
             },
