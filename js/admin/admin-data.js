@@ -238,43 +238,16 @@ window.LS_CONTACT_KEY = LS_CONTACT_KEY;
 
 function loadAdminData() {
     try {
-        const storedUsers = localStorage.getItem(LS_USERS_KEY);
-        if (storedUsers) {
-            const parsed = JSON.parse(storedUsers);
-            USERS = Array.isArray(parsed) ? parsed.filter(u => u && u.id && (typeof u.id === 'string' || u.id > 1000) && u.accountStatus !== 'deleted' && u.name !== '[Deleted Account]') : [];
-        } else {
-            USERS = [];
-        }
+        // ── Supabase-first: USERS / PAYMENTS / INTERESTS / REPORTS always come
+        //    from live Supabase fetch in syncAdminDataFromSupabase().
+        //    We do NOT load them from localStorage anymore.
+        USERS = [];
+        PAYMENTS = [];
+        REPORTS = [];
+        INTERESTS = [];
+        NOTIFS = [];
 
-        if (!USERS || USERS.length === 0) {
-            try {
-                const storedP = localStorage.getItem('LS_COMMUNITY_PROFILES');
-                if (storedP) {
-                    const parsedP = JSON.parse(storedP);
-                    if (Array.isArray(parsedP) && parsedP.length > 0) {
-                        USERS = parsedP.filter(u => u && u.accountStatus !== 'deleted' && u.name !== '[Deleted Account]');
-                    }
-                }
-            } catch (_) {}
-        }
-        
-        const storedPayments = localStorage.getItem(LS_PAYMENTS_KEY);
-        if (storedPayments) {
-            const parsedPay = JSON.parse(storedPayments);
-            PAYMENTS = Array.isArray(parsedPay) ? parsedPay.filter(p => p && p.id && !String(p.id).startsWith('TXN102')) : [];
-        } else {
-            PAYMENTS = [];
-        }
-        
-        const storedReports = localStorage.getItem(LS_REPORTS_KEY);
-        if (storedReports) REPORTS = JSON.parse(storedReports);
-        
-        const storedInterests = localStorage.getItem(LS_INTERESTS_KEY);
-        if (storedInterests) INTERESTS = JSON.parse(storedInterests);
-
-        const storedNotifs = localStorage.getItem(LS_NOTIFS_KEY);
-        if (storedNotifs) NOTIFS = JSON.parse(storedNotifs);
-
+        // ── App config (not in Supabase) — keep loading from localStorage ──
         const storedFaqs = localStorage.getItem(LS_FAQS_KEY);
         if (storedFaqs) {
             try {
@@ -295,11 +268,12 @@ function loadAdminData() {
 
         const storedCastes = localStorage.getItem(LS_CASTES_KEY);
         if (storedCastes) {
-            CASTES_DATA = JSON.parse(storedCastes);
+            try { CASTES_DATA = JSON.parse(storedCastes); } catch(_) {}
         } else {
             CASTES_DATA = JSON.parse(JSON.stringify(DEFAULT_COMMUNITIES));
             saveCastesData();
         }
+
         const storedCreds = localStorage.getItem(LS_ADMIN_CREDS_KEY);
         if (storedCreds) {
             try {
@@ -310,16 +284,13 @@ function loadAdminData() {
             } catch(e) {}
         }
     } catch(e) {
-        console.error("Error loading data", e);
+        console.error('[Admin] loadAdminData error:', e);
     }
 }
 
 function saveAdminData() {
-    localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
-    localStorage.setItem(LS_PAYMENTS_KEY, JSON.stringify(PAYMENTS));
-    localStorage.setItem(LS_REPORTS_KEY, JSON.stringify(REPORTS));
-    localStorage.setItem(LS_INTERESTS_KEY, JSON.stringify(INTERESTS));
-    localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
+    // Supabase-first: only persist app-config data that lives in localStorage.
+    // USERS / PAYMENTS / INTERESTS / REPORTS are always sourced live from Supabase.
     localStorage.setItem(LS_FAQS_KEY, JSON.stringify(FAQS));
     localStorage.setItem(LS_HOWITWORKS_KEY, JSON.stringify(GUIDE_STEPS));
     saveCastesData();
@@ -334,49 +305,50 @@ function saveCastesData() {
  */
 async function syncAdminDataFromSupabase() {
     try {
+        // ── USERS (profiles) ──────────────────────────────────────────────────
         if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
             const remoteProfiles = await supabaseFetchAllProfilesForAdmin();
-            if (Array.isArray(remoteProfiles) && remoteProfiles.length >= 0) {
+            if (Array.isArray(remoteProfiles)) {
                 USERS = remoteProfiles.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                 window.USERS = USERS;
-                localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                 if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
                 if (typeof renderDashboard === 'function') renderDashboard();
             }
         }
 
+        // ── PAYMENTS ──────────────────────────────────────────────────────────
         if (typeof supabaseFetchPaymentsForAdmin === 'function') {
             const remotePayments = await supabaseFetchPaymentsForAdmin();
             if (Array.isArray(remotePayments)) {
                 PAYMENTS = remotePayments;
                 window.PAYMENTS = PAYMENTS;
-                localStorage.setItem(LS_PAYMENTS_KEY, JSON.stringify(PAYMENTS));
                 if (typeof renderPayments === 'function' && document.getElementById('payList')) renderPayments();
                 if (typeof renderDashboard === 'function') renderDashboard();
             }
         }
 
+        // ── INTERESTS / MATCHES ───────────────────────────────────────────────
         if (typeof supabaseFetchAllInterestsForAdmin === 'function') {
             const remoteInterests = await supabaseFetchAllInterestsForAdmin();
             if (Array.isArray(remoteInterests)) {
                 INTERESTS = remoteInterests;
                 window.INTERESTS = INTERESTS;
-                localStorage.setItem(LS_INTERESTS_KEY, JSON.stringify(INTERESTS));
                 if (typeof renderInterests === 'function' && document.getElementById('interestList')) renderInterests();
                 if (typeof renderDashboard === 'function') renderDashboard();
             }
         }
 
+        // ── REPORTS ───────────────────────────────────────────────────────────
         if (typeof supabaseFetchReportsForAdmin === 'function') {
             const remoteReports = await supabaseFetchReportsForAdmin();
             if (Array.isArray(remoteReports)) {
                 REPORTS = remoteReports;
                 window.REPORTS = REPORTS;
-                localStorage.setItem(LS_REPORTS_KEY, JSON.stringify(REPORTS));
                 if (typeof renderReports === 'function' && document.getElementById('reportList')) renderReports();
             }
         }
 
+        // ── MAINTENANCE MODE ──────────────────────────────────────────────────
         if (typeof supabaseGetMaintenanceMode === 'function') {
             const liveMaint = await supabaseGetMaintenanceMode();
             localStorage.setItem(LS_COMMUNITY_MAINTENANCE, liveMaint ? 'true' : 'false');
@@ -384,7 +356,7 @@ async function syncAdminDataFromSupabase() {
             if (maintToggle) maintToggle.classList.toggle('on', !!liveMaint);
         }
 
-        // Sync real chronological notifications from the database
+        // ── NOTIFS (generated from live DB data) ──────────────────────────────
         syncAdminNotifsFromDatabase();
     } catch (err) {
         console.warn('[Admin] Supabase sync notice:', err);
