@@ -606,6 +606,24 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         }
 
         const numId = Number(profileId);
+
+        // Also keep raw_data in sync (prevents old JSON from overriding column values on reload)
+        try {
+            const { data: existingRow } = await client
+                .from('profiles')
+                .select('raw_data')
+                .eq('id', !isNaN(numId) ? numId : profileId)
+                .maybeSingle();
+            if (existingRow && existingRow.raw_data) {
+                const updatedRaw = { ...existingRow.raw_data };
+                if (payload.account_status !== undefined) updatedRaw.accountStatus = payload.account_status;
+                if (updates.visible !== undefined) updatedRaw.visible = updates.visible;
+                if (updates.featured !== undefined) updatedRaw.featured = updates.featured;
+                if (updates.suspensionReason !== undefined) updatedRaw.suspensionReason = updates.suspensionReason || null;
+                payload.raw_data = updatedRaw;
+            }
+        } catch (_) {}
+
         let { data, error } = await client
             .from('profiles')
             .update(payload)

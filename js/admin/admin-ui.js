@@ -154,6 +154,8 @@
             adminAppInitialized = true;
 
             loadAdminData();
+            // Clear stale purge cache — prevents old deleted-user IDs from hiding current active users
+            try { sessionStorage.removeItem('LS_PURGED_USER_CACHE'); } catch(_) {}
             if (typeof initializeMockDataIfNeeded === 'function') initializeMockDataIfNeeded();
             syncSettingsUI();
             if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
