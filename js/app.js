@@ -230,16 +230,10 @@ function initApp() {
     }
 }
 
-// Synchronize changes made in Admin in real-time across tabs
+// Synchronize changes made in Admin in real-time across tabs or live Supabase
 window.addEventListener('storage', (e) => {
     if (e.key === LS_COMMUNITY_MAINTENANCE) {
         checkMaintenanceMode();
-    } else if (e.key === LS_HOWITWORKS_KEY) {
-        renderHowItWorks();
-    } else if (e.key === LS_FAQS_KEY) {
-        renderFaqs();
-    } else if (e.key === LS_CASTES_KEY) {
-        if (typeof renderCasteSelectors === 'function') renderCasteSelectors();
     }
 });
 
@@ -247,8 +241,36 @@ let appInitialized = false;
 function bootstrapApp() {
     if (appInitialized) return;
     appInitialized = true;
+
+    // One-time cleanup of stale localStorage configs so app always uses fresh Supabase data
+    try {
+        localStorage.removeItem(LS_CASTES_KEY);
+        localStorage.removeItem(LS_FAQS_KEY);
+        localStorage.removeItem(LS_HOWITWORKS_KEY);
+    } catch(e) {}
+
     if (typeof initAppHelpers === 'function') initAppHelpers();
     initApp();
+
+    // Live sync FAQs, How It Works, and Castes directly from Supabase app_settings
+    if (typeof syncHelpContentFromSupabase === 'function') syncHelpContentFromSupabase();
+    if (typeof syncCastesFromSupabase === 'function') syncCastesFromSupabase();
+
+    // Subscribe to live Supabase updates so any admin edits reflect immediately
+    if (typeof supabaseSubscribeAppSettings === 'function') {
+        supabaseSubscribeAppSettings((key, value) => {
+            if (key === 'faqs' && Array.isArray(value)) {
+                window.REMOTE_FAQS = value;
+                if (typeof renderFaqs === 'function' && document.getElementById('faqList')) renderFaqs();
+            } else if (key === 'guide_steps' && Array.isArray(value)) {
+                window.REMOTE_GUIDE_STEPS = value.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
+                if (typeof renderHowItWorks === 'function') renderHowItWorks();
+            } else if (key === 'castes' && Array.isArray(value)) {
+                window.REMOTE_CASTES = value;
+                if (typeof renderFilterCasteOptions === 'function') renderFilterCasteOptions();
+            }
+        });
+    }
 }
 
 if (document.readyState === 'loading') {

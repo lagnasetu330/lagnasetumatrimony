@@ -591,12 +591,16 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
     const client = getSupabaseClient();
     if (!client) return { success: true, localOnly: true };
     try {
+        const numId = Number(profileId);
+        const resolvedId = !isNaN(numId) ? numId : profileId;
+
         const payload = {
+            id: resolvedId, // CRITICAL: Required for PostgreSQL RLS WITH CHECK (id IS NOT NULL) to pass
             updated_at: new Date().toISOString()
         };
         if (updates.verifyStatus || updates.verify_status) payload.verify_status = updates.verifyStatus || updates.verify_status;
         if (updates.accountStatus || updates.account_status) payload.account_status = updates.accountStatus || updates.account_status;
-        if (updates.visible !== undefined) payload.visible = updates.visible;
+        if (updates.visible !== undefined && payload.account_status !== 'suspended') payload.visible = updates.visible;
         if (updates.featured !== undefined) payload.featured = updates.featured;
         if (updates.suspensionReason !== undefined || updates.suspension_reason !== undefined) {
             payload.suspension_reason = updates.suspensionReason || updates.suspension_reason;
@@ -605,14 +609,12 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
             payload.reject_reason = updates.rejectReason || updates.reject_reason;
         }
 
-        const numId = Number(profileId);
-
         // Also keep raw_data in sync (prevents old JSON from overriding column values on reload)
         try {
             const { data: existingRow } = await client
                 .from('profiles')
                 .select('raw_data')
-                .eq('id', !isNaN(numId) ? numId : profileId)
+                .eq('id', resolvedId)
                 .maybeSingle();
             if (existingRow && existingRow.raw_data) {
                 const updatedRaw = { ...existingRow.raw_data };
@@ -627,7 +629,7 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         let { data, error } = await client
             .from('profiles')
             .update(payload)
-            .eq('id', !isNaN(numId) ? numId : profileId);
+            .eq('id', resolvedId);
 
         if (error && updates.email) {
             const res = await client
@@ -635,6 +637,27 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
                 .update(payload)
                 .eq('email', String(updates.email).trim().toLowerCase());
             if (!res.error) error = null;
+        }
+
+        // Synchronize account status directly to users table as well
+        if (payload.account_status !== undefined) {
+            const userStatus = payload.account_status === 'suspended' ? 'Suspended' : 'Active';
+            try {
+                await client.from('users').update({
+                    status: userStatus,
+                    suspension_reason: payload.suspension_reason || null,
+                    updated_at: new Date().toISOString()
+                }).eq('id', String(profileId));
+            } catch (_) {}
+            if (updates.email) {
+                try {
+                    await client.from('users').update({
+                        status: userStatus,
+                        suspension_reason: payload.suspension_reason || null,
+                        updated_at: new Date().toISOString()
+                    }).eq('email', String(updates.email).trim().toLowerCase());
+                } catch (_) {}
+            }
         }
 
         if (error) console.warn('[Supabase] Profile status update note:', error.message);
@@ -2894,6 +2917,90 @@ function supabaseSubscribeMaintenance(callback) {
     }
 }
 
+/**
+ * Generic app_settings accessors (FAQs, Castes, Guide Steps, Maintenance)
+ */
+async function supabaseGetAppSetting(key, defaultValue = null) {
+    const client = getSupabaseClient();
+    if (!client) return defaultValue;
+    try {
+        const { data, error } = await client
+            .from('app_settings')
+            .select('value')
+            .eq('key', key)
+            .maybeSingle();
+        if (!error && data && data.value !== undefined && data.value !== null) {
+            return data.value;
+        }
+    } catch (e) {
+        console.warn(`[Supabase] Error reading setting ${key}:`, e);
+    }
+    return defaultValue;
+}
+
+async function supabaseSetAppSetting(key, value) {
+    const client = getSupabaseClient();
+    if (!client) return { success: false, error: 'No Supabase client' };
+    try {
+        const { data, error } = await client
+            .from('app_settings')
+            .upsert({
+                key: key,
+                value: value,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+        if (error) {
+            console.error(`[Supabase] Error saving setting ${key}:`, error);
+            return { success: false, error };
+        }
+        return { success: true };
+    } catch (e) {
+        console.error(`[Supabase] Exception saving setting ${key}:`, e);
+        return { success: false, error: e.message };
+    }
+}
+
+async function supabaseGetAllAppSettings() {
+    const client = getSupabaseClient();
+    if (!client) return {};
+    try {
+        const { data, error } = await client
+            .from('app_settings')
+            .select('key, value');
+        if (!error && Array.isArray(data)) {
+            const map = {};
+            data.forEach(row => { map[row.key] = row.value; });
+            return map;
+        }
+    } catch (e) {
+        console.warn('[Supabase] Error fetching all app_settings:', e);
+    }
+    return {};
+}
+
+function supabaseSubscribeAppSettings(callback) {
+    const client = getSupabaseClient();
+    if (!client || typeof client.channel !== 'function') return null;
+    try {
+        const channelName = `app_settings_sync_${Date.now()}`;
+        const channel = client.channel(channelName)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, payload => {
+                if (payload.new && payload.new.key) {
+                    if (typeof callback === 'function') {
+                        callback(payload.new.key, payload.new.value);
+                    }
+                }
+            })
+            .subscribe((status) => {
+                console.info('[Supabase Realtime] App settings channel status:', status);
+            });
+        return channel;
+    } catch (e) {
+        console.warn('[Supabase Realtime] App settings subscribe error:', e);
+        return null;
+    }
+}
+
 // Global Exports
 window.SUPABASE_CONFIG = SUPABASE_CONFIG;
 window.getSupabaseClient = getSupabaseClient;
@@ -2949,6 +3056,10 @@ window.supabaseUpdateReportStatus = supabaseUpdateReportStatus;
 window.supabaseGetMaintenanceMode = supabaseGetMaintenanceMode;
 window.supabaseSetMaintenanceMode = supabaseSetMaintenanceMode;
 window.supabaseSubscribeMaintenance = supabaseSubscribeMaintenance;
+window.supabaseGetAppSetting = supabaseGetAppSetting;
+window.supabaseSetAppSetting = supabaseSetAppSetting;
+window.supabaseGetAllAppSettings = supabaseGetAllAppSettings;
+window.supabaseSubscribeAppSettings = supabaseSubscribeAppSettings;
 
 
 

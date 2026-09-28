@@ -86,7 +86,6 @@
                         if (Array.isArray(remoteProfiles)) {
                             USERS = remoteProfiles.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                             window.USERS = USERS;
-                            localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                             renderUsers();
                             if (typeof renderDashboard === 'function') renderDashboard();
                         }
@@ -843,24 +842,9 @@
                         fullAddress: u.fullAddress,
                         address: u.fullAddress
                     });
-                    localStorage.setItem('LS_COMMUNITY_PROFILES', JSON.stringify(pList));
-                }
-
-                // Also update LS_COMMUNITY_USERS
-                const uList = JSON.parse(localStorage.getItem('LS_COMMUNITY_USERS') || '[]');
-                const uIdx = uList.findIndex(x => String(x.id) === normId || (x.email && normEmail && String(x.email).toLowerCase().trim() === normEmail));
-                if (uIdx !== -1) {
-                    Object.assign(uList[uIdx], {
-                        name: u.name,
-                        gender: (u.gender === 'girls' || u.gender === 'Girl') ? 'Girl' : 'Boy',
-                        caste: u.community,
-                        mobile: u.ownMobile || u.mobile,
-                        email: u.email
-                    });
-                    localStorage.setItem('LS_COMMUNITY_USERS', JSON.stringify(uList));
                 }
             } catch (e) {
-                console.warn('[Admin Edit] Cache sync notice:', e);
+                console.warn('[Admin Edit] Edit notice:', e);
             }
 
             // 3. Persist live changes directly to Supabase PostgreSQL database
@@ -939,18 +923,6 @@
                 }).catch(err => console.warn('[Supabase] Visibility sync notice:', err));
             }
 
-            // 2. Sync to member app cache
-            try {
-                const normEmail = (u.email || '').toLowerCase().trim();
-                const normId = String(u.id);
-                const pList = JSON.parse(localStorage.getItem('LS_COMMUNITY_PROFILES') || '[]');
-                const pIdx = pList.findIndex(p => String(p.id) === normId || (p.email && normEmail && String(p.email).toLowerCase().trim() === normEmail));
-                if (pIdx !== -1) {
-                    pList[pIdx].visible = u.visible;
-                    localStorage.setItem('LS_COMMUNITY_PROFILES', JSON.stringify(pList));
-                }
-            } catch (e) {}
-
             showToast(u.visible ? 'Profile is now visible in search' : 'Profile hidden from search');
         }
 
@@ -976,37 +948,31 @@
             openModal('modalSuspend');
         }
 
-        function doSuspendToggle() {
+        async function doSuspendToggle() {
             const u = findUser(state.activeUserId);
             if (!u) return;
             u.accountStatus = u.accountStatus === 'active' ? 'suspended' : 'active';
             if (u.accountStatus === 'suspended') u.visible = false;
             else u.visible = true;
             closeModal('modalSuspend');
-            saveAdminData();
+            refreshCurrentScreen();
 
             // Sync to live Supabase PostgreSQL
             if (typeof supabaseUpdateProfileStatus === 'function') {
-                supabaseUpdateProfileStatus(u.id, {
-                    accountStatus: u.accountStatus,
-                    visible: u.visible,
-                    suspensionReason: u.accountStatus === 'suspended' ? 'Suspended by admin review.' : null
-                }).catch(err => console.warn('[Supabase] Suspend sync note:', err));
+                try {
+                    await supabaseUpdateProfileStatus(u.id, {
+                        email: u.email,
+                        accountStatus: u.accountStatus,
+                        visible: u.visible,
+                        suspensionReason: u.accountStatus === 'suspended' ? 'Suspended by admin review.' : null
+                    });
+                    console.info('[Admin] Member status successfully updated in Supabase:', u.id, u.accountStatus);
+                } catch(err) {
+                    console.warn('[Supabase] Suspend sync note:', err);
+                }
             }
 
-            // Sync to member app cache
-            try {
-                const pList = JSON.parse(localStorage.getItem('LS_COMMUNITY_PROFILES') || '[]');
-                const pIdx = pList.findIndex(p => p.id === u.id);
-                if (pIdx !== -1) {
-                    pList[pIdx].accountStatus = u.accountStatus;
-                    pList[pIdx].visible = u.visible;
-                    localStorage.setItem('LS_COMMUNITY_PROFILES', JSON.stringify(pList));
-                }
-            } catch(e) {}
-
             showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
-            refreshCurrentScreen();
         }
 
         function openDeleteModal(id) {

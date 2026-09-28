@@ -172,24 +172,37 @@ const ALL_CASTES = [
     { name: 'Charan Barot', guj: 'ચારણ બારોટ', group: 'Traditional Communities', keywords: 'charan barot ચારણ બારોટ' }
 ];
 
+let REMOTE_CASTES = null;
+
 function getActiveCastes() {
-    try {
-        const stored = localStorage.getItem(LS_CASTES_KEY);
-        if (stored) {
-            const list = JSON.parse(stored);
-            if (Array.isArray(list) && list.length > 0) return list;
-        }
-    } catch(e) {
-        console.error("Error reading community castes", e);
+    if (Array.isArray(REMOTE_CASTES) && REMOTE_CASTES.length > 0) {
+        return REMOTE_CASTES;
+    }
+    if (Array.isArray(window.REMOTE_CASTES) && window.REMOTE_CASTES.length > 0) {
+        return window.REMOTE_CASTES;
     }
     return ALL_CASTES;
 }
 
-if (!localStorage.getItem(LS_CASTES_KEY)) {
+/**
+ * Fetch Castes directory directly from Supabase app_settings table
+ */
+async function syncCastesFromSupabase() {
+    if (typeof supabaseGetAppSetting !== 'function') return;
     try {
-        localStorage.setItem(LS_CASTES_KEY, JSON.stringify(ALL_CASTES));
-    } catch(e) {}
+        const castes = await supabaseGetAppSetting('castes');
+        if (Array.isArray(castes) && castes.length > 0) {
+            REMOTE_CASTES = castes;
+            window.REMOTE_CASTES = castes;
+            if (typeof renderFilterCasteOptions === 'function') {
+                renderFilterCasteOptions();
+            }
+        }
+    } catch(e) {
+        console.warn('[Castes] syncCastesFromSupabase notice:', e);
+    }
 }
 
 window.ALL_CASTES = ALL_CASTES;
 window.getActiveCastes = getActiveCastes;
+window.syncCastesFromSupabase = syncCastesFromSupabase;

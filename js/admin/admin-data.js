@@ -238,41 +238,37 @@ window.LS_CONTACT_KEY = LS_CONTACT_KEY;
 
 function loadAdminData() {
     try {
-        // ── Supabase-first: USERS / PAYMENTS / INTERESTS / REPORTS always come
-        //    from live Supabase fetch in syncAdminDataFromSupabase().
-        //    We do NOT load them from localStorage anymore.
+        // ── Supabase-first: All data comes directly from Supabase Cloud.
+        //    No localStorage caching is used.
         USERS = [];
         PAYMENTS = [];
         REPORTS = [];
         INTERESTS = [];
         NOTIFS = [];
 
-        // ── App config (not in Supabase) — keep loading from localStorage ──
-        const storedFaqs = localStorage.getItem(LS_FAQS_KEY);
-        if (storedFaqs) {
-            try {
-                const parsedFaqs = JSON.parse(storedFaqs);
-                if (Array.isArray(parsedFaqs) && parsedFaqs.length > 0) FAQS = parsedFaqs;
-            } catch(e) {}
-        }
+        // One-time cleanup of legacy localStorage caches
+        try {
+            localStorage.removeItem(LS_USERS_KEY);
+            localStorage.removeItem(LS_PAYMENTS_KEY);
+            localStorage.removeItem(LS_INTERESTS_KEY);
+            localStorage.removeItem(LS_REPORTS_KEY);
+            localStorage.removeItem(LS_NOTIFS_KEY);
+            localStorage.removeItem(LS_FAQS_KEY);
+            localStorage.removeItem(LS_HOWITWORKS_KEY);
+            localStorage.removeItem(LS_CASTES_KEY);
+        } catch(e) {}
 
-        const storedGuide = localStorage.getItem(LS_HOWITWORKS_KEY);
-        if (storedGuide) {
-            try {
-                const parsedGuide = JSON.parse(storedGuide);
-                if (Array.isArray(parsedGuide) && parsedGuide.length > 0) {
-                    GUIDE_STEPS = parsedGuide.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
-                }
-            } catch(e) {}
-        }
-
-        const storedCastes = localStorage.getItem(LS_CASTES_KEY);
-        if (storedCastes) {
-            try { CASTES_DATA = JSON.parse(storedCastes); } catch(_) {}
-        } else {
-            CASTES_DATA = JSON.parse(JSON.stringify(DEFAULT_COMMUNITIES));
-            saveCastesData();
-        }
+        // In-memory defaults as initial fallback before Supabase fetch completes
+        FAQS = [
+            ['How do I register?', 'Members create an account, verify their phone/email by OTP, select community, and complete personal, family, and address details.'],
+            ['Is membership free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
+            ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹99, giving direct contact to verified community brides\' families.'],
+            ['How do members contact each other?', 'A member can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request to unlock chat.'],
+            ['Is a member\'s phone number public?', 'No. A member\'s own mobile number is kept strictly private for Admin review only. Only the father\'s contact number is shown on the public profile.'],
+            ['How do multi-photo profiles work?', 'Members can upload up to 3 high-resolution photos. Admin and verified members can view all photos in the photo gallery carousel.']
+        ];
+        GUIDE_STEPS = JSON.parse(JSON.stringify(DEFAULT_GUIDE_STEPS));
+        CASTES_DATA = JSON.parse(JSON.stringify(DEFAULT_COMMUNITIES));
 
         const storedCreds = localStorage.getItem(LS_ADMIN_CREDS_KEY);
         if (storedCreds) {
@@ -288,20 +284,41 @@ function loadAdminData() {
     }
 }
 
-function saveAdminData() {
-    // Supabase-first: only persist app-config data that lives in localStorage.
-    // USERS / PAYMENTS / INTERESTS / REPORTS are always sourced live from Supabase.
-    localStorage.setItem(LS_FAQS_KEY, JSON.stringify(FAQS));
-    localStorage.setItem(LS_HOWITWORKS_KEY, JSON.stringify(GUIDE_STEPS));
+/**
+ * Save FAQs and How It Works steps directly to Supabase app_settings table
+ */
+async function saveAdminData() {
+    try {
+        if (typeof supabaseSetAppSetting === 'function') {
+            await Promise.all([
+                supabaseSetAppSetting('faqs', FAQS),
+                supabaseSetAppSetting('guide_steps', GUIDE_STEPS)
+            ]);
+            console.info('[Admin] FAQs and Guide steps saved to Supabase app_settings');
+        }
+    } catch (e) {
+        console.error('[Admin] Error saving FAQs/Guide to Supabase:', e);
+    }
     saveCastesData();
 }
 
-function saveCastesData() {
-    localStorage.setItem(LS_CASTES_KEY, JSON.stringify(CASTES_DATA));
+/**
+ * Save Castes directory directly to Supabase app_settings table
+ */
+async function saveCastesData() {
+    try {
+        if (typeof supabaseSetAppSetting === 'function') {
+            await supabaseSetAppSetting('castes', CASTES_DATA);
+            console.info('[Admin] Castes saved to Supabase app_settings');
+        }
+    } catch (e) {
+        console.error('[Admin] Error saving Castes to Supabase:', e);
+    }
 }
 
 /**
- * Asynchronously fetch all live member registrations, payments, and interests/matches from Supabase
+ * Asynchronously fetch all live member registrations, payments, interests, reports,
+ * and app_settings (faqs, guide_steps, castes) directly from Supabase
  */
 async function syncAdminDataFromSupabase() {
     try {
@@ -351,12 +368,39 @@ async function syncAdminDataFromSupabase() {
         // ── MAINTENANCE MODE ──────────────────────────────────────────────────
         if (typeof supabaseGetMaintenanceMode === 'function') {
             const liveMaint = await supabaseGetMaintenanceMode();
-            localStorage.setItem(LS_COMMUNITY_MAINTENANCE, liveMaint ? 'true' : 'false');
             const maintToggle = document.getElementById('toggleMaintenance');
             if (maintToggle) maintToggle.classList.toggle('on', !!liveMaint);
         }
 
-        // ── NOTIFS (generated from live DB data) ──────────────────────────────
+        // ── APP CONFIG (FAQS / GUIDE / CASTES) from Supabase app_settings ──
+        if (typeof supabaseGetAppSetting === 'function') {
+            try {
+                const [remoteFaqs, remoteGuide, remoteCastes] = await Promise.all([
+                    supabaseGetAppSetting('faqs'),
+                    supabaseGetAppSetting('guide_steps'),
+                    supabaseGetAppSetting('castes')
+                ]);
+                if (Array.isArray(remoteFaqs) && remoteFaqs.length > 0) {
+                    FAQS = remoteFaqs;
+                    window.FAQS = FAQS;
+                    if (typeof renderHelp === 'function' && document.getElementById('faqAdminList')) renderHelp();
+                }
+                if (Array.isArray(remoteGuide) && remoteGuide.length > 0) {
+                    GUIDE_STEPS = remoteGuide.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
+                    window.GUIDE_STEPS = GUIDE_STEPS;
+                    if (typeof renderHelp === 'function' && document.getElementById('guideAdminList')) renderHelp();
+                }
+                if (Array.isArray(remoteCastes) && remoteCastes.length > 0) {
+                    CASTES_DATA = remoteCastes;
+                    window.CASTES_DATA = CASTES_DATA;
+                    if (typeof renderCastes === 'function' && document.getElementById('casteAdminList')) renderCastes();
+                }
+            } catch (cfgErr) {
+                console.warn('[Admin] App settings fetch note:', cfgErr);
+            }
+        }
+
+        // ── NOTIFS (generated from live DB data in memory) ────────────────────
         syncAdminNotifsFromDatabase();
     } catch (err) {
         console.warn('[Admin] Supabase sync notice:', err);
@@ -364,7 +408,7 @@ async function syncAdminDataFromSupabase() {
 }
 
 /**
- * Sync real administrative notifications directly from live database tables
+ * Sync real administrative notifications directly from live database tables in memory
  */
 function syncAdminNotifsFromDatabase() {
     const existingKeys = new Set(NOTIFS.map(n => n.id || (n.txt + '::' + n.time)));
@@ -434,7 +478,6 @@ function syncAdminNotifsFromDatabase() {
 
     if (generated.length > 0) {
         NOTIFS = [...generated, ...NOTIFS];
-        localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
         if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
         if (typeof renderNotifs === 'function') renderNotifs();
         if (typeof renderDashboard === 'function') renderDashboard();
@@ -443,7 +486,8 @@ function syncAdminNotifsFromDatabase() {
 window.syncAdminNotifsFromDatabase = syncAdminNotifsFromDatabase;
 
 /**
- * Realtime subscription: Admin listens live to new registrations, profile edits, payments, interests, and chat messages
+ * Realtime subscription: Admin listens live to new registrations, profile edits,
+ * payments, interests, chat messages, and app_settings (faqs/castes/guide)
  */
 function setupAdminRealtime() {
     try {
@@ -456,7 +500,6 @@ function setupAdminRealtime() {
                         if (Array.isArray(remoteInterests)) {
                             INTERESTS = remoteInterests;
                             window.INTERESTS = INTERESTS;
-                            localStorage.setItem(LS_INTERESTS_KEY, JSON.stringify(INTERESTS));
                             if (typeof renderInterests === 'function' && document.getElementById('interestList')) renderInterests();
                             if (typeof renderDashboard === 'function') renderDashboard();
                         }
@@ -473,7 +516,6 @@ function setupAdminRealtime() {
                             type: 'interest',
                             targetId: newRow.id
                         });
-                        localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
                         if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
                         if (typeof renderNotifs === 'function') renderNotifs();
                         if (typeof showToast === 'function') showToast(`New interest request sent by ${newRow.sender_name || 'Member'}`);
@@ -496,7 +538,6 @@ function setupAdminRealtime() {
                         if (Array.isArray(remotePayments)) {
                             PAYMENTS = remotePayments;
                             window.PAYMENTS = PAYMENTS;
-                            localStorage.setItem(LS_PAYMENTS_KEY, JSON.stringify(PAYMENTS));
                             if (typeof renderPayments === 'function' && document.getElementById('payList')) renderPayments();
                             if (typeof renderDashboard === 'function') renderDashboard();
                         }
@@ -513,7 +554,6 @@ function setupAdminRealtime() {
                             type: 'payment',
                             targetId: newPay.id
                         });
-                        localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
                         if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
                         if (typeof renderNotifs === 'function') renderNotifs();
                         if (typeof renderDashboard === 'function') renderDashboard();
@@ -537,7 +577,6 @@ function setupAdminRealtime() {
                             return true;
                         });
                         window.USERS = USERS;
-                        localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                         if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
                         if (typeof renderDashboard === 'function') renderDashboard();
                     }
@@ -546,7 +585,6 @@ function setupAdminRealtime() {
                         if (Array.isArray(remoteProfiles)) {
                             USERS = remoteProfiles.filter(u => u && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                             window.USERS = USERS;
-                            localStorage.setItem(LS_USERS_KEY, JSON.stringify(USERS));
                             if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
                             if (typeof renderDashboard === 'function') renderDashboard();
                         }
@@ -563,7 +601,6 @@ function setupAdminRealtime() {
                             type: 'user',
                             targetId: newMember.id
                         });
-                        localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
                         if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
                         if (typeof renderNotifs === 'function') renderNotifs();
                         if (typeof renderDashboard === 'function') renderDashboard();
@@ -577,7 +614,6 @@ function setupAdminRealtime() {
                         if (Array.isArray(remoteReports)) {
                             REPORTS = remoteReports;
                             window.REPORTS = REPORTS;
-                            localStorage.setItem(LS_REPORTS_KEY, JSON.stringify(REPORTS));
                             if (typeof renderReports === 'function' && document.getElementById('reportList')) renderReports();
                         }
                     }
@@ -590,7 +626,6 @@ function setupAdminRealtime() {
                             time: 'Just now',
                             unread: true
                         });
-                        localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
                         if (typeof renderNotifs === 'function') renderNotifs();
                         if (typeof showToast === 'function') showToast(`New member report received: ${parsedReason}`);
                     }
@@ -598,10 +633,28 @@ function setupAdminRealtime() {
                 onMaintenanceChange: async (payload) => {
                     if (typeof supabaseGetMaintenanceMode === 'function') {
                         const isM = await supabaseGetMaintenanceMode();
-                        localStorage.setItem(LS_COMMUNITY_MAINTENANCE, isM ? 'true' : 'false');
                         const maintToggle = document.getElementById('toggleMaintenance');
                         if (maintToggle) maintToggle.classList.toggle('on', !!isM);
                     }
+                }
+            });
+        }
+
+        // Live Realtime listener for app_settings changes (FAQs, Guide Steps, Castes)
+        if (typeof supabaseSubscribeAppSettings === 'function') {
+            supabaseSubscribeAppSettings((key, value) => {
+                if (key === 'faqs' && Array.isArray(value)) {
+                    FAQS = value;
+                    window.FAQS = FAQS;
+                    if (typeof renderHelp === 'function' && document.getElementById('faqAdminList')) renderHelp();
+                } else if (key === 'guide_steps' && Array.isArray(value)) {
+                    GUIDE_STEPS = value.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
+                    window.GUIDE_STEPS = GUIDE_STEPS;
+                    if (typeof renderHelp === 'function' && document.getElementById('guideAdminList')) renderHelp();
+                } else if (key === 'castes' && Array.isArray(value)) {
+                    CASTES_DATA = value;
+                    window.CASTES_DATA = CASTES_DATA;
+                    if (typeof renderCastes === 'function' && document.getElementById('casteAdminList')) renderCastes();
                 }
             });
         }

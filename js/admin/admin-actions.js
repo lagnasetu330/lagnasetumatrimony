@@ -666,7 +666,6 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!n) return;
 
             n.unread = false;
-            localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
             updateAdminNotifBadge();
 
             const activeScr = document.querySelector('.screen.active');
@@ -691,7 +690,6 @@ window.escapeHtml = escapeHtmlAdmin;
         function markAllAdminNotifsAsRead() {
             if (!NOTIFS || NOTIFS.length === 0) return;
             NOTIFS.forEach(n => { n.unread = false; });
-            localStorage.setItem(LS_NOTIFS_KEY, JSON.stringify(NOTIFS));
             updateAdminNotifBadge();
             renderNotifs();
             if (typeof renderDashboard === 'function') renderDashboard();
@@ -795,12 +793,14 @@ window.escapeHtml = escapeHtmlAdmin;
             }
         }
 
-        function saveContactDetails() {
+        async function saveContactDetails() {
             const wa = document.getElementById('supportWhatsapp')?.value.trim() || '+91 97263 62863';
             const phone = document.getElementById('supportPhone')?.value.trim() || '+91 97263 62863';
             const email = document.getElementById('supportEmail')?.value.trim() || 'lagnasetu330@gmail.com';
             const contact = { whatsapp: wa, phone: phone, email: email };
-            localStorage.setItem(LS_CONTACT_KEY, JSON.stringify(contact));
+            if (typeof supabaseSetAppSetting === 'function') {
+                await supabaseSetAppSetting('contact_details', contact);
+            }
             showToast('Contact details saved successfully');
         }
 
@@ -1177,12 +1177,9 @@ function syncSettingsUI() {
     // Maintenance mode toggle sync
     const maintToggle = document.getElementById('toggleMaintenance');
     if (maintToggle) {
-        const isMaint = localStorage.getItem(LS_COMMUNITY_MAINTENANCE) === 'true'; // default OFF
-        maintToggle.classList.toggle('on', isMaint);
         if (typeof supabaseGetMaintenanceMode === 'function') {
             supabaseGetMaintenanceMode().then(liveMaint => {
                 maintToggle.classList.toggle('on', !!liveMaint);
-                localStorage.setItem(LS_COMMUNITY_MAINTENANCE, liveMaint ? 'true' : 'false');
             }).catch(() => {});
         }
     }
@@ -1208,7 +1205,9 @@ function toggleAutoApprove(btn) {
     const isCurrentlyOn = btn.classList.contains('on');
     const newState = !isCurrentlyOn;
     btn.classList.toggle('on', newState);
-    localStorage.setItem(LS_COMMUNITY_AUTO_APPROVE, newState ? 'true' : 'false');
+    if (typeof supabaseSetAppSetting === 'function') {
+        supabaseSetAppSetting('auto_approve', { enabled: newState }).catch(() => {});
+    }
     if (newState) {
         showToast('Auto-approve ON: New registrations activate instantly');
     } else {
@@ -1220,7 +1219,6 @@ async function toggleMaintenanceMode(btn) {
     const isCurrentlyOn = btn.classList.contains('on');
     const newState = !isCurrentlyOn;
     btn.classList.toggle('on', newState);
-    localStorage.setItem(LS_COMMUNITY_MAINTENANCE, newState ? 'true' : 'false');
     if (newState) {
         showToast('Maintenance mode ACTIVATED: Member app is now locked');
     } else {

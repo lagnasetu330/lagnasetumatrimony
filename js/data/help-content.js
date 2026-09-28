@@ -24,32 +24,56 @@ const DEFAULT_FAQS = [
     ['How can I contact official Admin support?', 'You can reach our Jasdan administrative cell via WhatsApp or Phone at +91 97263 62863 or email lagnasetu330@gmail.com.']
 ];
 
+let REMOTE_GUIDE_STEPS = null;
+let REMOTE_FAQS = null;
+
 function getHowItWorksSteps() {
-    try {
-        const stored = localStorage.getItem(LS_HOWITWORKS_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-                return parsed.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
-            }
-        }
-    } catch(e) {
-        console.error("Error reading How it works data", e);
+    if (Array.isArray(REMOTE_GUIDE_STEPS) && REMOTE_GUIDE_STEPS.length > 0) {
+        return REMOTE_GUIDE_STEPS;
+    }
+    if (Array.isArray(window.REMOTE_GUIDE_STEPS) && window.REMOTE_GUIDE_STEPS.length > 0) {
+        return window.REMOTE_GUIDE_STEPS;
     }
     return DEFAULT_HOW_IT_WORKS;
 }
 
 function getFaqs() {
-    try {
-        const stored = localStorage.getItem(LS_FAQS_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-    } catch(e) {
-        console.error("Error reading FAQs data", e);
+    if (Array.isArray(REMOTE_FAQS) && REMOTE_FAQS.length > 0) {
+        return REMOTE_FAQS;
+    }
+    if (Array.isArray(window.REMOTE_FAQS) && window.REMOTE_FAQS.length > 0) {
+        return window.REMOTE_FAQS;
     }
     return DEFAULT_FAQS;
+}
+
+/**
+ * Fetch FAQs and Guide Steps directly from Supabase app_settings table
+ */
+async function syncHelpContentFromSupabase() {
+    if (typeof supabaseGetAppSetting !== 'function') return;
+    try {
+        const [faqs, guide] = await Promise.all([
+            supabaseGetAppSetting('faqs'),
+            supabaseGetAppSetting('guide_steps')
+        ]);
+        if (Array.isArray(faqs) && faqs.length > 0) {
+            REMOTE_FAQS = faqs;
+            window.REMOTE_FAQS = faqs;
+            if (typeof renderFaqs === 'function' && document.getElementById('faqList')) {
+                renderFaqs();
+            }
+        }
+        if (Array.isArray(guide) && guide.length > 0) {
+            REMOTE_GUIDE_STEPS = guide.map(s => typeof s === 'string' ? { title: s, desc: '' } : s);
+            window.REMOTE_GUIDE_STEPS = REMOTE_GUIDE_STEPS;
+            if (typeof renderHowItWorks === 'function') {
+                renderHowItWorks();
+            }
+        }
+    } catch(e) {
+        console.warn('[Help] syncHelpContentFromSupabase notice:', e);
+    }
 }
 
 
@@ -149,3 +173,4 @@ if (typeof renderFaqs !== 'undefined') window.renderFaqs = renderFaqs;
 if (typeof filterFaqs !== 'undefined') window.filterFaqs = filterFaqs;
 if (typeof getFaqs !== 'undefined') window.getFaqs = getFaqs;
 if (typeof getHowItWorks !== 'undefined') window.getHowItWorks = getHowItWorks;
+if (typeof syncHelpContentFromSupabase !== 'undefined') window.syncHelpContentFromSupabase = syncHelpContentFromSupabase;
