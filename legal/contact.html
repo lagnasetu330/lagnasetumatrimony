@@ -72,7 +72,7 @@
                             Direct correspondence for billing, profile verification, inquiries &amp; general assistance.
                         </div>
                     </div>
-                    <a href="mailto:lagnasetu330@gmail.com?subject=Lagna%20Setu%20Support%20Inquiry" class="legal-contact-action mail-act">
+                    <a href="mailto:lagnasetu330@gmail.com?subject=Lagna%20Setu%20Support%20Inquiry" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Lagna Setu Support Inquiry');" class="legal-contact-action mail-act">
                         <span class="lca-left">
                             <i class="fa-solid fa-paper-plane"></i>
                             <span>Send Official Email</span>
@@ -153,7 +153,7 @@
                     <b>Name / Officer:</b> Grievance Redressal Officer, Lagna Setu Matrimony<br>
                     <b>Designation:</b> Head of Customer Trust &amp; Safety<br>
                     <b>Official Grievance Desk:</b> 
-                    <a href="mailto:lagnasetu330@gmail.com?subject=Attention:%20Grievance%20Officer%20-%20Lagna%20Setu" class="legal-grievance-btn">
+                    <a href="mailto:lagnasetu330@gmail.com?subject=Attention:%20Grievance%20Officer%20-%20Lagna%20Setu" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Attention: Grievance Officer - Lagna Setu');" class="legal-grievance-btn">
                         <i class="fa-solid fa-envelope-open-text"></i> Write to Grievance Officer <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i>
                     </a><br>
                     <b>Operating Headquarters:</b> Jasdan / Gujarat, India<br>
@@ -245,6 +245,35 @@
                 } catch(e) {}
             }
         })();
+
+        // Smart email opener: opens Gmail Web compose on PC desktop, native email app on mobile
+        function openSmartEmail(e, email, subject, body) {
+            if (e && e.preventDefault) e.preventDefault();
+            email = email || 'lagnasetu330@gmail.com';
+            subject = subject || 'Lagna Setu Support Inquiry';
+            body = body || '';
+            
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(email);
+                }
+            } catch(err) {}
+
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            var subEnc = encodeURIComponent(subject);
+            var bodyEnc = encodeURIComponent(body);
+            var mailtoUrl = 'mailto:' + email + '?subject=' + subEnc + (body ? '&body=' + bodyEnc : '');
+
+            if (isMobile) {
+                window.location.href = mailtoUrl;
+            } else {
+                var gmailUrl = 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email) + '&su=' + subEnc + (body ? '&body=' + bodyEnc : '');
+                var win = window.open(gmailUrl, '_blank');
+                if (!win || win.closed || typeof win.closed === 'undefined') {
+                    window.location.href = mailtoUrl;
+                }
+            }
+        }
 
         window.addEventListener('scroll', function() {
             var btn = document.getElementById('legalBackToTop');
