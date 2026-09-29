@@ -110,11 +110,21 @@ async function supabaseVerifyEmailOtp(email, token) {
     const client = getSupabaseClient();
     if (!client) return { data: null, error: null };
     try {
-        const res = await client.auth.verifyOtp({
+        let res = await client.auth.verifyOtp({
             email: email.toLowerCase(),
             token: token.trim(),
             type: 'email'
         });
+        if (res && res.error) {
+            const retry = await client.auth.verifyOtp({
+                email: email.toLowerCase(),
+                token: token.trim(),
+                type: 'signup'
+            });
+            if (retry && !retry.error) {
+                res = retry;
+            }
+        }
         return res;
     } catch (err) {
         console.warn('[Supabase] Verify OTP note:', err?.message || err);
