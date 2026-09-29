@@ -367,18 +367,9 @@ function processSuccessfulPayment(txnId, upiMethod) {
 function processMockPayment() {
     closeModal('modalRazorpayCheckout');
 
-    // Anti-Bypass Guard: Strictly disable mock payments in production environments
-    const isLiveProduction = window.IS_PRODUCTION === true || (
-        typeof window.location !== 'undefined' &&
-        window.location.hostname &&
-        window.location.hostname !== 'localhost' &&
-        window.location.hostname !== '127.0.0.1' &&
-        !window.location.protocol.startsWith('file:') &&
-        !window.ALLOW_MOCK_PAYMENTS
-    );
-
-    if (isLiveProduction || (window.RAZORPAY_KEY_ID && !window.RAZORPAY_KEY_ID.includes('demo'))) {
-        showToast('Live Mode: Mock payments are disabled. Please complete payment via official UPI gateway.');
+    // Only route to official Razorpay if a real live merchant key is configured
+    if (window.RAZORPAY_KEY_ID && !window.RAZORPAY_KEY_ID.includes('demo') && window.RAZORPAY_KEY_ID.startsWith('rzp_live_')) {
+        showToast('Connecting to Razorpay gateway...');
         if (typeof openRazorpayCheckout === 'function') {
             openRazorpayCheckout();
         }
@@ -389,12 +380,53 @@ function processMockPayment() {
     const customVpa = upiInput ? upiInput.value.trim() : '';
     const methodStr = customVpa ? `UPI (${customVpa})` : `UPI (${selectedUpiApp || 'Google Pay'})`;
 
-    showToast('Processing secure payment via ' + methodStr + ' (Razorpay)...');
+    showToast('Processing test payment via ' + methodStr + '...');
     setTimeout(() => {
-        const txnId = 'RZP_UPI_' + Math.floor(10000 + Math.random() * 90000);
+        const txnId = 'DEMO_UPI_' + Math.floor(10000 + Math.random() * 90000);
         processSuccessfulPayment(txnId, methodStr);
-    }, 750);
+    }, 600);
 }
+
+function activateDemoTestPass() {
+    closeModal('modalPaywall');
+    closeModal('modalBoyComplete');
+    closeModal('modalRazorpayCheckout');
+
+    if (typeof state === 'undefined' || !state.currentUser) {
+        showToast('Please log in or register first');
+        return;
+    }
+
+    const testTxnId = 'DEMO_TEST_' + Math.floor(10000 + Math.random() * 90000);
+    processSuccessfulPayment(testTxnId, 'Testing Demo Pass (Free)');
+    showToast('🧪 30-Day Testing Pass Activated! Full access unlocked 🎉');
+
+    setTimeout(() => {
+        if (typeof enterHome === 'function') {
+            enterHome();
+        } else if (typeof go === 'function') {
+            go('scr-home');
+        }
+    }, 450);
+}
+window.activateDemoTestPass = activateDemoTestPass;
+
+function resetDemoTestPass() {
+    if (typeof state === 'undefined' || !state.currentUser) return;
+    state.currentUser.paymentStatus = 'Unpaid';
+    state.currentUser.planStart = null;
+    state.currentUser.planExpiry = null;
+    state.membershipPaid = false;
+    delete state.currentUser.paymentToken;
+    try {
+        localStorage.setItem('lagnaSetu_membershipPaid', 'false');
+    } catch (_) {}
+    if (typeof saveSessionState === 'function') saveSessionState();
+    if (typeof updateMembershipScreen === 'function') updateMembershipScreen();
+    showToast('Pass reset to Unpaid for testing.');
+    if (typeof go === 'function') go('scr-membership');
+}
+window.resetDemoTestPass = resetDemoTestPass;
 
 /* ============================================================ MEMBERSHIP SCREEN UPDATE ============================================================ */
 function updateMembershipScreen() {
@@ -409,12 +441,14 @@ function updateMembershipScreen() {
     const titleEl = memWrap.querySelector('.h-display');
     const subEl = memWrap.querySelector('.card div[style*="font-size:12px"]');
     const payBtn = document.getElementById('btnMembershipPayAction');
+    const demoBtn = document.getElementById('btnDemoPassAction');
 
     if (isGirl) {
         if (badgeEl) badgeEl.innerHTML = '<i class="fa-solid fa-crown"></i> 100% LIFETIME FREE';
         if (titleEl) titleEl.textContent = 'Free Girl Membership';
         if (subEl) subEl.textContent = '100% Lifetime Free for all verified community girls — no payment required forever';
         if (payBtn) payBtn.style.display = 'none';
+        if (demoBtn) demoBtn.style.display = 'none';
     } else if (passStatus.active) {
         if (badgeEl) badgeEl.innerHTML = '<i class="fa-solid fa-crown"></i> 30 DAYS PASS';
         if (titleEl) titleEl.textContent = 'Active 30-Day Pass';
@@ -422,6 +456,7 @@ function updateMembershipScreen() {
             subEl.textContent = `${passStatus.daysLeft} Days Remaining (Valid until ${state.currentUser.planExpiry || 'Active'}) · Unlimited Full Access`;
         }
         if (payBtn) payBtn.style.display = 'none';
+        if (demoBtn) demoBtn.style.display = 'none';
     } else if (passStatus.reason === 'expired') {
         if (badgeEl) badgeEl.innerHTML = '<i class="fa-solid fa-clock-rotate-left"></i> PASS EXPIRED';
         if (titleEl) titleEl.textContent = 'Membership Expired';
@@ -432,6 +467,7 @@ function updateMembershipScreen() {
             payBtn.style.display = 'flex';
             payBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Renew 30-Day Pass (₹99 via UPI)';
         }
+        if (demoBtn) demoBtn.style.display = 'flex';
     } else {
         if (badgeEl) badgeEl.innerHTML = '<i class="fa-solid fa-lock"></i> ₹99 PASS REQUIRED';
         if (titleEl) titleEl.textContent = 'Payment Required';
@@ -442,6 +478,7 @@ function updateMembershipScreen() {
             payBtn.style.display = 'flex';
             payBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> Pay ₹99 via UPI (30 Days Pass)';
         }
+        if (demoBtn) demoBtn.style.display = 'flex';
     }
 }
 
