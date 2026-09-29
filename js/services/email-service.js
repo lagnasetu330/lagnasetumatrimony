@@ -391,8 +391,127 @@ function getInterestDeclinedEmailHtml(sender, receiver) {
 }
 
 /**
+ * Account Deletion Notification Email
+ * Sent by Admin to the member when their account is permanently deleted.
+ * @param {string} toEmail
+ * @param {string} toName
+ * @param {string} reason - Admin-entered reason for deletion
+ */
+async function sendAccountDeletionEmail(toEmail, toName, reason) {
+    if (!toEmail) {
+        console.warn('[EmailService] sendAccountDeletionEmail: recipient email missing.');
+        return { success: false, reason: 'missing_email' };
+    }
+    const cleanEmail = String(toEmail).trim().toLowerCase();
+    const safeName = safeEmailText(toName || 'Member');
+    const safeReason = safeEmailText(reason || 'Violation of community guidelines');
+    const subject = `Lagna Setu — Important Notice: Your Account Has Been Removed`;
+
+    const bodyContent = `
+      <div style="font-size:18px;font-weight:700;color:#202124;margin-bottom:10px;">
+        Dear ${safeName},
+      </div>
+      <p style="font-size:14.5px;line-height:1.65;color:#5F5B67;margin:0 0 20px 0;">
+        We regret to inform you that your <b>Lagna Setu</b> matrimony account associated with
+        <b style="color:#5A189A;">${cleanEmail}</b> has been <b style="color:#E63946;">permanently removed</b>
+        from the Lagna Setu community platform by the administrative team.
+      </p>
+
+      <!-- Reason Card -->
+      <table border="0" cellpadding="0" cellspacing="0" width="100%"
+        style="background:#FBEAEA;border:1.5px solid #E63946;border-radius:14px;margin-bottom:22px;">
+        <tr>
+          <td style="padding:18px 20px;">
+            <div style="font-size:11px;font-weight:700;color:#E63946;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+              📋 Reason for Account Removal
+            </div>
+            <div style="font-size:14.5px;font-weight:700;color:#202124;line-height:1.55;">
+              ${safeReason}
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <p style="font-size:13.5px;line-height:1.65;color:#5F5B67;margin:0 0 20px 0;">
+        All your profile information, photos, and activity records have been permanently erased
+        from our database as per our community guidelines and data protection policy.
+      </p>
+
+      <!-- Contact Support Box -->
+      <div style="background:#FAF8FC;border-left:3.5px solid #7B2CBF;border-radius:8px;padding:14px 18px;font-size:13px;color:#5F5B67;line-height:1.6;margin-bottom:20px;">
+        <b style="color:#202124;">If you believe this action was taken in error,</b> please write to us and we will review your case:<br>
+        <a href="mailto:lagnasetu330@gmail.com?subject=Account%20Removal%20Appeal%20-%20${encodeURIComponent(cleanEmail)}"
+          style="color:#7B2CBF;font-weight:700;text-decoration:none;">
+          📧 lagnasetu330@gmail.com
+        </a>
+        &nbsp;·&nbsp;
+        <a href="https://wa.me/919726362863?text=Hello%20Lagna%20Setu%20Admin%2C%20I%20want%20to%20appeal%20my%20account%20removal%20for%20${encodeURIComponent(cleanEmail)}"
+          target="_blank"
+          style="color:#25D366;font-weight:700;text-decoration:none;">
+          💬 WhatsApp Support
+        </a>
+      </div>
+
+      <p style="font-size:12.5px;color:#A29DAF;margin:0;">
+        This notification was sent automatically by the Lagna Setu admin team.
+        Please do not reply to this email directly — use the contact details above for any queries.
+      </p>
+    `;
+
+    const html = wrapEmailTemplate('Account Removal Notice — Lagna Setu', `Your Lagna Setu account has been removed. Reason: ${safeReason}`, bodyContent);
+
+    console.info(`[EmailService] 🗑️ Sending account deletion notice to: ${cleanEmail} | Reason: ${safeReason}`);
+
+    // Log to Supabase
+    try {
+        const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+        if (client) {
+            await client.from('email_logs').insert({
+                id: 'del_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                recipient_email: cleanEmail,
+                recipient_name: toName || '',
+                subject: subject,
+                notification_type: 'ACCOUNT_DELETED',
+                payload: { reason: safeReason, deleted_at: new Date().toISOString() },
+                status: 'sent'
+            });
+        }
+    } catch(e) {
+        console.warn('[EmailService] email_logs note (deletion):', e);
+    }
+
+    // Dispatch via EmailJS
+    if (window.emailjs && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey) {
+        try {
+            await window.emailjs.send(
+                EMAIL_CONFIG.emailjs.serviceId,
+                EMAIL_CONFIG.emailjs.templateId,
+                {
+                    to_email: cleanEmail,
+                    to_name: toName || 'Member',
+                    recipient_email: cleanEmail,
+                    recipient_name: toName || 'Member',
+                    from_name: EMAIL_CONFIG.fromName,
+                    subject: subject,
+                    message: html,
+                    message_html: html
+                },
+                EMAIL_CONFIG.emailjs.publicKey
+            );
+            console.info(`[EmailService] ✅ Account deletion email sent to ${cleanEmail}`);
+            return { success: true };
+        } catch(e) {
+            console.warn('[EmailService] Deletion email dispatch note:', e);
+            return { success: false, error: e };
+        }
+    }
+    return { success: false, reason: 'emailjs_unconfigured' };
+}
+
+/**
  * Main Notification Dispatcher
  * Saves audit to Supabase public.email_logs & dispatches real email via EmailJS / Webhook
+
  */
 async function sendMatrimonialEmailNotification(params) {
     const { type, toEmail, toName, senderData, receiverData } = params;
@@ -578,3 +697,4 @@ window.getInterestAcceptedEmailHtml = getInterestAcceptedEmailHtml;
 window.getInterestDeclinedEmailHtml = getInterestDeclinedEmailHtml;
 window.sendMatrimonialEmailNotification = sendMatrimonialEmailNotification;
 window.sendOtpEmail = sendOtpEmail;
+window.sendAccountDeletionEmail = sendAccountDeletionEmail;

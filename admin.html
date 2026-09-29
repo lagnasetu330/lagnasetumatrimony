@@ -30,13 +30,13 @@
                     return;
                 }
                 // Always ensure old mock cache keys are removed
-                ['LS_COMMUNITY_USERS','LS_COMMUNITY_PROFILES','LS_ADMIN_USERS','LS_ADMIN_PAYMENTS',
-                 'LS_ADMIN_INTERESTS','LS_ADMIN_REPORTS','LS_ADMIN_NOTIFS','LS_COMMUNITY_FAQS',
-                 'LS_COMMUNITY_HOWITWORKS','LS_COMMUNITY_CASTES','lagnaSetu_profiles','LS_PURGED_USER_CACHE'
-                ].forEach(function(k) { localStorage.removeItem(k); });
+                ['LS_COMMUNITY_USERS', 'LS_COMMUNITY_PROFILES', 'LS_ADMIN_USERS', 'LS_ADMIN_PAYMENTS',
+                    'LS_ADMIN_INTERESTS', 'LS_ADMIN_REPORTS', 'LS_ADMIN_NOTIFS', 'LS_COMMUNITY_FAQS',
+                    'LS_COMMUNITY_HOWITWORKS', 'LS_COMMUNITY_CASTES', 'lagnaSetu_profiles', 'LS_PURGED_USER_CACHE'
+                ].forEach(function (k) { localStorage.removeItem(k); });
             } catch (e) { }
         })();
-        window.adminForceClearCache = function() {
+        window.adminForceClearCache = function () {
             try {
                 var savedCreds = localStorage.getItem('LS_ADMIN_CREDENTIALS');
                 localStorage.clear();
@@ -212,11 +212,14 @@
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;justify-content:space-between;margin:-4px 0 20px;">
-                        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-muted);font-weight:600;">
-                            <input type="checkbox" id="adminRememberMe" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;border-radius:4px;margin:0;">
+                        <label
+                            style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-muted);font-weight:600;">
+                            <input type="checkbox" id="adminRememberMe"
+                                style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;border-radius:4px;margin:0;">
                             <span>Remember me</span>
                         </label>
-                        <span class="link-txt" style="font-size:12.5px;" onclick="go('scr-forgot')">Forgot password?</span>
+                        <span class="link-txt" style="font-size:12.5px;" onclick="go('scr-forgot')">Forgot
+                            password?</span>
                     </div>
                     <button class="btn btn-primary" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Log
                         in</button>
@@ -700,8 +703,8 @@
 
                 <div class="section-label">Membership pricing</div>
                 <div class="row-2">
-                    <div class="field"><label>Boys fee (₹) / 30 Days</label><input class="input" id="settingsBoysFee" type="number"
-                            value="99"></div>
+                    <div class="field"><label>Boys fee (₹) / 30 Days</label><input class="input" id="settingsBoysFee"
+                            type="number" value="99"></div>
                     <div class="field"><label>Girls fee (₹)</label><input class="input" type="text"
                             value="0 (100% Free)" readonly
                             style="background:var(--bg-card);color:var(--success);font-weight:700;"></div>
@@ -710,11 +713,14 @@
                         class="fa-solid fa-floppy-disk"></i> Save settings</button>
 
                 <div class="section-label">Cache &amp; Storage Reset</div>
-                <div class="card" style="margin-bottom:14px;background:var(--bg-elevated);border:1px dashed var(--border);padding:14px;">
+                <div class="card"
+                    style="margin-bottom:14px;background:var(--bg-elevated);border:1px dashed var(--border);padding:14px;">
                     <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px;line-height:1.5;">
-                        Clear all browser cached data (localStorage &amp; sessionStorage) and reload freshly from Supabase.
+                        Clear all browser cached data (localStorage &amp; sessionStorage) and reload freshly from
+                        Supabase.
                     </div>
-                    <button class="btn btn-outline" type="button" onclick="adminForceClearCache()" style="color:var(--error);border-color:var(--error);font-weight:700;">
+                    <button class="btn btn-outline" type="button" onclick="adminForceClearCache()"
+                        style="color:var(--error);border-color:var(--error);font-weight:700;">
                         <i class="fa-solid fa-broom"></i> Clear Cache &amp; Reload Fresh
                     </button>
                 </div>
@@ -782,19 +788,61 @@
 
         <!-- Delete user confirm -->
         <div class="modal-backdrop modal-center" id="modalDelete">
-            <div class="modal-card">
+            <div class="modal-card" style="max-width:420px;">
                 <div class="modal-icon-circle" style="background:var(--error-bg);color:var(--error);"><i
-                        class="fa-solid fa-trash"></i></div>
+                        class="fa-solid fa-user-xmark"></i></div>
                 <div class="h-display h-lg">Delete this account?</div>
-                <p class="p-muted" style="margin-top:8px;">This permanently removes the member's profile.
-                    This cannot be undone.</p>
-                <div class="btn-row" style="margin-top:20px;">
+                <p class="p-muted" style="margin-top:8px;font-size:13px;">This will permanently remove <b
+                        id="deleteUserNameLabel">this member</b>'s profile, photos, and all data from the database. This
+                    cannot be undone.</p>
+
+                <!-- Email Notice -->
+                <div
+                    style="background:#FFF4E5;border:1px solid #F59E0B;border-radius:12px;padding:10px 14px;margin:14px 0;display:flex;align-items:flex-start;gap:10px;">
+                    <i class="fa-solid fa-envelope"
+                        style="color:#D97706;margin-top:2px;font-size:15px;flex-shrink:0;"></i>
+                    <div style="font-size:12.5px;color:#92400E;line-height:1.5;">
+                        <b>An email notification</b> will be sent to <span id="deleteUserEmailLabel"
+                            style="font-weight:700;">this member</span> with the reason for account removal.
+                    </div>
+                </div>
+
+                <!-- Reason Input -->
+                <div class="field" style="margin-top:4px;">
+                    <label
+                        style="font-size:12.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.4px;">
+                        <i class="fa-solid fa-pen-to-square" style="color:var(--error);"></i> Reason for deletion <span
+                            style="color:var(--error);">*</span>
+                    </label>
+                    <select class="input" id="deleteReasonSelect" style="margin-bottom:8px;"
+                        onchange="onDeleteReasonSelectChange()">
+                        <option value="">— Select a reason —</option>
+                        <option value="Violation of community guidelines">Violation of community guidelines</option>
+                        <option value="Fake or misleading profile information">Fake or misleading profile information
+                        </option>
+                        <option value="Inappropriate behaviour toward members">Inappropriate behaviour toward members
+                        </option>
+                        <option value="Duplicate account detected">Duplicate account detected</option>
+                        <option value="Member requested account removal">Member requested account removal</option>
+                        <option value="Spam or misuse of platform">Spam or misuse of platform</option>
+                        <option value="other">Other (write below)</option>
+                    </select>
+                    <textarea class="input" id="deleteReasonText" rows="3"
+                        style="resize:vertical;font-size:13.5px;min-height:72px;display:none;"
+                        placeholder="Describe the specific reason for permanently deleting this account..."></textarea>
+                    <div id="deleteReasonError" style="display:none;color:var(--error);font-size:12px;margin-top:4px;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Please select or enter a reason before deleting.
+                    </div>
+                </div>
+
+                <div class="btn-row" style="margin-top:16px;">
                     <button class="btn btn-outline" onclick="closeModal('modalDelete')">Cancel</button>
-                    <button class="btn btn-danger" onclick="doDeleteUser()"><i class="fa-solid fa-trash"></i>
-                        Delete</button>
+                    <button class="btn btn-danger" id="btnConfirmDeleteUser" onclick="doDeleteUser()"><i
+                            class="fa-solid fa-user-xmark"></i> Delete & Notify</button>
                 </div>
             </div>
         </div>
+
 
         <!-- Logout confirm -->
         <div class="modal-backdrop modal-center" id="modalLogout">
@@ -1337,31 +1385,37 @@
                         Caste</button>
                 </div>
             </div>
-        <!-- ============================================================ ADMIN GLOBAL LIVE LOADER ============================================================ -->
-        <div class="page-route-loader" id="adminGlobalLoader">
-            <div style="width:58px;height:58px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#E63946;font-size:26px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);border:2px solid #F1A7A7;">
-                <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <!-- ============================================================ ADMIN GLOBAL LIVE LOADER ============================================================ -->
+            <div class="page-route-loader" id="adminGlobalLoader">
+                <div
+                    style="width:58px;height:58px;border-radius:50%;background:#ffffff;display:flex;align-items:center;justify-content:center;color:#E63946;font-size:26px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.15);border:2px solid #F1A7A7;">
+                    <i class="fa-solid fa-circle-notch fa-spin"></i>
+                </div>
+                <div id="adminGlobalLoaderText"
+                    style="font-weight:700;font-size:13px;color:#202124;letter-spacing:.02em;background:rgba(255,255,255,0.96);padding:7px 18px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);">
+                    Syncing admin data with Supabase...
+                </div>
             </div>
-            <div id="adminGlobalLoaderText" style="font-weight:700;font-size:13px;color:#202124;letter-spacing:.02em;background:rgba(255,255,255,0.96);padding:7px 18px;border-radius:20px;box-shadow:0 4px 14px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);">
-                Syncing admin data with Supabase...
-            </div>
+
         </div>
 
-    </div>
-
-    <!-- Supabase JS SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Cloudinary Image CDN -->
-    <script src="js/utils/cloudinary.js?v=3.6"></script>
-    <script src="js/utils/helpers.js?v=3.8"></script>
-    <!-- Admin Modular Scripts -->
-    <script src="js/core/supabase-client.js?v=3.8"></script>
-    <script src="js/admin/admin-security.js?v=3.6"></script>
-    <script src="js/admin/admin-data.js?v=3.6"></script>
-    <script src="js/admin/admin-charts.js?v=3.6"></script>
-    <script src="js/admin/admin-actions.js?v=3.6"></script>
-    <script src="js/admin/admin-analytics.js?v=4.6"></script>
-    <script src="js/admin/admin-ui.js?v=3.6"></script>
+        <!-- Supabase JS SDK -->
+        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+        <!-- Cloudinary Image CDN -->
+        <script src="js/utils/cloudinary.js?v=3.6"></script>
+        <script src="js/utils/helpers.js?v=3.8"></script>
+        <!-- Admin Modular Scripts -->
+        <script src="js/core/supabase-client.js?v=3.8"></script>
+        <script src="js/admin/admin-security.js?v=3.6"></script>
+        <script src="js/admin/admin-data.js?v=3.6"></script>
+        <script src="js/admin/admin-charts.js?v=3.6"></script>
+        <script src="js/admin/admin-actions.js?v=3.6"></script>
+        <script src="js/admin/admin-analytics.js?v=4.6"></script>
+        <!-- EmailJS SDK (for account deletion email notification) -->
+        <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+        <!-- Email Notification Service -->
+        <script src="js/services/email-service.js?v=3.6"></script>
+        <script src="js/admin/admin-ui.js?v=3.6"></script>
 
 </body>
 

@@ -1059,10 +1059,57 @@
         function openDeleteModal(id) {
             state.activeUserId = id;
             state.deleteTargetUser = findUser(id);
+
+            // Populate name & email labels in modal
+            const u = findUser(id) || {};
+            const nameLabel = document.getElementById('deleteUserNameLabel');
+            const emailLabel = document.getElementById('deleteUserEmailLabel');
+            if (nameLabel) nameLabel.textContent = u.name || 'this member';
+            if (emailLabel) emailLabel.textContent = u.email || 'this member';
+
+            // Reset the reason fields
+            const sel = document.getElementById('deleteReasonSelect');
+            const txt = document.getElementById('deleteReasonText');
+            const err = document.getElementById('deleteReasonError');
+            if (sel) sel.value = '';
+            if (txt) { txt.value = ''; txt.style.display = 'none'; }
+            if (err) err.style.display = 'none';
+
             openModal('modalDelete');
         }
 
+        function onDeleteReasonSelectChange() {
+            const sel = document.getElementById('deleteReasonSelect');
+            const txt = document.getElementById('deleteReasonText');
+            const err = document.getElementById('deleteReasonError');
+            if (!sel || !txt) return;
+            if (sel.value === 'other') {
+                txt.style.display = 'block';
+                txt.focus();
+            } else {
+                txt.style.display = 'none';
+            }
+            if (err) err.style.display = 'none';
+        }
+        window.onDeleteReasonSelectChange = onDeleteReasonSelectChange;
+
         async function doDeleteUser() {
+            // --- Validate reason input ---
+            const sel = document.getElementById('deleteReasonSelect');
+            const txt = document.getElementById('deleteReasonText');
+            const err = document.getElementById('deleteReasonError');
+            let deleteReason = '';
+            if (sel && sel.value === 'other') {
+                deleteReason = (txt ? txt.value.trim() : '');
+            } else if (sel) {
+                deleteReason = sel.value;
+            }
+            if (!deleteReason) {
+                if (err) err.style.display = 'block';
+                if (sel) sel.focus();
+                return; // Stop — reason is required
+            }
+
             const u = findUser(state.activeUserId) || state.deleteTargetUser || { id: state.activeUserId };
             const targetId = u.id || state.activeUserId;
             const targetEmail = u.email || '';
@@ -1171,9 +1218,19 @@
             // Navigate cleanly to Users table screen (NEVER splash) and refresh UI
             go('scr-users', true);
             renderUsers();
-            showToast(`Permanently deleting ${userName}...`);
+            showToast(`Sending deletion notice to ${userName}...`);
 
-            // 2. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
+            // 2. Send branded account deletion email notification FIRST (before purge)
+            if (targetEmail && typeof sendAccountDeletionEmail === 'function') {
+                try {
+                    await sendAccountDeletionEmail(targetEmail, userName, deleteReason);
+                    console.info(`[Admin Delete] Deletion email sent to ${targetEmail}`);
+                } catch(emailErr) {
+                    console.warn('[Admin Delete] Email dispatch note:', emailErr);
+                }
+            }
+
+            // 3. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
             showGlobalLoader(`Permanently deleting ${userName} from Supabase...`);
             try {
                 if (typeof supabaseDeleteUserCompletely === 'function') {
@@ -1200,8 +1257,9 @@
             }
 
             renderUsers();
-            showToast(`${userName}'s account and all records permanently wiped from database`);
+            showToast(`✅ ${userName}'s account removed & deletion notice emailed`);
         }
+
 
 // Global Window Exports
 if (typeof go !== 'undefined') window.go = go;
