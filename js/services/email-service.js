@@ -564,9 +564,10 @@ async function sendOtpEmail(toEmail, otpCode, toName = 'Member', purpose = 'sign
             return { success: true };
         } catch (ejsErr) {
             console.warn('[EmailService] EmailJS OTP dispatch note:', ejsErr);
+            return { success: false, error: ejsErr };
         }
     }
-    return { success: true };
+    return { success: false, reason: 'emailjs_unconfigured' };
 }
 
 // Global Window Exports
