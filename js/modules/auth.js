@@ -1080,6 +1080,21 @@ function enterHome() {
 
     // Guard 1: Profile must be complete
     if (state.currentUser && !state.profileComplete) {
+        if (state.currentUser.profileComplete || state.currentUser.profileId) {
+            state.profileComplete = true;
+        } else if (typeof getStoredAccounts === 'function') {
+            const accs = getStoredAccounts();
+            const myEm = (state.currentUser.email || '').toLowerCase().trim();
+            const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
+            if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
+                state.profileComplete = true;
+                state.currentUser.profileComplete = true;
+                if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
+            }
+        }
+    }
+
+    if (state.currentUser && !state.profileComplete) {
         openModal('modalCompleteProfile');
         showToast('Please complete your profile first');
         go('scr-reg-caste');
@@ -1175,6 +1190,9 @@ function doLogout(isTimeout = false) {
     try {
         localStorage.removeItem('lagnaSetu_activeUser');
         localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
+        localStorage.removeItem('lagnaSetu_profileComplete');
+        localStorage.removeItem('lagnaSetu_membershipPaid');
+        localStorage.removeItem('lagnaSetu_activeScreen');
     } catch (_) {}
 
     // 3. Reset in-memory state cleanly

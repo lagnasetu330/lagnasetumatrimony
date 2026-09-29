@@ -51,6 +51,9 @@ async function syncProfilesFromSupabase(force = false) {
                         state.currentUser.photo = state.currentUser.img;
                     }
                     state.currentUser.profileId = myProf.id;
+                    state.currentUser.profileComplete = true;
+                    state.profileComplete = true;
+                    try { localStorage.setItem('lagnaSetu_profileComplete', 'true'); } catch(_) {}
                     if (typeof saveSessionState === 'function') saveSessionState();
                 }
             }

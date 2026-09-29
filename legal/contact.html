@@ -23,7 +23,7 @@
                 </div>
             </a>
             <div class="legal-header-actions">
-                <a href="../app.html" class="legal-back-btn"><i class="fa-solid fa-arrow-left"></i> Back to App</a>
+                <a href="../app.html" class="legal-back-btn" onclick="return handleLegalBack(event);"><i class="fa-solid fa-arrow-left"></i> Back to App</a>
             </div>
         </div>
     </header>
@@ -454,6 +454,30 @@ ${safeMessage}
                     </div>
                 </div>
             `;
+        }
+
+        function handleLegalBack(e) {
+            if (e && e.preventDefault) e.preventDefault();
+            if (window.opener && !window.opener.closed) {
+                try {
+                    window.opener.focus();
+                    window.close();
+                    return false;
+                } catch (_) {}
+            }
+            if (document.referrer && document.referrer.includes('app.html') && window.history.length > 1) {
+                window.history.back();
+                return false;
+            }
+            var target = '../app.html';
+            try {
+                var savedScr = localStorage.getItem('lagnaSetu_activeScreen');
+                if (savedScr && savedScr.startsWith('scr-')) {
+                    target = '../app.html#/' + savedScr.replace('scr-', '');
+                }
+            } catch (_) {}
+            window.location.href = target;
+            return false;
         }
 
         function escapeHtml(str) {

@@ -113,6 +113,18 @@ function saveSessionState() {
         }
         sessionStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(state.profileComplete));
         sessionStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(state.membershipPaid));
+        try {
+            if (state.currentUser) {
+                localStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(Boolean(state.profileComplete)));
+                localStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
+                const activeScreen = (state.history && state.history[state.history.length - 1]) || 'scr-welcome';
+                localStorage.setItem('lagnaSetu_activeScreen', activeScreen);
+            } else {
+                localStorage.removeItem('lagnaSetu_profileComplete');
+                localStorage.removeItem('lagnaSetu_membershipPaid');
+                localStorage.removeItem('lagnaSetu_activeScreen');
+            }
+        } catch (_) {}
         sessionStorage.setItem('lagnaSetu_favorites', JSON.stringify(Array.from(state.favorites)));
         sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
         sessionStorage.setItem('lagnaSetu_chatThreads', JSON.stringify(CHAT_THREADS));
@@ -150,6 +162,9 @@ function loadSessionState() {
             try {
                 localStorage.removeItem('lagnaSetu_activeUser');
                 localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
+                localStorage.removeItem('lagnaSetu_profileComplete');
+                localStorage.removeItem('lagnaSetu_membershipPaid');
+                localStorage.removeItem('lagnaSetu_activeScreen');
             } catch (_) {}
             state.currentUser = null;
             window._sessionTimedOutOnBoot = true;
@@ -171,6 +186,8 @@ function loadSessionState() {
                 const matchedProf = PROFILES.find(p => p && ((myEmail && p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId))));
                 if (matchedProf) {
                     state.currentUser.profileId = matchedProf.id;
+                    state.currentUser.profileComplete = true;
+                    state.profileComplete = true;
                     if (!state.currentUser.name || state.currentUser.name === 'Member') {
                         state.currentUser.name = matchedProf.name;
                     }
@@ -181,13 +198,36 @@ function loadSessionState() {
                 }
             }
         }
-        const savedComplete = sessionStorage.getItem('lagnaSetu_profileComplete');
+        let savedComplete = sessionStorage.getItem('lagnaSetu_profileComplete');
+        if (savedComplete === null) {
+            try { savedComplete = localStorage.getItem('lagnaSetu_profileComplete'); } catch(_) {}
+        }
         if (savedComplete !== null) {
             state.profileComplete = JSON.parse(savedComplete);
-        } else if (state.currentUser && state.currentUser.profileId) {
+        } else if (state.currentUser && (state.currentUser.profileId || state.currentUser.profileComplete)) {
             state.profileComplete = true;
         }
-        const savedPaid = sessionStorage.getItem('lagnaSetu_membershipPaid');
+
+        // Self-Healing: Check stored accounts to verify profile completion
+        if (state.currentUser && !state.profileComplete) {
+            const myEmail = (state.currentUser.email || '').trim().toLowerCase();
+            const curId = state.currentUser.id || state.currentUser.userId || state.currentUser.profileId;
+            if (typeof getStoredAccounts === 'function') {
+                const accounts = getStoredAccounts();
+                const matchedAcc = accounts.find(a => (myEmail && a.email && a.email.trim().toLowerCase() === myEmail) || (curId && (a.id == curId || a.userId == curId)));
+                if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
+                    state.profileComplete = true;
+                    state.currentUser.profileComplete = true;
+                    if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
+                    if (matchedAcc.paymentStatus) state.currentUser.paymentStatus = matchedAcc.paymentStatus;
+                }
+            }
+        }
+
+        let savedPaid = sessionStorage.getItem('lagnaSetu_membershipPaid');
+        if (savedPaid === null) {
+            try { savedPaid = localStorage.getItem('lagnaSetu_membershipPaid'); } catch(_) {}
+        }
         if (savedPaid !== null) {
             state.membershipPaid = JSON.parse(savedPaid);
         }

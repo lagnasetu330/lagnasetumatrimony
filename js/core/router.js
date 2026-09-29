@@ -71,9 +71,37 @@ function go(id, replace = false) {
     }
 
     // 3. Profile completion gatekeeper: only prompts if a logged-in user hasn't completed their profile
+    if (state.currentUser && !state.profileComplete) {
+        if (state.currentUser.profileComplete || state.currentUser.profileId) {
+            state.profileComplete = true;
+        } else if (typeof getStoredAccounts === 'function') {
+            const accs = getStoredAccounts();
+            const myEm = (state.currentUser.email || '').toLowerCase().trim();
+            const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
+            if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
+                state.profileComplete = true;
+                state.currentUser.profileComplete = true;
+                if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
+            }
+        }
+    }
+
     if (state.currentUser && !state.profileComplete && !INCOMPLETE_ALLOWED.has(id)) {
         openModal('modalCompleteProfile');
         return;
+    }
+
+    // If profile is already complete, prevent navigation back into registration steps
+    if (state.currentUser && state.profileComplete) {
+        if (id === 'scr-reg-caste' || id === 'scr-reg2' || id === 'scr-reg3' || id === 'scr-reg4') {
+            const isBoy = typeof isBoyGender === 'function' ? isBoyGender(state.currentUser.gender) : (state.currentUser.gender === 'Boy' || state.currentUser.gender === 'boy');
+            const passCheck = typeof checkBoyPassStatus === 'function' ? checkBoyPassStatus(state.currentUser) : { active: state.currentUser.paymentStatus === 'Active' };
+            if (isBoy && !passCheck.active) {
+                id = 'scr-membership';
+            } else {
+                id = 'scr-home';
+            }
+        }
     }
 
     // Strict Girl Lifetime Free Pass: Girls NEVER go to scr-membership or see paywalls
@@ -192,21 +220,29 @@ function go(id, replace = false) {
 }
 
 function goBack() {
-    if (state.history.length > 1) {
-        state.history.pop(); // Remove current screen
-        const prev = state.history[state.history.length - 1];
-        if (prev && prev !== 'scr-splash' && document.getElementById(prev)) {
-            go(prev, true);
-            return;
-        }
-    }
-
-    // Contextual fallback if stack is empty or at root
     const current = document.querySelector('.screen.active')?.id;
+
+    // Contextual fallback: Unpaid boy on membership screen should not navigate back into registration or home
     if (current === 'scr-membership' && state.currentUser && (state.currentUser.gender === 'Boy' || state.currentUser.gender === 'boy')) {
         const pStatus = typeof checkBoyPassStatus === 'function' ? checkBoyPassStatus(state.currentUser) : { active: false };
         if (!pStatus.active) {
             openModal('modalLogout');
+            return;
+        }
+    }
+
+    if (state.history.length > 1) {
+        state.history.pop(); // Remove current screen
+        let prev = state.history[state.history.length - 1];
+
+        // If user already completed profile, never navigate back into registration screens
+        if (state.currentUser && state.profileComplete && prev && (prev.startsWith('scr-reg') || prev.startsWith('scr-otp'))) {
+            state.history = state.history.filter(h => !h.startsWith('scr-reg') && !h.startsWith('scr-otp'));
+            prev = state.history[state.history.length - 1];
+        }
+
+        if (prev && prev !== 'scr-splash' && document.getElementById(prev)) {
+            go(prev, true);
             return;
         }
     }

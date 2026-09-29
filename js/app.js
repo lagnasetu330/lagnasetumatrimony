@@ -83,7 +83,7 @@ function initApp() {
     }
 
     const visited = sessionStorage.getItem('lagnaSetu_visited');
-    const savedScreen = sessionStorage.getItem('lagnaSetu_activeScreen');
+    const savedScreen = sessionStorage.getItem('lagnaSetu_activeScreen') || localStorage.getItem('lagnaSetu_activeScreen');
     const rawHash = (window.location.hash || '').replace('#/', '').replace('#', '');
 
     const PUBLIC_GUEST_SCREENS = new Set([
@@ -147,6 +147,23 @@ function initApp() {
                 targetScreen = 'scr-home';
             }
 
+            // Self-healing profile completion verification:
+            // Check if active user already has a complete profile before applying route guards
+            if (!state.profileComplete && state.currentUser) {
+                if (state.currentUser.profileComplete || state.currentUser.profileId) {
+                    state.profileComplete = true;
+                } else if (typeof getStoredAccounts === 'function') {
+                    const accs = getStoredAccounts();
+                    const myEm = (state.currentUser.email || '').toLowerCase().trim();
+                    const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
+                    if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
+                        state.profileComplete = true;
+                        state.currentUser.profileComplete = true;
+                        if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
+                    }
+                }
+            }
+
             // Route Guard 0: Suspended Account Check (Strict non-dismissible modal)
             if (state.currentUser && state.currentUser.status === 'Suspended') {
                 targetScreen = 'scr-home';
@@ -156,7 +173,7 @@ function initApp() {
                     }
                 }, 100);
             }
-            // Route Guard A: Incomplete Profile Check
+            // Route Guard A: Incomplete Profile Check (ONLY if profile is truly incomplete)
             else if (!state.profileComplete) {
                 if (!INCOMPLETE_ALLOWED.has(targetScreen)) {
                     targetScreen = 'scr-reg-caste';
@@ -176,6 +193,8 @@ function initApp() {
                     ]);
                     if (!UNPAID_ALLOWED.has(targetScreen)) {
                         targetScreen = 'scr-membership';
+                        setTimeout(() => { if (typeof openModal === 'function') openModal('modalPaywall'); }, 350);
+                    } else if (targetScreen === 'scr-membership') {
                         setTimeout(() => { if (typeof openModal === 'function') openModal('modalPaywall'); }, 350);
                     }
                 }

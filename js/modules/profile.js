@@ -97,6 +97,8 @@ function submitProfileCompletion() {
     state.currentUser = state.currentUser || {};
     state.currentUser.id = newProfile.id;
     state.currentUser.userId = String(newProfile.id);
+    state.currentUser.profileId = newProfile.id;
+    state.currentUser.profileComplete = true;
     state.currentUser.email = newProfile.email;
     state.currentUser.name = newProfile.name;
     state.currentUser.gender = isGirl ? 'Girl' : 'Boy';
@@ -157,6 +159,7 @@ function submitProfileCompletion() {
                 accounts[uIdx].district = state.regData.district;
                 accounts[uIdx].address = state.regData.address;
                 accounts[uIdx].fullAddress = state.regData.address;
+                accounts[uIdx].profileId = newProfile.id;
                 accounts[uIdx].profileComplete = true;
                 accounts[uIdx].genderToken = state.currentUser.genderToken;
                 if (state.currentUser.paymentToken) accounts[uIdx].paymentToken = state.currentUser.paymentToken;
@@ -169,19 +172,24 @@ function submitProfileCompletion() {
     }
 
     saveCommunityProfiles();
-    saveSessionState();
     try {
+        localStorage.setItem('lagnaSetu_profileComplete', 'true');
+        localStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(isGirl));
+        localStorage.setItem('lagnaSetu_activeScreen', isGirl ? 'scr-home' : 'scr-membership');
+        sessionStorage.setItem('lagnaSetu_profileComplete', 'true');
         sessionStorage.setItem('lagnaSetu_just_registered', 'true');
     } catch (_) {}
+    saveSessionState();
     renderFilterCasteOptions();
     updateHeaderUserDisplay();
-    renderHome();
 
     if (isGirl) {
+        state.history = ['scr-home'];
         renderHome();
         openModal('modalGirlComplete');
     } else {
         // Boy MUST pay ₹99 to see any girl profiles — redirect directly to scr-membership
+        state.history = ['scr-membership'];
         go('scr-membership', true);
         openModal('modalBoyComplete');
     }
