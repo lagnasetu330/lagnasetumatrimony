@@ -588,7 +588,7 @@ function setupAdminRealtime() {
                     }
                 },
                 onProfilesChange: async (payload) => {
-                    const isDeleteEvent = payload && (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new && (payload.new.account_status === 'deleted' || payload.new.visible === false)));
+                    const isDeleteEvent = payload && (payload.eventType === 'DELETE' || (payload.eventType === 'UPDATE' && payload.new && (payload.new.account_status === 'deleted' || payload.new.accountStatus === 'deleted')));
                     if (isDeleteEvent) {
                         const delId = payload.old?.id || payload.new?.id;
                         const delEmail = payload.old?.email || payload.new?.email;
@@ -605,6 +605,7 @@ function setupAdminRealtime() {
                         });
                         window.USERS = USERS;
                         if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
+                        if (typeof renderProfileMgmt === 'function' && document.getElementById('profileMgmtList')) renderProfileMgmt();
                         if (typeof renderDashboard === 'function') renderDashboard();
                     }
                     if (typeof supabaseFetchAllProfilesForAdmin === 'function') {
@@ -613,6 +614,7 @@ function setupAdminRealtime() {
                             USERS = remoteProfiles.filter(u => u && (typeof isUserPurged !== 'function' || !isUserPurged(u)));
                             window.USERS = USERS;
                             if (typeof renderUsers === 'function' && document.getElementById('userList')) renderUsers();
+                            if (typeof renderProfileMgmt === 'function' && document.getElementById('profileMgmtList')) renderProfileMgmt();
                             if (typeof renderDashboard === 'function') renderDashboard();
                         }
                     }
