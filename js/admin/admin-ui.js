@@ -1067,48 +1067,65 @@
             if (nameLabel) nameLabel.textContent = u.name || 'this member';
             if (emailLabel) emailLabel.textContent = u.email || 'this member';
 
-            // Reset the reason fields
-            const sel = document.getElementById('deleteReasonSelect');
+            // Reset all pill states and hidden input
+            const hiddenInput = document.getElementById('deleteReasonSelect');
             const txt = document.getElementById('deleteReasonText');
             const err = document.getElementById('deleteReasonError');
-            if (sel) sel.value = '';
+            if (hiddenInput) hiddenInput.value = '';
             if (txt) { txt.value = ''; txt.style.display = 'none'; }
             if (err) err.style.display = 'none';
+            document.querySelectorAll('.del-reason-pill').forEach(p => p.classList.remove('selected'));
 
             openModal('modalDelete');
         }
 
-        function onDeleteReasonSelectChange() {
-            const sel = document.getElementById('deleteReasonSelect');
+        function selectDeleteReason(btn) {
+            // Deselect all pills
+            document.querySelectorAll('.del-reason-pill').forEach(p => p.classList.remove('selected'));
+            btn.classList.add('selected');
+
+            const reason = btn.getAttribute('data-reason');
+            const hiddenInput = document.getElementById('deleteReasonSelect');
             const txt = document.getElementById('deleteReasonText');
             const err = document.getElementById('deleteReasonError');
-            if (!sel || !txt) return;
-            if (sel.value === 'other') {
-                txt.style.display = 'block';
-                txt.focus();
-            } else {
-                txt.style.display = 'none';
-            }
+
+            if (hiddenInput) hiddenInput.value = reason;
             if (err) err.style.display = 'none';
+
+            // Show textarea only for "Other"
+            if (txt) {
+                if (reason === 'other') {
+                    txt.style.display = 'block';
+                    setTimeout(() => txt.focus(), 50);
+                } else {
+                    txt.style.display = 'none';
+                    txt.value = '';
+                }
+            }
         }
-        window.onDeleteReasonSelectChange = onDeleteReasonSelectChange;
+        window.selectDeleteReason = selectDeleteReason;
+        // Keep onDeleteReasonSelectChange as no-op for backward compat
+        window.onDeleteReasonSelectChange = function() {};
+
 
         async function doDeleteUser() {
-            // --- Validate reason input ---
-            const sel = document.getElementById('deleteReasonSelect');
+            // --- Validate reason input (from hidden input + pill system) ---
+            const sel = document.getElementById('deleteReasonSelect'); // hidden input
             const txt = document.getElementById('deleteReasonText');
             const err = document.getElementById('deleteReasonError');
-            let deleteReason = '';
-            if (sel && sel.value === 'other') {
+            let deleteReason = sel ? sel.value.trim() : '';
+            // If "other" was selected, use the custom textarea text
+            if (deleteReason === 'other') {
                 deleteReason = (txt ? txt.value.trim() : '');
-            } else if (sel) {
-                deleteReason = sel.value;
             }
             if (!deleteReason) {
                 if (err) err.style.display = 'block';
-                if (sel) sel.focus();
+                // Scroll to the pills so user can see what's needed
+                const pills = document.getElementById('deleteReasonPills');
+                if (pills) pills.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return; // Stop — reason is required
             }
+
 
             const u = findUser(state.activeUserId) || state.deleteTargetUser || { id: state.activeUserId };
             const targetId = u.id || state.activeUserId;
