@@ -1,0 +1,21 @@
+# Robots.txt for Lagna Setu Matrimony (https://www.lagnasetu.in/)
+User-agent: *
+Allow: /
+Allow: /index.html
+Allow: /app.html
+Allow: /legal/
+Allow: /images/
+Allow: /css/
+Allow: /js/
+
+# Disallow sensitive internal admin and config paths
+Disallow: /admin.html
+Disallow: /database/
+Disallow: /email-templates/
+Disallow: /.git/
+
+# Crawl-delay for crawler politeness
+Crawl-delay: 1
+
+# XML Sitemap Location
+Sitemap: https://www.lagnasetu.in/sitemap.xml
