@@ -111,7 +111,11 @@ function initApp() {
             state.profileComplete = false;
             state.membershipPaid = false;
 
-            if (hasExplicitHash) {
+            const isSupabaseRecovery = (window.location.hash && window.location.hash.includes('type=recovery')) ||
+                                       (window.location.search && window.location.search.includes('type=recovery'));
+            if (isSupabaseRecovery) {
+                targetScreen = 'scr-newpass';
+            } else if (hasExplicitHash) {
                 const requestedScreen = 'scr-' + rawHash;
                 // Only explicitly public guest screens are allowed directly
                 if (PUBLIC_GUEST_SCREENS.has(requestedScreen) && document.getElementById(requestedScreen)) {

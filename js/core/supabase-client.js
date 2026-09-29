@@ -149,6 +149,27 @@ async function supabaseSendPasswordReset(email) {
 }
 
 /**
+ * Update authenticated user password in Supabase Auth (Used in Forgot Password completion)
+ * @param {string} newPassword
+ */
+async function supabaseUpdateUserPassword(newPassword) {
+    const client = getSupabaseClient();
+    if (!client) return { data: null, error: null };
+    try {
+        const res = await client.auth.updateUser({ password: newPassword });
+        if (res && res.error) {
+            console.warn('[Supabase] Auth password update note:', res.error.message);
+        } else {
+            console.info('[Supabase] Password updated successfully in Supabase Auth');
+        }
+        return res;
+    } catch (err) {
+        console.warn('[Supabase] Auth password update error:', err?.message || err);
+        return { data: null, error: err };
+    }
+}
+
+/**
  * Bidirectional mapper: Frontend Profile Object -> Supabase PostgreSQL Row
  */
 function mapProfileForSupabase(p) {
@@ -3100,6 +3121,7 @@ window.supabaseRecordPayment = supabaseRecordPayment;
 window.supabaseSendEmailOtp = supabaseSendEmailOtp;
 window.supabaseVerifyEmailOtp = supabaseVerifyEmailOtp;
 window.supabaseSendPasswordReset = supabaseSendPasswordReset;
+window.supabaseUpdateUserPassword = supabaseUpdateUserPassword;
 window.supabaseFetchAllProfilesForAdmin = supabaseFetchAllProfilesForAdmin;
 window.supabaseUpdateProfileStatus = supabaseUpdateProfileStatus;
 window.supabaseAdminUpdateMember = supabaseAdminUpdateMember;

@@ -1390,14 +1390,27 @@ async function verifyForgotOtp() {
     // 2. Validate OTP: Primary check with Supabase Auth recovery, fallback to generatedOtp / test bypass
     let isValid = false;
     if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient() && forgotPasswordState.email) {
-        const client = getSupabaseClient();
-        const res = await client.auth.verifyOtp({
-            email: forgotPasswordState.email.toLowerCase(),
-            token: entered,
-            type: 'recovery'
-        });
-        if (res && !res.error) {
-            isValid = true;
+        try {
+            const client = getSupabaseClient();
+            let res = await client.auth.verifyOtp({
+                email: forgotPasswordState.email.toLowerCase(),
+                token: entered,
+                type: 'recovery'
+            });
+            if (res && res.error) {
+                // If recovery type failed, test email type as fallback
+                const retry = await client.auth.verifyOtp({
+                    email: forgotPasswordState.email.toLowerCase(),
+                    token: entered,
+                    type: 'email'
+                });
+                if (retry && !retry.error) res = retry;
+            }
+            if (res && !res.error) {
+                isValid = true;
+            }
+        } catch (e) {
+            console.warn('[Supabase] Recovery OTP verification note:', e);
         }
     }
     if (!isValid && forgotPasswordState.otp && entered === forgotPasswordState.otp) {
@@ -1455,38 +1468,67 @@ async function handleResetPassword() {
 
     const newHash = await hashPass(newPass);
 
-    // Update in Stored Accounts with Profile Reconciliation
+    // 1. Update in Supabase Auth if session exists
+    if (typeof supabaseUpdateUserPassword === 'function') {
+        try {
+            await supabaseUpdateUserPassword(newPass);
+        } catch(e) {
+            console.warn('[Supabase] Auth update note:', e);
+        }
+    }
+
+    // 2. Update in Stored Accounts with Profile Reconciliation
     try {
-        const accounts = getStoredAccounts();
-        const idx = accounts.findIndex(u => u.email && u.email.toLowerCase() === resetEmail);
+        let accounts = getStoredAccounts();
+        let idx = accounts.findIndex(u => u.email && u.email.toLowerCase() === resetEmail);
         if (idx !== -1) {
             accounts[idx].passwordHash = newHash;
+        } else {
+            // If user reset on a new device or fresh browser, add them to stored accounts
+            accounts.push({
+                id: Date.now(),
+                email: resetEmail,
+                passwordHash: newHash,
+                name: '',
+                gender: '',
+                status: 'Active',
+                profileComplete: false,
+                paymentStatus: 'Unpaid'
+            });
+            idx = accounts.length - 1;
+        }
 
-            // Reconcile with PROFILES if user already has a profile
-            const prof = (window.PROFILES || []).find(p => p.email && p.email.toLowerCase() === resetEmail);
-            if (prof) {
-                accounts[idx].profileComplete = true;
-                if (!accounts[idx].name) accounts[idx].name = prof.name;
-                const isGirl = typeof isGirlGender === 'function' ? isGirlGender(prof.gender) : (prof.gender === 'girls' || prof.gender === 'Girl');
-                accounts[idx].gender = isGirl ? 'Girl' : 'Boy';
-                if (!accounts[idx].caste) accounts[idx].caste = prof.community;
-                if (!accounts[idx].mobile) accounts[idx].mobile = prof.mobile;
-                if (isGirl) {
-                    accounts[idx].paymentStatus = 'Free';
-                } else if (prof.paymentStatus === 'paid' || prof.paymentStatus === 'active') {
-                    accounts[idx].paymentStatus = 'Active';
-                    if (!accounts[idx].planExpiry) {
-                        const exp = new Date();
-                        exp.setDate(exp.getDate() + 30);
-                        accounts[idx].planExpiry = exp.toISOString().split('T')[0];
-                        accounts[idx].planStart = new Date().toISOString().split('T')[0];
-                    }
+        // Reconcile with PROFILES if user already has a profile
+        const prof = (window.PROFILES || []).find(p => p.email && p.email.toLowerCase() === resetEmail);
+        if (prof) {
+            accounts[idx].profileComplete = true;
+            if (!accounts[idx].name) accounts[idx].name = prof.name;
+            const isGirl = typeof isGirlGender === 'function' ? isGirlGender(prof.gender) : (prof.gender === 'girls' || prof.gender === 'Girl');
+            accounts[idx].gender = isGirl ? 'Girl' : 'Boy';
+            if (!accounts[idx].caste) accounts[idx].caste = prof.community;
+            if (!accounts[idx].mobile) accounts[idx].mobile = prof.mobile;
+            if (isGirl) {
+                accounts[idx].paymentStatus = 'Free';
+            } else if (prof.paymentStatus === 'paid' || prof.paymentStatus === 'active') {
+                accounts[idx].paymentStatus = 'Active';
+                if (!accounts[idx].planExpiry) {
+                    const exp = new Date();
+                    exp.setDate(exp.getDate() + 30);
+                    accounts[idx].planExpiry = exp.toISOString().split('T')[0];
+                    accounts[idx].planStart = new Date().toISOString().split('T')[0];
                 }
             }
-            saveStoredAccounts(accounts);
         }
+        saveStoredAccounts(accounts);
     } catch(e) {
         console.error('Error saving updated password in accounts:', e);
+    }
+
+    // 3. Clear temporary recovery session in Supabase client for clean login
+    if (typeof getSupabaseClient === 'function' && getSupabaseClient()) {
+        try {
+            await getSupabaseClient().auth.signOut();
+        } catch (_) {}
     }
 
     // Wipe sensitive in-memory and DOM data
