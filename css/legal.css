@@ -612,33 +612,62 @@ body.legal-page {
 
 .legal-contact-card {
     border: 1.5px solid var(--legal-border);
-    border-radius: 14px;
-    padding: 16px 18px;
+    border-radius: 16px;
+    padding: 18px 20px;
     background: #ffffff;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+    box-shadow: 0 2px 10px rgba(123, 44, 191, 0.04);
+}
+
+.legal-contact-card:hover {
+    transform: translateY(-2px);
+    border-color: #D6C2EA;
+    box-shadow: 0 8px 24px rgba(123, 44, 191, 0.08);
 }
 
 .legal-contact-icon {
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
     background: var(--primary-light);
     color: var(--primary-dark);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
-    margin-bottom: 10px;
+    font-size: 16px;
+    margin-bottom: 12px;
     flex-shrink: 0;
 }
 
+.legal-contact-icon.mail {
+    background: #FFF4E5;
+    color: #B25E00;
+}
+
+.legal-contact-icon.wa {
+    background: #E7F7ED;
+    color: #15803D;
+}
+
+.legal-contact-icon.call {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+.legal-contact-icon.loc {
+    background: #FFF9EB;
+    color: #B8790A;
+}
+
 .legal-contact-label {
-    font-size: 11.5px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     color: var(--legal-muted);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
     margin-bottom: 4px;
 }
 
@@ -647,6 +676,116 @@ body.legal-page {
     font-weight: 700;
     color: var(--legal-text);
     word-break: break-word;
+}
+
+.legal-contact-desc {
+    font-size: 12.5px;
+    color: var(--legal-muted);
+    line-height: 1.5;
+    margin-bottom: 14px;
+    flex-grow: 1;
+}
+
+.legal-contact-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all .2s ease;
+    margin-top: auto;
+}
+
+.legal-contact-action .lca-left {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.legal-contact-action .lca-arr {
+    font-size: 11px;
+    opacity: 0.7;
+    transition: transform .2s ease;
+}
+
+.legal-contact-action:hover {
+    text-decoration: none;
+}
+
+.legal-contact-action:hover .lca-arr {
+    transform: translate(2px, -2px);
+    opacity: 1;
+}
+
+.legal-contact-action.mail-act {
+    background: #FFF5E8;
+    color: #92400E;
+    border: 1px solid #FED7AA;
+}
+
+.legal-contact-action.mail-act:hover {
+    background: #F59E0B;
+    color: #FFFFFF;
+    border-color: #F59E0B;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+}
+
+.legal-contact-action.wa-act {
+    background: #ECFDF5;
+    color: #166534;
+    border: 1px solid #A7F3D0;
+}
+
+.legal-contact-action.wa-act:hover {
+    background: #10B981;
+    color: #FFFFFF;
+    border-color: #10B981;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.legal-contact-action.call-act {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    border: 1px solid #E1D0F5;
+}
+
+.legal-contact-action.call-act:hover {
+    background: var(--primary);
+    color: #FFFFFF;
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(123, 44, 191, 0.25);
+}
+
+.legal-contact-action.loc-act {
+    background: #FDF4E3;
+    color: #78350F;
+    border: 1px solid #FDE68A;
+}
+
+.legal-grievance-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    margin-top: 4px;
+    background: #FEF3C7;
+    color: #78350F;
+    border: 1px solid #FCD34D;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all .2s ease;
+}
+
+.legal-grievance-btn:hover {
+    background: #78350F;
+    color: #FFFFFF;
+    border-color: #78350F;
 }
 
 /* ============================================================
