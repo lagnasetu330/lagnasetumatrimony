@@ -20,6 +20,7 @@
     <meta name="theme-color" content="#7B2CBF">
     <meta name="application-name" content="Lagna Setu">
     <meta name="apple-mobile-web-app-title" content="Lagna Setu">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="format-detection" content="telephone=no">
@@ -629,6 +630,10 @@
             cursor: pointer;
         }
 
+        .nav-toggle i {
+            pointer-events: none;
+        }
+
         .mobile-nav {
             display: none;
             padding: 14px 0 20px;
@@ -641,15 +646,16 @@
             display: flex;
         }
 
-        .mobile-nav a {
+        .mobile-nav a:not(.btn) {
             font-size: 15px;
             font-weight: 600;
             padding: 10px 14px;
             border-radius: 10px;
             color: var(--text);
+            text-decoration: none;
         }
 
-        .mobile-nav a:hover {
+        .mobile-nav a:not(.btn):hover {
             background: var(--primary-light);
             color: var(--primary-dark);
         }
@@ -659,6 +665,12 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
+        }
+
+        .mobile-nav a.btn-primary,
+        .mobile-nav .mobile-cta a {
+            color: #FFFFFF !important;
+            text-decoration: none;
         }
 
         /* ============================================================
@@ -887,6 +899,39 @@
         .t-item span {
             font-size: 12px;
             color: var(--text-muted);
+        }
+
+        @media (max-width: 580px) {
+            .trust-strip {
+                padding: 16px 0;
+            }
+
+            .trust-strip .container {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+
+            .trust-strip .t-item {
+                background: #FAF8FC;
+                border: 1px solid var(--border);
+                border-radius: 14px;
+                padding: 12px 16px;
+                width: 100%;
+            }
+
+            .trust-strip .t-item i {
+                font-size: 22px;
+            }
+
+            .trust-strip .t-item b {
+                font-size: 14px;
+            }
+
+            .trust-strip .t-item span {
+                font-size: 12.5px;
+            }
         }
 
         /* ============================================================
@@ -1814,18 +1859,32 @@
 
         .contact-card {
             background: var(--surface);
-            border: 1px solid var(--border);
+            border: 1.5px solid var(--border);
             border-radius: var(--radius-md);
-            padding: 24px;
+            padding: 20px 20px;
             display: flex;
-            align-items: flex-start;
+            flex-direction: column;
+            justify-content: space-between;
             gap: 16px;
             box-shadow: var(--shadow-card);
-            transition: transform .2s ease;
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
 
         .contact-card:hover {
             transform: translateY(-2px);
+            border-color: #D6C2EA;
+            box-shadow: 0 8px 24px rgba(123, 44, 191, 0.12);
+        }
+
+        .cc-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .cc-meta {
+            flex: 1;
+            min-width: 0;
         }
 
         .cc-icon {
@@ -1835,7 +1894,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 19px;
             flex-shrink: 0;
         }
 
@@ -1861,13 +1920,17 @@
 
         .contact-card h3 {
             font-size: 16px;
-            margin-bottom: 4px;
+            font-weight: 700;
+            margin-bottom: 3px;
             color: var(--text);
+            line-height: 1.3;
         }
 
         .contact-card p {
             font-size: 12.5px;
-            margin-bottom: 6px;
+            color: var(--text-muted);
+            line-height: 1.45;
+            margin-bottom: 0;
         }
 
         .cc-link {
@@ -1882,27 +1945,31 @@
         }
 
         .cc-action-btn {
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: 9px;
+            width: 100%;
             font-size: 13.5px;
             font-weight: 700;
-            padding: 9px 18px;
-            border-radius: 999px;
+            padding: 11px 16px;
+            border-radius: 12px;
             text-decoration: none;
-            transition: all .25s ease;
-            margin-top: 6px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all .22s ease;
+            white-space: nowrap;
+            box-sizing: border-box;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
         }
 
         .cc-action-btn i.mini-arr {
-            font-size: 10.5px;
+            font-size: 11px;
             opacity: 0.75;
             transition: transform .2s ease;
+            margin-left: 2px;
         }
 
         .cc-action-btn:hover {
-            transform: translateY(-2px);
+            transform: translateY(-1px);
         }
 
         .cc-action-btn:hover i.mini-arr {
@@ -2116,10 +2183,6 @@
             .community-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-
-            .contact-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
 
         @media (min-width: 640px) {
@@ -2128,6 +2191,10 @@
             }
 
             .pricing-grid-dual {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .contact-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
 
@@ -2238,7 +2305,7 @@
                 animation: mobileNavDown .24s cubic-bezier(.16, 1, .3, 1) forwards;
             }
 
-            .mobile-nav a {
+            .mobile-nav a:not(.btn) {
                 padding: 10px 14px;
                 font-size: 14.5px;
                 border-radius: 10px;
@@ -2420,7 +2487,7 @@
                 <a href="#faq">FAQ</a>
                 <a href="#contact">Contact</a>
                 <div class="mobile-cta">
-                    <a href="app.html#login" class="btn btn-primary btn-block"><i
+                    <a href="app.html#login" class="btn btn-primary btn-block" style="color:#ffffff !important;"><i
                             class="fa-solid fa-arrow-right-to-bracket"></i> Log In</a>
                 </div>
             </nav>
@@ -3227,44 +3294,52 @@
                 </div>
                 <div class="contact-grid">
                     <div class="contact-card wa">
-                        <div class="cc-icon"><i class="fa-brands fa-whatsapp"></i></div>
-                        <div>
-                            <h3>WhatsApp Support</h3>
-                            <p>Fastest assistance for registration &amp; community help.</p>
-                            <a class="cc-action-btn wa-action" href="https://wa.me/919726362863?text=Hello%20Lagna%20Setu%20Team%2C%20I%20need%20assistance" target="_blank" rel="noopener">
-                                <i class="fa-brands fa-whatsapp"></i> Chat on WhatsApp <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
-                            </a>
+                        <div class="cc-header">
+                            <div class="cc-icon"><i class="fa-brands fa-whatsapp"></i></div>
+                            <div class="cc-meta">
+                                <h3>WhatsApp Support</h3>
+                                <p>Fastest assistance for registration &amp; community help.</p>
+                            </div>
                         </div>
+                        <a class="cc-action-btn wa-action" href="https://wa.me/919726362863?text=Hello%20Lagna%20Setu%20Team%2C%20I%20need%20assistance" target="_blank" rel="noopener">
+                            <i class="fa-brands fa-whatsapp"></i> <span>Chat on WhatsApp</span> <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
+                        </a>
                     </div>
                     <div class="contact-card call">
-                        <div class="cc-icon"><i class="fa-solid fa-phone"></i></div>
-                        <div>
-                            <h3>Phone Support</h3>
-                            <p>Monday – Saturday, 10:00 AM – 7:00 PM.</p>
-                            <a class="cc-action-btn call-action" href="tel:+919726362863">
-                                <i class="fa-solid fa-phone-volume"></i> Call Support Helpline <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
-                            </a>
+                        <div class="cc-header">
+                            <div class="cc-icon"><i class="fa-solid fa-phone"></i></div>
+                            <div class="cc-meta">
+                                <h3>Phone Support</h3>
+                                <p>Monday – Saturday, 10:00 AM – 7:00 PM.</p>
+                            </div>
                         </div>
+                        <a class="cc-action-btn call-action" href="tel:+919726362863">
+                            <i class="fa-solid fa-phone-volume"></i> <span>Call Support Helpline</span> <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
+                        </a>
                     </div>
                     <div class="contact-card mail">
-                        <div class="cc-icon"><i class="fa-solid fa-envelope"></i></div>
-                        <div>
-                            <h3>Official Email</h3>
-                            <p>For inquiries, support &amp; grievance redressal.</p>
-                            <a class="cc-action-btn mail-action" href="mailto:lagnasetu330@gmail.com?subject=Lagna%20Setu%20Support%20Inquiry" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Lagna Setu Support Inquiry');">
-                                <i class="fa-solid fa-envelope"></i> Send Direct Email <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
-                            </a>
+                        <div class="cc-header">
+                            <div class="cc-icon"><i class="fa-solid fa-envelope"></i></div>
+                            <div class="cc-meta">
+                                <h3>Official Email</h3>
+                                <p>For inquiries, support &amp; grievance redressal.</p>
+                            </div>
                         </div>
+                        <a class="cc-action-btn mail-action" href="mailto:lagnasetu330@gmail.com?subject=Lagna%20Setu%20Support%20Inquiry" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Lagna Setu Support Inquiry');">
+                            <i class="fa-solid fa-envelope"></i> <span>Send Direct Email</span> <i class="fa-solid fa-arrow-up-right-from-square mini-arr"></i>
+                        </a>
                     </div>
                     <div class="contact-card loc">
-                        <div class="cc-icon"><i class="fa-solid fa-location-dot"></i></div>
-                        <div>
-                            <h3>Administrative Cell</h3>
-                            <p>Jasdan / Rajkot, Gujarat, India.</p>
-                            <a class="cc-action-btn loc-action" href="legal/contact.html">
-                                <i class="fa-solid fa-compass"></i> View Full Contact Page <i class="fa-solid fa-chevron-right mini-arr"></i>
-                            </a>
+                        <div class="cc-header">
+                            <div class="cc-icon"><i class="fa-solid fa-location-dot"></i></div>
+                            <div class="cc-meta">
+                                <h3>Administrative Cell</h3>
+                                <p>Jasdan / Rajkot, Gujarat, India.</p>
+                            </div>
                         </div>
+                        <a class="cc-action-btn loc-action" href="legal/contact.html">
+                            <i class="fa-solid fa-compass"></i> <span>View Full Contact Page</span> <i class="fa-solid fa-chevron-right mini-arr"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -3377,23 +3452,31 @@
         // Mobile nav toggle
         const navToggle = document.getElementById('navToggle');
         const mobileNav = document.getElementById('mobileNav');
-        navToggle.addEventListener('click', () => {
-            const open = mobileNav.classList.toggle('open');
-            navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-            navToggle.innerHTML = open ? '<i class="fa-solid fa-xmark"></i>' : '<i class="fa-solid fa-bars"></i>';
-        });
-        mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-            mobileNav.classList.remove('open');
-            navToggle.setAttribute('aria-expanded', 'false');
-            navToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
-        }));
-        document.addEventListener('click', (e) => {
-            if (mobileNav.classList.contains('open') && !mobileNav.contains(e.target) && !navToggle.contains(e.target)) {
+        if (navToggle && mobileNav) {
+            navToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const open = mobileNav.classList.toggle('open');
+                navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                const icon = navToggle.querySelector('i');
+                if (icon) {
+                    icon.className = open ? 'fa-solid fa-xmark' : 'fa-solid fa-bars';
+                }
+            });
+            mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
                 mobileNav.classList.remove('open');
                 navToggle.setAttribute('aria-expanded', 'false');
-                navToggle.innerHTML = '<i class="fa-solid fa-bars"></i>';
-            }
-        });
+                const icon = navToggle.querySelector('i');
+                if (icon) icon.className = 'fa-solid fa-bars';
+            }));
+            document.addEventListener('click', (e) => {
+                if (mobileNav.classList.contains('open') && !mobileNav.contains(e.target) && !navToggle.contains(e.target)) {
+                    mobileNav.classList.remove('open');
+                    navToggle.setAttribute('aria-expanded', 'false');
+                    const icon = navToggle.querySelector('i');
+                    if (icon) icon.className = 'fa-solid fa-bars';
+                }
+            });
+        }
 
         // FAQ accordion
         document.querySelectorAll('.faq-item').forEach(item => {
