@@ -1067,44 +1067,67 @@
             if (nameLabel) nameLabel.textContent = u.name || 'this member';
             if (emailLabel) emailLabel.textContent = u.email || 'this member';
 
-            // Reset all pill states and hidden input
+            // Reset .dd dropdown state
+            const ddDel = document.getElementById('ddDeleteReason');
+            if (ddDel) {
+                ddDel.classList.remove('open');
+                const trigger = ddDel.querySelector('.dd-trigger');
+                const labelSpan = ddDel.querySelector('#deleteReasonText_label');
+                if (trigger) trigger.classList.add('placeholder');
+                if (labelSpan) labelSpan.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color:var(--text-faint);font-size:13px;"></i> Select a reason';
+                ddDel.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+            }
             const hiddenInput = document.getElementById('deleteReasonSelect');
             const txt = document.getElementById('deleteReasonText');
             const err = document.getElementById('deleteReasonError');
             if (hiddenInput) hiddenInput.value = '';
             if (txt) { txt.value = ''; txt.style.display = 'none'; }
             if (err) err.style.display = 'none';
-            document.querySelectorAll('.del-reason-pill').forEach(p => p.classList.remove('selected'));
 
             openModal('modalDelete');
         }
 
-        function selectDeleteReason(btn) {
-            // Deselect all pills
-            document.querySelectorAll('.del-reason-pill').forEach(p => p.classList.remove('selected'));
-            btn.classList.add('selected');
-
-            const reason = btn.getAttribute('data-reason');
+        function pickDeleteReason(reason, icon, li) {
+            const dd = document.getElementById('ddDeleteReason');
             const hiddenInput = document.getElementById('deleteReasonSelect');
             const txt = document.getElementById('deleteReasonText');
             const err = document.getElementById('deleteReasonError');
+            const labelSpan = document.getElementById('deleteReasonText_label');
+            const trigger = dd ? dd.querySelector('.dd-trigger') : null;
 
+            // Mark the selected li
+            if (dd) dd.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+            if (li) li.classList.add('active');
+
+            // Update trigger label with icon + text
+            const labelText = reason === 'other' ? 'Other — write below' : li.querySelector('span').textContent.trim();
+            const iconColor = reason === 'other' ? '#D97706' : 'var(--primary)';
+            if (labelSpan) labelSpan.innerHTML = `<i class="fa-solid ${icon}" style="color:${iconColor};font-size:13px;"></i> ${labelText}`;
+            if (trigger) trigger.classList.remove('placeholder');
+
+            // Store value
             if (hiddenInput) hiddenInput.value = reason;
+
+            // Close dropdown
+            if (dd) dd.classList.remove('open');
+
+            // Clear error
             if (err) err.style.display = 'none';
 
-            // Show textarea only for "Other"
+            // Show/hide textarea
             if (txt) {
                 if (reason === 'other') {
                     txt.style.display = 'block';
-                    setTimeout(() => txt.focus(), 50);
+                    setTimeout(() => txt.focus(), 80);
                 } else {
                     txt.style.display = 'none';
                     txt.value = '';
                 }
             }
         }
-        window.selectDeleteReason = selectDeleteReason;
-        // Keep onDeleteReasonSelectChange as no-op for backward compat
+        window.pickDeleteReason = pickDeleteReason;
+        // Keep old refs as no-op for safety
+        window.selectDeleteReason = function() {};
         window.onDeleteReasonSelectChange = function() {};
 
 

@@ -808,42 +808,73 @@
                 </div>
 
                 <!-- Reason Input -->
-                <div class="field" style="margin-top:4px;">
-                    <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:block;">
-                        <i class="fa-solid fa-pen-to-square" style="color:var(--error);"></i> Reason for deletion <span style="color:var(--error);">*</span>
+                <div class="field" style="margin-top:8px;">
+                    <label style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;display:block;">
+                        <i class="fa-solid fa-pen-to-square" style="color:var(--error);"></i>
+                        Reason for deletion <span style="color:var(--error);">*</span>
                     </label>
 
-                    <!-- Custom Pill Reason Selector -->
-                    <div id="deleteReasonPills" style="display:flex;flex-direction:column;gap:8px;">
-                        <button type="button" class="del-reason-pill" data-reason="Violation of community guidelines" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-shield-halved"></i> Violation of community guidelines
-                        </button>
-                        <button type="button" class="del-reason-pill" data-reason="Fake or misleading profile information" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-id-card-clip"></i> Fake or misleading profile information
-                        </button>
-                        <button type="button" class="del-reason-pill" data-reason="Inappropriate behaviour toward members" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-hand"></i> Inappropriate behaviour toward members
-                        </button>
-                        <button type="button" class="del-reason-pill" data-reason="Duplicate account detected" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-copy"></i> Duplicate account detected
-                        </button>
-                        <button type="button" class="del-reason-pill" data-reason="Member requested account removal" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-user-minus"></i> Member requested account removal
-                        </button>
-                        <button type="button" class="del-reason-pill" data-reason="Spam or misuse of platform" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-ban"></i> Spam or misuse of platform
-                        </button>
-                        <button type="button" class="del-reason-pill del-reason-pill--other" data-reason="other" onclick="selectDeleteReason(this)">
-                            <i class="fa-solid fa-pen"></i> Other — write below
-                        </button>
+                    <!-- Custom .dd Dropdown (same pattern as gender dropdown) -->
+                    <div class="dd" id="ddDeleteReason">
+                        <div class="dd-trigger placeholder" onclick="ddOpen('ddDeleteReason')">
+                            <span id="deleteReasonText_label" style="display:inline-flex;align-items:center;gap:8px;">
+                                <i class="fa-solid fa-circle-exclamation" style="color:var(--text-faint);font-size:13px;"></i>
+                                Select a reason
+                            </span>
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </div>
+                        <ul class="dd-menu">
+                            <li onclick="pickDeleteReason('Violation of community guidelines', 'fa-shield-halved', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-shield-halved" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Violation of community guidelines
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('Fake or misleading profile information', 'fa-id-card-clip', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-id-card-clip" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Fake or misleading profile information
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('Inappropriate behaviour toward members', 'fa-hand', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-hand" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Inappropriate behaviour toward members
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('Duplicate account detected', 'fa-copy', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-copy" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Duplicate account detected
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('Member requested account removal', 'fa-user-minus', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-user-minus" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Member requested account removal
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('Spam or misuse of platform', 'fa-ban', this)">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-ban" style="color:var(--primary);font-size:13px;width:15px;text-align:center;"></i>
+                                    Spam or misuse of platform
+                                </span>
+                            </li>
+                            <li onclick="pickDeleteReason('other', 'fa-pen', this)" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px;">
+                                <span style="display:inline-flex;align-items:center;gap:9px;">
+                                    <i class="fa-solid fa-pen" style="color:#D97706;font-size:13px;width:15px;text-align:center;"></i>
+                                    Other — write below
+                                </span>
+                            </li>
+                        </ul>
                     </div>
 
                     <!-- Hidden input that stores the selected value (used by doDeleteUser) -->
                     <input type="hidden" id="deleteReasonSelect" value="">
 
-                    <!-- "Other" textarea (shown only when Other pill is selected) -->
+                    <!-- "Other" textarea (shown only when Other is picked) -->
                     <textarea id="deleteReasonText" rows="3"
-                        style="display:none;margin-top:10px;width:100%;box-sizing:border-box;border:1.5px solid var(--error);border-radius:12px;padding:10px 14px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:72px;background:#fff;color:var(--text-primary);outline:none;"
+                        style="display:none;margin-top:10px;width:100%;box-sizing:border-box;border:1.5px solid var(--border);border-radius:14px;padding:12px 14px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:72px;background:var(--surface);color:var(--text);outline:none;transition:border-color 0.2s;"
                         placeholder="Describe the specific reason for permanently deleting this account..."></textarea>
 
                     <div id="deleteReasonError" style="display:none;color:var(--error);font-size:12px;margin-top:8px;">
@@ -851,22 +882,6 @@
                     </div>
                 </div>
 
-                <style>
-                .del-reason-pill {
-                    display: flex;align-items: center;gap: 9px;width: 100%;text-align: left;
-                    background: #FAF8FC;border: 1.5px solid #ECE5F5;border-radius: 10px;
-                    padding: 10px 14px;font-size: 13px;font-weight: 600;
-                    color: var(--text-primary, #202124);cursor: pointer;font-family: inherit;
-                    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
-                }
-                .del-reason-pill i { font-size: 13px;color: var(--text-muted, #9e9aad);flex-shrink:0;transition: color 0.15s;width:16px;text-align:center; }
-                .del-reason-pill:hover { background: #F5EEFF;border-color: var(--primary, #7B2CBF);color: var(--primary, #7B2CBF);transform: translateX(3px); }
-                .del-reason-pill:hover i { color: var(--primary, #7B2CBF); }
-                .del-reason-pill.selected { background: #FEF2F2;border-color: var(--error, #E63946);color: var(--error, #E63946);font-weight: 700;transform: translateX(3px); }
-                .del-reason-pill.selected i { color: var(--error, #E63946); }
-                .del-reason-pill--other.selected { background: #FFF7E6;border-color: #D97706;color: #92400E; }
-                .del-reason-pill--other.selected i { color: #D97706; }
-                </style>
 
 
                 <div class="btn-row" style="margin-top:16px;">
