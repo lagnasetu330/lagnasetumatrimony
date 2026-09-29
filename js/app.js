@@ -311,6 +311,9 @@ function bootstrapApp() {
             } else if (key === 'castes' && Array.isArray(value)) {
                 window.REMOTE_CASTES = value;
                 if (typeof renderFilterCasteOptions === 'function') renderFilterCasteOptions();
+            } else if (key === 'contact_details' && value) {
+                window.REMOTE_CONTACT = value;
+                try { localStorage.setItem('lagna_setu_contact_info', JSON.stringify(value)); } catch(e) {}
             }
         });
     }

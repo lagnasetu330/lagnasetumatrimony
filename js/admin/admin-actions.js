@@ -1266,11 +1266,29 @@ function syncSettingsUI() {
         inputEmail.value = ADMIN_CREDS.email;
     }
 
-    // Auto-approve toggle sync
     const autoToggle = document.getElementById('toggleAutoApprove');
-    if (autoToggle) {
-        const isAuto = localStorage.getItem(LS_COMMUNITY_AUTO_APPROVE) !== 'false'; // default ON
-        autoToggle.classList.toggle('on', isAuto);
+    const emailToggle = document.getElementById('toggleEmailNotifs');
+    const boysFeeInput = document.getElementById('settingsBoysFee');
+
+    // Fetch live platform settings & pricing from Supabase app_settings
+    if (typeof supabaseGetAppSetting === 'function') {
+        Promise.all([
+            supabaseGetAppSetting('platform_settings'),
+            supabaseGetAppSetting('membership_pricing'),
+            supabaseGetAppSetting('auto_approve')
+        ]).then(([plat, pricing, autoApp]) => {
+            if (plat && emailToggle) {
+                emailToggle.classList.toggle('on', plat.email_notifications !== false);
+            }
+            if (autoToggle) {
+                const isAuto = autoApp ? !!autoApp.enabled : (plat ? plat.auto_approve !== false : true);
+                autoToggle.classList.toggle('on', isAuto);
+            }
+            if (pricing && boysFeeInput && typeof pricing.boys_fee === 'number') {
+                boysFeeInput.value = pricing.boys_fee;
+                localStorage.setItem('LS_MEMBERSHIP_PRICING', JSON.stringify(pricing));
+            }
+        }).catch(err => console.warn('[Admin] Sync settings error:', err));
     }
 
     // Maintenance mode toggle sync
@@ -1284,7 +1302,7 @@ function syncSettingsUI() {
     }
 }
 
-function updateAdminEmail() {
+async function updateAdminEmail() {
     const input = document.getElementById('settingsAdminEmail');
     if (!input) return;
     const newEmail = input.value.trim();
@@ -1295,10 +1313,60 @@ function updateAdminEmail() {
     }
     ADMIN_CREDS.email = newEmail;
     localStorage.setItem(LS_ADMIN_CREDS_KEY, JSON.stringify(ADMIN_CREDS));
+
+    // Save directly to Supabase app_settings
+    if (typeof supabaseSetAppSetting === 'function') {
+        try {
+            await supabaseSetAppSetting('admin_credentials', ADMIN_CREDS);
+            console.info('[Admin] Admin email saved to Supabase app_settings');
+        } catch(e) {
+            console.warn('[Admin] Failed saving email to Supabase:', e);
+        }
+    }
+
     syncSettingsUI();
-    showToast('Admin email updated successfully!');
+    showToast('Admin email updated successfully! ✨');
 }
 
+async function savePlatformSettings() {
+    const emailNotifsToggle = document.getElementById('toggleEmailNotifs');
+    const autoApproveToggle = document.getElementById('toggleAutoApprove');
+    const boysFeeInput = document.getElementById('settingsBoysFee');
+
+    const emailNotifsOn = emailNotifsToggle ? emailNotifsToggle.classList.contains('on') : true;
+    const autoApproveOn = autoApproveToggle ? autoApproveToggle.classList.contains('on') : true;
+    const boysFee = boysFeeInput ? (parseInt(boysFeeInput.value) || 99) : 99;
+
+    const platformSettings = {
+        email_notifications: emailNotifsOn,
+        auto_approve: autoApproveOn,
+        updated_at: new Date().toISOString()
+    };
+
+    const membershipPricing = {
+        boys_fee: boysFee,
+        girls_fee: 0,
+        currency: 'INR',
+        duration_days: 30,
+        updated_at: new Date().toISOString()
+    };
+
+    if (typeof supabaseSetAppSetting === 'function') {
+        try {
+            await Promise.all([
+                supabaseSetAppSetting('platform_settings', platformSettings),
+                supabaseSetAppSetting('membership_pricing', membershipPricing),
+                supabaseSetAppSetting('auto_approve', { enabled: autoApproveOn })
+            ]);
+            console.info('[Admin] Platform settings & pricing saved to Supabase app_settings');
+        } catch(e) {
+            console.warn('[Admin] Failed saving platform settings to Supabase:', e);
+        }
+    }
+
+    localStorage.setItem('LS_MEMBERSHIP_PRICING', JSON.stringify(membershipPricing));
+    showToast('Platform settings & pricing saved to Supabase! ✨');
+}
 
 function toggleAutoApprove(btn) {
     const isCurrentlyOn = btn.classList.contains('on');
@@ -1343,4 +1411,5 @@ if (typeof renderReports !== 'undefined') window.renderReports = renderReports;
 if (typeof renderNotifs !== 'undefined') window.renderNotifs = renderNotifs;
 if (typeof renderHelp !== 'undefined') window.renderHelp = renderHelp;
 if (typeof syncSettingsUI !== 'undefined') window.syncSettingsUI = syncSettingsUI;
+if (typeof savePlatformSettings !== 'undefined') window.savePlatformSettings = savePlatformSettings;
 if (typeof setUserTab !== 'undefined') window.setUserTab = setUserTab;

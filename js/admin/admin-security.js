@@ -59,6 +59,46 @@ function getEffectiveAdminCreds() {
 var ADMIN_CREDS = getEffectiveAdminCreds();
 window.ADMIN_CREDS = ADMIN_CREDS;
 
+/**
+ * Fetch latest admin credentials from Supabase app_settings
+ */
+async function syncAdminCredsFromSupabase() {
+    if (typeof supabaseGetAppSetting !== 'function') return;
+    try {
+        const remoteCreds = await supabaseGetAppSetting('admin_credentials');
+        if (remoteCreds && remoteCreds.email && remoteCreds.passHash) {
+            localStorage.setItem(LS_ADMIN_CREDS_KEY, JSON.stringify(remoteCreds));
+            ADMIN_CREDS = remoteCreds;
+            window.ADMIN_CREDS = ADMIN_CREDS;
+            const disp = document.getElementById('adminDisplayEmail');
+            if (disp) disp.textContent = remoteCreds.email;
+            const inp = document.getElementById('settingsAdminEmail');
+            if (inp) inp.value = remoteCreds.email;
+            console.info('[Admin Security] Admin credentials synchronized from Supabase');
+        }
+    } catch (e) {
+        console.warn('[Admin Security] Supabase creds sync notice:', e);
+    }
+}
+window.syncAdminCredsFromSupabase = syncAdminCredsFromSupabase;
+
+/**
+ * Restore Remembered Admin login
+ */
+function restoreAdminRememberMe() {
+    try {
+        const isRem = localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true';
+        const remEmail = localStorage.getItem('lagnaSetu_admin_rememberEmail') || '';
+        const chk = document.getElementById('adminRememberMe');
+        const emailInput = document.getElementById('loginEmail');
+        if (chk) chk.checked = isRem;
+        if (isRem && remEmail && emailInput && !emailInput.value) {
+            emailInput.value = remEmail;
+        }
+    } catch (_) {}
+}
+window.restoreAdminRememberMe = restoreAdminRememberMe;
+
 /* ---------------- Rate Limiting / Brute Force Protection ---------------- */
 var LOGIN_SECURITY = {
     KEY: 'LS_ADMIN_LOGIN_SECURITY',
@@ -155,6 +195,17 @@ async function doLogin() {
 
     if (isMatch) {
         clearLoginSecurityState();
+
+        // Handle Remember Me
+        const chk = document.getElementById('adminRememberMe');
+        if (chk && chk.checked) {
+            localStorage.setItem('lagnaSetu_admin_rememberMe', 'true');
+            localStorage.setItem('lagnaSetu_admin_rememberEmail', email);
+        } else {
+            localStorage.removeItem('lagnaSetu_admin_rememberMe');
+            localStorage.removeItem('lagnaSetu_admin_rememberEmail');
+        }
+
         var sessionToken = await generateAdminSessionToken(creds.email, creds.passHash);
         sessionStorage.setItem('admin_isLoggedIn', 'true');
         sessionStorage.setItem('admin_session_token', sessionToken);
@@ -240,6 +291,16 @@ async function updateAdminPassword() {
     delete creds.pass;
     localStorage.setItem(LS_ADMIN_CREDS_KEY, JSON.stringify(creds));
 
+    // Save directly to Supabase app_settings
+    if (typeof supabaseSetAppSetting === 'function') {
+        try {
+            await supabaseSetAppSetting('admin_credentials', creds);
+            console.info('[Admin Security] Admin credentials updated in Supabase app_settings');
+        } catch(e) {
+            console.warn('[Admin Security] Failed saving creds to Supabase:', e);
+        }
+    }
+
     // Update in-memory creds
     ADMIN_CREDS = getEffectiveAdminCreds();
     window.ADMIN_CREDS = ADMIN_CREDS;
@@ -252,7 +313,7 @@ async function updateAdminPassword() {
     if (newInput) newInput.value = '';
     if (confInput) confInput.value = '';
 
-    showToast('Admin password updated successfully!');
+    showToast('Admin password updated successfully! ✨');
 }
 
 // Global Window Exports
@@ -260,3 +321,16 @@ if (typeof doLogin !== 'undefined') window.doLogin = doLogin;
 if (typeof doLogout !== 'undefined') window.doLogout = doLogout;
 if (typeof confirmLogout !== 'undefined') window.confirmLogout = confirmLogout;
 if (typeof updateAdminPassword !== 'undefined') window.updateAdminPassword = updateAdminPassword;
+
+// Auto-sync credentials and remember-me state on load
+if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            restoreAdminRememberMe();
+            syncAdminCredsFromSupabase();
+        });
+    } else {
+        restoreAdminRememberMe();
+        syncAdminCredsFromSupabase();
+    }
+}

@@ -387,10 +387,11 @@ async function syncAdminDataFromSupabase() {
         // ── APP CONFIG (FAQS / GUIDE / CASTES) from Supabase app_settings ──
         if (typeof supabaseGetAppSetting === 'function') {
             try {
-                const [remoteFaqs, remoteGuide, remoteCastes] = await Promise.all([
+                const [remoteFaqs, remoteGuide, remoteCastes, remoteContact] = await Promise.all([
                     supabaseGetAppSetting('faqs'),
                     supabaseGetAppSetting('guide_steps'),
-                    supabaseGetAppSetting('castes')
+                    supabaseGetAppSetting('castes'),
+                    supabaseGetAppSetting('contact_details')
                 ]);
                 if (Array.isArray(remoteFaqs) && remoteFaqs.length > 0) {
                     FAQS = remoteFaqs;
@@ -406,6 +407,9 @@ async function syncAdminDataFromSupabase() {
                     CASTES_DATA = remoteCastes;
                     window.CASTES_DATA = CASTES_DATA;
                     if (typeof renderCastes === 'function' && document.getElementById('casteAdminList')) renderCastes();
+                }
+                if (remoteContact && typeof remoteContact === 'object') {
+                    try { localStorage.setItem(LS_CONTACT_KEY, JSON.stringify(remoteContact)); } catch(e) {}
                 }
             } catch (cfgErr) {
                 console.warn('[Admin] App settings fetch note:', cfgErr);
@@ -678,6 +682,8 @@ function setupAdminRealtime() {
                     CASTES_DATA = value;
                     window.CASTES_DATA = CASTES_DATA;
                     if (typeof renderCastes === 'function' && document.getElementById('casteAdminList')) renderCastes();
+                } else if (key === 'contact_details' && value) {
+                    try { localStorage.setItem(LS_CONTACT_KEY, JSON.stringify(value)); } catch(e) {}
                 }
             });
         }

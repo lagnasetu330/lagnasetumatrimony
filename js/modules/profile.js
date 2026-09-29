@@ -742,9 +742,21 @@ function openProfile(id) {
                         list = trimmed.split(',').map(s => s.trim()).filter(Boolean);
                     }
                 }
-                if (!list || list.length === 0) return '';
+                if (!list || list.length === 0) {
+                    return `
+                    <div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;">
+                        <div class="dlabel"><i class="fa-solid fa-icons" style="color:var(--primary);"></i> Hobbies</div>
+                        <div style="font-size:13px;color:var(--text-muted);font-style:italic;margin-top:2px;">No hobbies listed</div>
+                    </div>`;
+                }
                 const chipsHtml = typeof renderHobbiesHtml === 'function' ? renderHobbiesHtml(list) : list.map(h => `<span class="chip">${escapeHtml(h)}</span>`).join('');
-                if (!chipsHtml) return '';
+                if (!chipsHtml) {
+                    return `
+                    <div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:6px;padding:10px 0;">
+                        <div class="dlabel"><i class="fa-solid fa-icons" style="color:var(--primary);"></i> Hobbies</div>
+                        <div style="font-size:13px;color:var(--text-muted);font-style:italic;margin-top:2px;">No hobbies listed</div>
+                    </div>`;
+                }
                 return `
                 <div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:8px;padding:12px 0;">
                     <div class="dlabel"><i class="fa-solid fa-icons" style="color:var(--primary);"></i> Hobbies</div>

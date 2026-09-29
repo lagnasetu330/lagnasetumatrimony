@@ -26,6 +26,7 @@ const DEFAULT_FAQS = [
 
 let REMOTE_GUIDE_STEPS = null;
 let REMOTE_FAQS = null;
+let REMOTE_CONTACT = null;
 
 function getHowItWorksSteps() {
     if (Array.isArray(REMOTE_GUIDE_STEPS) && REMOTE_GUIDE_STEPS.length > 0) {
@@ -48,14 +49,15 @@ function getFaqs() {
 }
 
 /**
- * Fetch FAQs and Guide Steps directly from Supabase app_settings table
+ * Fetch FAQs, Guide Steps and Contact Details directly from Supabase app_settings table
  */
 async function syncHelpContentFromSupabase() {
     if (typeof supabaseGetAppSetting !== 'function') return;
     try {
-        const [faqs, guide] = await Promise.all([
+        const [faqs, guide, contact] = await Promise.all([
             supabaseGetAppSetting('faqs'),
-            supabaseGetAppSetting('guide_steps')
+            supabaseGetAppSetting('guide_steps'),
+            supabaseGetAppSetting('contact_details')
         ]);
         if (Array.isArray(faqs) && faqs.length > 0) {
             REMOTE_FAQS = faqs;
@@ -70,6 +72,13 @@ async function syncHelpContentFromSupabase() {
             if (typeof renderHowItWorks === 'function') {
                 renderHowItWorks();
             }
+        }
+        if (contact && typeof contact === 'object') {
+            REMOTE_CONTACT = contact;
+            window.REMOTE_CONTACT = contact;
+            try {
+                localStorage.setItem(LS_CONTACT_KEY, JSON.stringify(contact));
+            } catch(e) {}
         }
     } catch(e) {
         console.warn('[Help] syncHelpContentFromSupabase notice:', e);
@@ -147,15 +156,21 @@ function filterFaqs(val) {
 
 function contactSupportAction(type) {
     let contact = { whatsapp: '+91 97263 62863', phone: '+91 97263 62863', email: 'lagnasetu330@gmail.com' };
-    try {
-        const stored = localStorage.getItem(LS_CONTACT_KEY);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.whatsapp && !parsed.whatsapp.includes('98765')) contact.whatsapp = parsed.whatsapp;
-            if (parsed.phone && !parsed.phone.includes('4000')) contact.phone = parsed.phone;
-            if (parsed.email) contact.email = parsed.email;
-        }
-    } catch(e) {}
+    if (REMOTE_CONTACT && typeof REMOTE_CONTACT === 'object') {
+        if (REMOTE_CONTACT.whatsapp) contact.whatsapp = REMOTE_CONTACT.whatsapp;
+        if (REMOTE_CONTACT.phone) contact.phone = REMOTE_CONTACT.phone;
+        if (REMOTE_CONTACT.email) contact.email = REMOTE_CONTACT.email;
+    } else {
+        try {
+            const stored = localStorage.getItem(LS_CONTACT_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed.whatsapp && !parsed.whatsapp.includes('98765')) contact.whatsapp = parsed.whatsapp;
+                if (parsed.phone && !parsed.phone.includes('4000')) contact.phone = parsed.phone;
+                if (parsed.email) contact.email = parsed.email;
+            }
+        } catch(e) {}
+    }
 
     if (type === 'whatsapp') {
         const cleanNumber = contact.whatsapp.replace(/[^0-9]/g, '');

@@ -211,8 +211,13 @@
                                     class="fa-solid fa-eye"></i></button>
                         </div>
                     </div>
-                    <div style="text-align:right;margin:-6px 0 20px;"><span class="link-txt" style="font-size:12.5px;"
-                            onclick="go('scr-forgot')">Forgot password?</span></div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin:-4px 0 20px;">
+                        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none;font-size:12.5px;color:var(--text-muted);font-weight:600;">
+                            <input type="checkbox" id="adminRememberMe" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;border-radius:4px;margin:0;">
+                            <span>Remember me</span>
+                        </label>
+                        <span class="link-txt" style="font-size:12.5px;" onclick="go('scr-forgot')">Forgot password?</span>
+                    </div>
                     <button class="btn btn-primary" onclick="doLogin()"><i class="fa-solid fa-right-to-bracket"></i> Log
                         in</button>
                     <div class="center-txt p-muted" style="margin-top:20px;font-size:12px;"><i
@@ -676,7 +681,7 @@
                         <div class="tlabel">Email notifications</div>
                         <div class="tsub">Get emailed for new registrations &amp; reports</div>
                     </div>
-                    <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                    <button class="toggle on" id="toggleEmailNotifs" onclick="this.classList.toggle('on')"></button>
                 </div>
                 <div class="toggle-row">
                     <div>
@@ -695,13 +700,13 @@
 
                 <div class="section-label">Membership pricing</div>
                 <div class="row-2">
-                    <div class="field"><label>Boys fee (₹) / 30 Days</label><input class="input" type="number"
+                    <div class="field"><label>Boys fee (₹) / 30 Days</label><input class="input" id="settingsBoysFee" type="number"
                             value="99"></div>
                     <div class="field"><label>Girls fee (₹)</label><input class="input" type="text"
                             value="0 (100% Free)" readonly
                             style="background:var(--bg-card);color:var(--success);font-weight:700;"></div>
                 </div>
-                <button class="btn btn-primary" onclick="showToast('Settings saved')"><i
+                <button class="btn btn-primary" type="button" onclick="savePlatformSettings()"><i
                         class="fa-solid fa-floppy-disk"></i> Save settings</button>
 
                 <div class="section-label">Cache &amp; Storage Reset</div>
