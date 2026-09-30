@@ -2360,6 +2360,7 @@ function supabaseSubscribeToUserChat(userId, userEmail, handlers = {}) {
     try {
         const numId = Number(userId || 0);
         const normEmail = (userEmail || '').trim().toLowerCase();
+        const myProfId = (typeof state !== 'undefined' && state.currentUser?.profileId) ? Number(state.currentUser.profileId) : 0;
         const channelName = `realtime:chat:${numId || Date.now()}`;
 
         userChatRealtimeChannel = client.channel(channelName)
@@ -2371,8 +2372,11 @@ function supabaseSubscribeToUserChat(userId, userEmail, handlers = {}) {
                 const recEmail = (row.receiver_email || '').trim().toLowerCase();
                 const sendEmail = (row.sender_email || '').trim().toLowerCase();
 
-                // Relevant to current user?
-                if (recId === numId || sendId === numId || (normEmail && (recEmail === normEmail || sendEmail === normEmail))) {
+                // Relevant to current user? (Check user ID, profile ID, and email)
+                const isForMe = (numId && (recId === numId || sendId === numId)) ||
+                                (myProfId && (recId === myProfId || sendId === myProfId)) ||
+                                (normEmail && (recEmail === normEmail || sendEmail === normEmail));
+                if (isForMe) {
                     if (typeof handlers.onNewMessage === 'function') {
                         handlers.onNewMessage(row);
                     }
@@ -2385,7 +2389,10 @@ function supabaseSubscribeToUserChat(userId, userEmail, handlers = {}) {
                 const sendId = Number(row.sender_id || 0);
                 const recEmail = (row.receiver_email || '').trim().toLowerCase();
                 const sendEmail = (row.sender_email || '').trim().toLowerCase();
-                if (recId === numId || sendId === numId || (normEmail && (recEmail === normEmail || sendEmail === normEmail))) {
+                const isForMe = (numId && (recId === numId || sendId === numId)) ||
+                                (myProfId && (recId === myProfId || sendId === myProfId)) ||
+                                (normEmail && (recEmail === normEmail || sendEmail === normEmail));
+                if (isForMe) {
                     if (typeof handlers.onMessageUpdate === 'function') {
                         handlers.onMessageUpdate(row);
                     }
@@ -2404,7 +2411,10 @@ function supabaseSubscribeToUserChat(userId, userEmail, handlers = {}) {
                 const recEmail = (row.receiver_email || '').trim().toLowerCase();
                 const sendEmail = (row.sender_email || '').trim().toLowerCase();
 
-                if (recId === numId || sendId === numId || (normEmail && (recEmail === normEmail || sendEmail === normEmail))) {
+                const isForMe = (numId && (recId === numId || sendId === numId)) ||
+                                (myProfId && (recId === myProfId || sendId === myProfId)) ||
+                                (normEmail && (recEmail === normEmail || sendEmail === normEmail));
+                if (isForMe) {
                     if (typeof handlers.onInterestUpdate === 'function') {
                         handlers.onInterestUpdate(row);
                     }
@@ -2415,7 +2425,10 @@ function supabaseSubscribeToUserChat(userId, userEmail, handlers = {}) {
                 if (!row) return;
                 const recId = Number(row.receiver_id || 0);
                 const recEmail = (row.receiver_email || '').trim().toLowerCase();
-                if (recId === numId || (normEmail && recEmail === normEmail)) {
+                const isForMe = (numId && recId === numId) ||
+                                (myProfId && recId === myProfId) ||
+                                (normEmail && recEmail === normEmail);
+                if (isForMe) {
                     if (typeof handlers.onInterestInsert === 'function') {
                         handlers.onInterestInsert(row);
                     }

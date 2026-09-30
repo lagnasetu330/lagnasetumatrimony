@@ -43,6 +43,25 @@ function findProfile(id, email) {
         }
     }
 
+    // 2B. Match from sessionStorage / localStorage cached profiles
+    try {
+        const cachedRaw = sessionStorage.getItem('lagnaSetu_profiles') || localStorage.getItem('LS_COMMUNITY_PROFILES');
+        if (cachedRaw) {
+            const cachedList = JSON.parse(cachedRaw);
+            if (Array.isArray(cachedList) && cachedList.length > 0) {
+                let p = cachedList.find(x => x && (
+                    (id && (x.id === id || String(x.id) === strId || (!isNaN(pid) && pid > 0 && Number(x.id) === pid) || (x.userId && (String(x.userId) === strId || Number(x.userId) === pid)))) ||
+                    (strEmail && !strEmail.includes('•') && x.email && x.email.trim().toLowerCase() === strEmail)
+                ));
+                if (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member') {
+                    if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
+                    if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
+                    return p;
+                }
+            }
+        }
+    } catch (_) {}
+
     // 3. Match from existing CHAT_THREADS in memory
     if (typeof CHAT_THREADS !== 'undefined' && Array.isArray(CHAT_THREADS)) {
         const thread = CHAT_THREADS.find(t => t && (
@@ -400,12 +419,16 @@ async function syncUserChatAndInterests() {
 
         const myProfId = (state.currentUser && state.currentUser.profileId) ? Number(state.currentUser.profileId) : 0;
 
-        // Canonical peer ID resolver by email
+        // Canonical peer ID resolver by email and profile lookup
         function getCanonicalPeerId(rawPid, rawEmail) {
             if (rawEmail) {
                 const norm = rawEmail.trim().toLowerCase();
                 const matched = (window.PROFILES || []).find(prof => prof && prof.email && prof.email.trim().toLowerCase() === norm);
                 if (matched && matched.id) return Number(matched.id);
+            }
+            if (rawPid && typeof findProfile === 'function') {
+                const fp = findProfile(rawPid, rawEmail);
+                if (fp && fp.id) return Number(fp.id);
             }
             return Number(rawPid);
         }
@@ -502,6 +525,7 @@ async function syncUserChatAndInterests() {
         // 3. Reconstruct CHAT_THREADS
         const updatedThreads = [];
         const processedPeers = new Set();
+        const fallbackAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
 
         // A. Add threads for accepted matches from interests
         [...INCOMING_REQUESTS, ...OUTGOING_REQUESTS].forEach(r => {
@@ -512,12 +536,20 @@ async function syncUserChatAndInterests() {
                 if (!processedPeers.has(pid)) {
                     processedPeers.add(pid);
                     const msgs = messagesByPeer.get(pid) || [];
-                    const peerProf = findProfile(pid);
+                    const pEmail = (r.senderEmail === myEmail ? r.receiverEmail : r.senderEmail) || '';
+                    const peerProf = findProfile(pid, pEmail);
+                    const peerName = (peerProf && peerProf.name && peerProf.name !== 'Community Match' && peerProf.name !== 'Community Member')
+                        ? peerProf.name
+                        : ((r.senderName === state.currentUser.name ? r.receiverName : r.senderName) || 'Member');
+                    const peerImg = (peerProf && peerProf.img && !peerProf.img.includes('default_avatar'))
+                        ? peerProf.img
+                        : ((r.senderPhoto === (state.currentUser.photo || state.currentUser.img) ? r.receiverPhoto : r.senderPhoto) || fallbackAvatar);
+
                     updatedThreads.push({
                         profileId: pid,
-                        peerEmail: r.senderEmail === myEmail ? r.receiverEmail : r.senderEmail,
-                        name: peerProf ? peerProf.name : (r.senderName === state.currentUser.name ? r.receiverName : r.senderName),
-                        img: peerProf ? peerProf.img : (r.senderPhoto === (state.currentUser.photo || state.currentUser.img) ? r.receiverPhoto : r.senderPhoto),
+                        peerEmail: pEmail,
+                        name: peerName,
+                        img: peerImg,
                         messages: msgs
                     });
                 }
@@ -530,34 +562,44 @@ async function syncUserChatAndInterests() {
             if (typeof isSelfProfile === 'function' && isSelfProfile(pid)) return;
             if (!processedPeers.has(pid)) {
                 processedPeers.add(pid);
-                let peerProf = findProfile(pid);
-                // If not found by ID, try finding by peerEmail from messages
-                if (!peerProf && msgs && msgs.length > 0) {
-                    const firstMsg = msgs[0];
-                    const peerEmail = (Number(firstMsg.senderId) === myId || (firstMsg.senderEmail || '').toLowerCase() === myEmail)
-                        ? firstMsg.receiverEmail
-                        : firstMsg.senderEmail;
-                    if (peerEmail) {
-                        peerProf = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === peerEmail.trim().toLowerCase()) || null;
-                    }
-                }
-                // Try finding name from interest requests as final fallback
-                let peerName = 'Member';
-                let peerImg = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
-                if (peerProf) {
-                    peerName = peerProf.name || 'Member';
-                    peerImg = peerProf.img || peerImg;
-                } else {
+                const firstMsg = (msgs && msgs.length > 0) ? msgs[0] : null;
+                const peerEmail = firstMsg
+                    ? ((Number(firstMsg.senderId) === myId || (firstMsg.senderEmail || '').toLowerCase() === myEmail)
+                        ? (firstMsg.receiverEmail || '')
+                        : (firstMsg.senderEmail || ''))
+                    : '';
+                let peerProf = findProfile(pid, peerEmail);
+                let peerName = (peerProf && peerProf.name && peerProf.name !== 'Community Match' && peerProf.name !== 'Community Member')
+                    ? peerProf.name
+                    : '';
+                let peerImg = (peerProf && peerProf.img && !peerProf.img.includes('default_avatar'))
+                    ? peerProf.img
+                    : '';
+
+                if (!peerName) {
                     const allReqs = [...INCOMING_REQUESTS, ...OUTGOING_REQUESTS];
-                    const matchedReq = allReqs.find(r => r && (Number(r.profileId) === pid || Number(r.senderId) === pid || Number(r.receiverId) === pid));
+                    const matchedReq = allReqs.find(r => r && (
+                        Number(r.profileId) === pid || 
+                        Number(r.senderId) === pid || 
+                        Number(r.receiverId) === pid ||
+                        (peerEmail && ((r.senderEmail && r.senderEmail.toLowerCase() === peerEmail.toLowerCase()) || (r.receiverEmail && r.receiverEmail.toLowerCase() === peerEmail.toLowerCase())))
+                    ));
                     if (matchedReq) {
-                        const isSender = Number(matchedReq.senderId) === pid;
-                        peerName = (isSender ? matchedReq.senderName : matchedReq.receiverName) || peerName;
-                        peerImg = (isSender ? matchedReq.senderPhoto : matchedReq.receiverPhoto) || peerImg;
+                        const isSender = (Number(matchedReq.senderId) === pid) || (peerEmail && matchedReq.senderEmail && matchedReq.senderEmail.toLowerCase() === peerEmail.toLowerCase());
+                        peerName = (isSender ? matchedReq.senderName : matchedReq.receiverName) || '';
+                        peerImg = peerImg || (isSender ? matchedReq.senderPhoto : matchedReq.receiverPhoto) || '';
                     }
                 }
+                if (!peerName && peerEmail) {
+                    const parts = peerEmail.split('@')[0].split(/[._-]/).filter(Boolean);
+                    peerName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+                }
+                if (!peerName || peerName === 'Community Match') peerName = 'Member';
+                if (!peerImg) peerImg = fallbackAvatar;
+
                 updatedThreads.push({
                     profileId: pid,
+                    peerEmail: peerEmail,
                     name: peerName,
                     img: peerImg,
                     messages: msgs
@@ -676,14 +718,15 @@ function renderInbox() {
 function requestCard(r, kind) {
     if (!r) return null;
     const pid = Number(r.profileId || (kind === 'received' ? r.senderId : r.receiverId));
+    const reqEmail = (kind === 'received' ? r.senderEmail : r.receiverEmail) || '';
     const fallbackAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
-    const p = (pid ? findProfile(pid) : null) || {
+    const p = (pid ? findProfile(pid, reqEmail) : null) || {
         id: pid || 0,
-        name: r.senderName || r.receiverName || 'Community Member',
-        img: r.senderPhoto || r.receiverPhoto || fallbackAvatar,
-        age: r.senderAge || r.receiverAge || 24,
-        city: r.senderCity || r.receiverCity || 'Gujarat',
-        community: r.senderCaste || r.receiverCaste || 'Community Member'
+        name: (kind === 'received' ? r.senderName : r.receiverName) || 'Member',
+        img: (kind === 'received' ? r.senderPhoto : r.receiverPhoto) || fallbackAvatar,
+        age: (kind === 'received' ? r.senderAge : r.receiverAge) || 24,
+        city: (kind === 'received' ? r.senderCity : r.receiverCity) || 'Gujarat',
+        community: (kind === 'received' ? r.senderCaste : r.receiverCaste) || 'Community Member'
     };
     const card = document.createElement('div');
     card.className = 'card';
@@ -712,10 +755,17 @@ function requestCard(r, kind) {
         }
     }
 
+    const cardName = (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member')
+        ? p.name
+        : ((kind === 'received' ? r.senderName : r.receiverName) || 'Member');
+    const cardImg = (p && p.img && !p.img.includes('default_avatar'))
+        ? p.img
+        : ((kind === 'received' ? r.senderPhoto : r.receiverPhoto) || fallbackAvatar);
+
     card.innerHTML = `
-            <img src="${p.img || fallbackAvatar}" onerror="this.onerror=null;this.src='${fallbackAvatar}';" style="width:52px;height:52px;border-radius:14px;object-fit:cover;flex-shrink:0;" alt="${escapeHtml(p.name || '')}">
+            <img src="${cardImg}" onerror="this.onerror=null;this.src='${fallbackAvatar}';" style="width:52px;height:52px;border-radius:14px;object-fit:cover;flex-shrink:0;" alt="${escapeHtml(cardName)}">
             <div style="flex:1;min-width:0;">
-              <div style="font-weight:800;font-size:14px;">${escapeHtml(p.name || 'Community Member')}${p.age ? ', ' + p.age : ''}</div>
+              <div style="font-weight:800;font-size:14px;">${escapeHtml(cardName)}${p.age ? ', ' + p.age : ''}</div>
               <div class="p-muted" style="font-size:11.5px;"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(p.village || p.city || 'Gujarat')} · ${escapeHtml(p.community || '')}</div>
               <div class="p-muted" style="font-size:10.5px;margin-top:2px;">${r.date || 'Recently'}</div>
             </div>
@@ -731,14 +781,41 @@ function chatThreadCard(t) {
     if (!t) return null;
     const pid = Number(t.profileId);
     const fallbackAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
-    let p = findProfile(pid);
-    if (!p) {
-        p = {
-            id: pid,
-            name: t.name || t.peerName || 'Community Member',
-            img: t.img || t.peerAvatar || fallbackAvatar
-        };
+    let p = findProfile(pid, t.peerEmail);
+    let resolvedName = (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member')
+        ? p.name
+        : ((t.name && t.name !== 'Community Match' && t.name !== 'Community Member' && t.name !== 'Member')
+            ? t.name
+            : '');
+    let resolvedImg = (p && p.img && !p.img.includes('default_avatar'))
+        ? p.img
+        : ((t.img && !t.img.includes('default_avatar')) ? t.img : '');
+
+    if (!resolvedName) {
+        const allReqs = [...(INCOMING_REQUESTS || []), ...(OUTGOING_REQUESTS || [])];
+        const matchReq = allReqs.find(r => r && (
+            Number(r.profileId) === pid || 
+            Number(r.senderId) === pid || 
+            Number(r.receiverId) === pid || 
+            (t.peerEmail && ((r.senderEmail && r.senderEmail.toLowerCase() === t.peerEmail.toLowerCase()) || (r.receiverEmail && r.receiverEmail.toLowerCase() === t.peerEmail.toLowerCase())))
+        ));
+        if (matchReq) {
+            const isSender = (Number(matchReq.senderId) === pid) || (t.peerEmail && matchReq.senderEmail && matchReq.senderEmail.toLowerCase() === t.peerEmail.toLowerCase());
+            resolvedName = (isSender ? matchReq.senderName : matchReq.receiverName) || '';
+            resolvedImg = resolvedImg || (isSender ? matchReq.senderPhoto : matchReq.receiverPhoto) || '';
+        }
     }
+    if (!resolvedName && t.peerEmail) {
+        const parts = t.peerEmail.split('@')[0].split(/[._-]/).filter(Boolean);
+        resolvedName = parts.map(pt => pt.charAt(0).toUpperCase() + pt.slice(1)).join(' ');
+    }
+    if (!resolvedName || resolvedName === 'Community Match') resolvedName = 'Member';
+    if (!resolvedImg) resolvedImg = fallbackAvatar;
+
+    // Sync back into thread
+    t.name = resolvedName;
+    t.img = resolvedImg;
+
     const last = t.messages && t.messages.length > 0 ? t.messages[t.messages.length - 1] : null;
     const myId = Number(state.currentUser ? state.currentUser.id : 0);
     const myProfId = Number(state.currentUser && state.currentUser.profileId ? state.currentUser.profileId : 0);
@@ -772,12 +849,12 @@ function chatThreadCard(t) {
 
     card.innerHTML = `
             <div style="position:relative;flex-shrink:0;">
-                <img src="${p.img || fallbackAvatar}" onerror="this.onerror=null;this.src='${fallbackAvatar}';" style="width:52px;height:52px;border-radius:14px;object-fit:cover;display:block;" alt="${escapeHtml(p.name || '')}">
+                <img src="${resolvedImg}" onerror="this.onerror=null;this.src='${fallbackAvatar}';" style="width:52px;height:52px;border-radius:14px;object-fit:cover;display:block;" alt="${escapeHtml(resolvedName)}">
                 ${unreadCount > 0 ? '<span style="position:absolute;top:-3px;right:-3px;width:11px;height:11px;border-radius:50%;background:linear-gradient(135deg,#e63946,#d90429);border:2px solid #fff;"></span>' : ''}
             </div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
-                <span style="font-weight:800;font-size:14px;color:var(--text);">${escapeHtml(p.name || t.name || 'Community Member')}</span>
+                <span style="font-weight:800;font-size:14px;color:var(--text);">${escapeHtml(resolvedName)}</span>
                 <span class="p-muted" style="font-size:11px;font-weight:600;">${last && last.time ? last.time : ''}</span>
               </div>
               <div class="p-muted" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${unreadCount > 0 ? 'font-weight:700;color:var(--primary);' : ''}">
@@ -786,20 +863,35 @@ function chatThreadCard(t) {
             </div>
             ${unreadBadgeHtml}
             <i class="fa-solid fa-chevron-right chev" style="color:var(--text-faint);font-size:12px;margin-left:4px;"></i>`;
-    card.addEventListener('click', () => openChatFor(p.id));
+    card.addEventListener('click', () => openChatFor(pid));
     return card;
 }
 
 async function acceptRequest(profileId) {
     const pid = Number(profileId);
-    const r = INCOMING_REQUESTS.find(x => Number(x.profileId) === pid);
+    const r = INCOMING_REQUESTS.find(x => Number(x.profileId) === pid || Number(x.senderId) === pid);
     if (r) r.status = 'accepted';
-    if (!CHAT_THREADS.find(t => Number(t.profileId) === pid)) {
-        CHAT_THREADS.push({ profileId: pid, messages: [] });
+    
+    const p = findProfile(pid, r ? r.senderEmail : '');
+    const peerName = (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member')
+        ? p.name
+        : ((r && r.senderName) || 'Member');
+    const peerImg = (p && p.img && !p.img.includes('default_avatar'))
+        ? p.img
+        : ((r && r.senderPhoto) || '');
+    const peerEmail = (p && p.email) || (r && r.senderEmail) || '';
+
+    let thread = CHAT_THREADS.find(t => Number(t.profileId) === pid || (peerEmail && t.peerEmail && t.peerEmail.toLowerCase() === peerEmail.toLowerCase()));
+    if (!thread) {
+        thread = { profileId: pid, peerEmail, name: peerName, img: peerImg, messages: [] };
+        CHAT_THREADS.push(thread);
+    } else {
+        if (!thread.name || thread.name === 'Community Match' || thread.name === 'Member') thread.name = peerName;
+        if (!thread.img || thread.img.includes('default_avatar')) thread.img = peerImg;
+        if (!thread.peerEmail && peerEmail) thread.peerEmail = peerEmail;
     }
-    const p = findProfile(pid);
-    const pName = p ? p.name : 'Member';
-    showToast(`Matched with ${pName}! Safe text chat unlocked 🎉`);
+
+    showToast(`Matched with ${peerName}! Safe text chat unlocked 🎉`);
     saveSessionState();
     renderInbox();
     updateInboxBadge();
@@ -819,9 +911,9 @@ async function acceptRequest(profileId) {
 
 async function declineRequest(profileId) {
     const pid = Number(profileId);
-    const r = INCOMING_REQUESTS.find(x => Number(x.profileId) === pid);
+    const r = INCOMING_REQUESTS.find(x => Number(x.profileId) === pid || Number(x.senderId) === pid);
     if (r) r.status = 'declined';
-    const p = findProfile(pid);
+    const p = findProfile(pid, r ? r.senderEmail : '');
     showToast('Request declined');
     saveSessionState();
     renderInbox();
@@ -874,7 +966,10 @@ function openChatFor(profileId) {
         if (typeof showToast === 'function') showToast('You cannot chat with yourself');
         return;
     }
-    const p = findProfile(pid);
+
+    let thread = CHAT_THREADS.find(t => Number(t.profileId) === pid);
+    const knownEmail = thread ? thread.peerEmail : '';
+    const p = findProfile(pid, knownEmail);
     const myEmail = (state.currentUser.email || '').trim().toLowerCase();
 
     // Strict Gatekeeper: verify that interest between currentUser and profileId is ACCEPTED
@@ -893,13 +988,44 @@ function openChatFor(profileId) {
         return;
     }
 
-    let thread = CHAT_THREADS.find(t => Number(t.profileId) === pid);
-    if (!thread) { thread = { profileId: pid, messages: [] }; CHAT_THREADS.push(thread); }
+    if (!thread) { 
+        thread = { profileId: pid, peerEmail: (p && p.email) || '', name: (p && p.name) || '', img: (p && p.img) || '', messages: [] }; 
+        CHAT_THREADS.push(thread); 
+    }
 
-    const peerEmail = (p && p.email) ? p.email.trim().toLowerCase() : ((thread && thread.peerEmail) ? thread.peerEmail.trim().toLowerCase() : '');
+    const peerEmail = (p && p.email && !p.email.includes('•')) ? p.email.trim().toLowerCase() : ((thread && thread.peerEmail) ? thread.peerEmail.trim().toLowerCase() : '');
     const fallbackAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
-    const peerName = (p && p.name) || (thread && thread.name) || 'Community Member';
-    const peerImg = (p && p.img) || (thread && thread.img) || fallbackAvatar;
+    let peerName = (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member' && p.name !== 'Member')
+        ? p.name
+        : ((thread && thread.name && thread.name !== 'Community Match' && thread.name !== 'Community Member' && thread.name !== 'Member')
+            ? thread.name
+            : '');
+
+    if (!peerName) {
+        const allReqs = [...(INCOMING_REQUESTS || []), ...(OUTGOING_REQUESTS || [])];
+        const matchReq = allReqs.find(r => r && (
+            Number(r.profileId) === pid || 
+            Number(r.senderId) === pid || 
+            Number(r.receiverId) === pid ||
+            (peerEmail && ((r.senderEmail && r.senderEmail.toLowerCase() === peerEmail.toLowerCase()) || (r.receiverEmail && r.receiverEmail.toLowerCase() === peerEmail.toLowerCase())))
+        ));
+        if (matchReq) {
+            const isSender = (Number(matchReq.senderId) === pid) || (peerEmail && matchReq.senderEmail && matchReq.senderEmail.toLowerCase() === peerEmail.toLowerCase());
+            peerName = (isSender ? matchReq.senderName : matchReq.receiverName) || '';
+        }
+    }
+    if (!peerName && peerEmail) {
+        const parts = peerEmail.split('@')[0].split(/[._-]/).filter(Boolean);
+        peerName = parts.map(pt => pt.charAt(0).toUpperCase() + pt.slice(1)).join(' ');
+    }
+    if (!peerName || peerName === 'Community Match') peerName = 'Member';
+
+    let peerImg = (p && p.img && !p.img.includes('default_avatar')) ? p.img : ((thread && thread.img && !thread.img.includes('default_avatar')) ? thread.img : '');
+    if (!peerImg) peerImg = fallbackAvatar;
+
+    thread.name = peerName;
+    thread.img = peerImg;
+    if (peerEmail) thread.peerEmail = peerEmail;
 
     state.activeChatId = pid;
     cancelChatEdit();
@@ -1909,9 +2035,32 @@ function handleRealtimeInterestUpdate(dbInterest) {
         }
     }
 
+    const peerEmail = (isMeSender ? dbInterest.receiver_email : dbInterest.sender_email) || '';
+    const peerName = (isMeSender ? dbInterest.receiver_name : dbInterest.sender_name) || '';
+    const peerPhoto = (isMeSender ? dbInterest.receiver_photo : dbInterest.sender_photo) || '';
+    const peerProf = findProfile(peerId, peerEmail);
+    const resolvedName = (peerProf && peerProf.name && peerProf.name !== 'Community Match' && peerProf.name !== 'Community Member')
+        ? peerProf.name
+        : (peerName || 'Member');
+    const resolvedImg = (peerProf && peerProf.img && !peerProf.img.includes('default_avatar'))
+        ? peerProf.img
+        : (peerPhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop');
+
     if (dbInterest.status === 'accepted') {
-        if (!CHAT_THREADS.find(t => Number(t.profileId) === peerId)) {
-            CHAT_THREADS.push({ profileId: peerId, messages: [] });
+        let thread = CHAT_THREADS.find(t => Number(t.profileId) === peerId || (peerEmail && t.peerEmail && t.peerEmail.toLowerCase() === peerEmail.toLowerCase()));
+        if (!thread) {
+            thread = {
+                profileId: peerId,
+                peerEmail: peerEmail,
+                name: resolvedName,
+                img: resolvedImg,
+                messages: []
+            };
+            CHAT_THREADS.push(thread);
+        } else {
+            if (!thread.name || thread.name === 'Community Match' || thread.name === 'Member') thread.name = resolvedName;
+            if (!thread.img || thread.img.includes('default_avatar')) thread.img = resolvedImg;
+            if (!thread.peerEmail && peerEmail) thread.peerEmail = peerEmail;
         }
     }
 
@@ -1926,13 +2075,12 @@ function handleRealtimeInterestUpdate(dbInterest) {
 
     // Celebratory instant alert when interest is accepted
     if (isMeSender && dbInterest.status === 'accepted') {
-        const peer = findProfile(peerId) || { name: dbInterest.receiver_name || 'Member' };
-        showToast(`🎉 ${peer.name} accepted your interest request! Safe text chat is now unlocked.`);
+        showToast(`🎉 ${resolvedName} accepted your interest request! Safe text chat is now unlocked.`);
         if (typeof addUserRealtimeNotification === 'function') {
             addUserRealtimeNotification({
                 id: `interest_acc_${peerId}_${Date.now()}`,
                 icon: 'fa-heart',
-                title: `🎉 ${peer.name} accepted your interest request!`,
+                title: `🎉 ${resolvedName} accepted your interest request!`,
                 desc: 'Match accepted! Safe text chat is now unlocked.',
                 time: 'Just now',
                 unread: true,
@@ -1941,12 +2089,11 @@ function handleRealtimeInterestUpdate(dbInterest) {
             });
         }
     } else if (isMeSender && dbInterest.status === 'declined') {
-        const peer = findProfile(peerId) || { name: dbInterest.receiver_name || 'Member' };
         if (typeof addUserRealtimeNotification === 'function') {
             addUserRealtimeNotification({
                 id: `interest_dec_${peerId}_${Date.now()}`,
                 icon: 'fa-user-xmark',
-                title: `${peer.name} was unable to accept`,
+                title: `${resolvedName} was unable to accept`,
                 desc: 'Explore more verified community profiles in Browse.',
                 time: 'Just now',
                 unread: false,
