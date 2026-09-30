@@ -277,7 +277,6 @@ function isUserPurged(profile) {
 }
 window.registerPurgedUserId = registerPurgedUserId;
 window.isUserPurged = isUserPurged;
-window.isUserInDeletedList = isUserPurged;
 
 /**
  * Anti-Scraping / Inspect Privacy Masking Helpers
@@ -1736,15 +1735,69 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
    CHAT MESSAGES PERSISTENCE & REALTIME
    ============================================================================== */
 
-/**
- * Safe helper: checks whether a userId (string or number) is in deleted_for_users list
- */
-function isUserInDeletedList(deletedList, userId) {
-    if (!deletedList || userId === null || userId === undefined) return false;
-    const strId = String(userId).trim();
-    if (!strId) return false;
-    const numId = Number(userId);
+const CLEARED_CHATS_STORAGE_KEY = 'lagnaSetu_clearedChatTimestamps';
 
+function getClearedChatRecords() {
+    try {
+        const raw = localStorage.getItem(CLEARED_CHATS_STORAGE_KEY) || sessionStorage.getItem(CLEARED_CHATS_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch (_) {
+        return {};
+    }
+}
+
+/**
+ * Register a local cleared-chat record so UI & fetchers instantly hide older messages even on immediate reload
+ */
+function registerClearedChat(myId, peerId, myEmail, peerEmail) {
+    try {
+        const records = getClearedChatRecords();
+        const now = Date.now();
+        const myKeys = [String(myId || '').trim(), String(myEmail || '').trim().toLowerCase()].filter(Boolean);
+        const peerKeys = [String(peerId || '').trim(), String(peerEmail || '').trim().toLowerCase()].filter(Boolean);
+
+        myKeys.forEach(m => {
+            peerKeys.forEach(p => {
+                records[`${m}__${p}`] = now;
+            });
+        });
+
+        const serialized = JSON.stringify(records);
+        try { localStorage.setItem(CLEARED_CHATS_STORAGE_KEY, serialized); } catch (_) {}
+        try { sessionStorage.setItem(CLEARED_CHATS_STORAGE_KEY, serialized); } catch (_) {}
+    } catch (e) {
+        console.warn('[Chat] registerClearedChat note:', e);
+    }
+}
+
+/**
+ * Check whether a message was sent before the user cleared their conversation with this peer
+ */
+function isChatClearedForUser(myId, peerId, myEmail, peerEmail, messageTimeOrDate) {
+    if (!messageTimeOrDate) return false;
+    const msgTs = new Date(messageTimeOrDate).getTime();
+    if (isNaN(msgTs)) return false;
+
+    const records = getClearedChatRecords();
+    const myKeys = [String(myId || '').trim(), String(myEmail || '').trim().toLowerCase()].filter(Boolean);
+    const peerKeys = [String(peerId || '').trim(), String(peerEmail || '').trim().toLowerCase()].filter(Boolean);
+
+    for (const m of myKeys) {
+        for (const p of peerKeys) {
+            const clearedAt = records[`${m}__${p}`];
+            if (clearedAt && msgTs <= clearedAt) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/**
+ * Safe helper: checks whether ANY of the user identifiers (string, number, or email) is in deleted_for_users list
+ */
+function isUserInDeletedList(deletedList, ...userIdentifiers) {
+    if (!deletedList || !userIdentifiers || userIdentifiers.length === 0) return false;
     let list = [];
     if (Array.isArray(deletedList)) {
         list = deletedList;
@@ -1756,13 +1809,24 @@ function isUserInDeletedList(deletedList, userId) {
             list = [];
         }
     }
+    if (!list || list.length === 0) return false;
+
+    const targets = userIdentifiers.flat().filter(x => x !== null && x !== undefined && String(x).trim() !== '');
+    if (targets.length === 0) return false;
 
     return list.some(item => {
         if (item === null || item === undefined) return false;
-        const itemStr = String(item).trim();
-        if (itemStr && itemStr === strId) return true;
-        if (!isNaN(numId) && !isNaN(Number(item)) && Number(item) === numId) return true;
-        return false;
+        const itemStr = String(item).trim().toLowerCase();
+        const itemNum = Number(item);
+        const hasItemNum = !isNaN(itemNum) && itemNum > 0;
+
+        return targets.some(target => {
+            const targetStr = String(target).trim().toLowerCase();
+            if (targetStr && itemStr === targetStr) return true;
+            const targetNum = Number(target);
+            if (hasItemNum && !isNaN(targetNum) && targetNum > 0 && itemNum === targetNum) return true;
+            return false;
+        });
     });
 }
 
@@ -1777,18 +1841,24 @@ async function supabaseFetchChatMessages(myId, peerId, myEmail, peerEmail) {
         const id2 = Number(peerId);
         const strId1 = String(myId).trim();
         const strId2 = String(peerId).trim();
+        const myProfId = (typeof state !== 'undefined' && state.currentUser?.profileId) ? Number(state.currentUser.profileId) : 0;
         const normMyEmail = String(myEmail || (typeof state !== 'undefined' && state.currentUser?.email) || '').trim().toLowerCase();
         let normPeerEmail = String(peerEmail || '').trim().toLowerCase();
-        if (!normPeerEmail && typeof findProfile === 'function') {
+        if ((!normPeerEmail || normPeerEmail.includes('•')) && typeof findProfile === 'function') {
             const p = findProfile(peerId);
-            if (p && p.email) normPeerEmail = String(p.email).trim().toLowerCase();
+            if (p) normPeerEmail = String(p.rawEmail || p.email || '').trim().toLowerCase();
         }
+        if (normPeerEmail.includes('•')) normPeerEmail = '';
 
         let query = client.from('messages').select('*');
         const orParts = [];
         if (!isNaN(id1) && !isNaN(id2) && id1 > 0 && id2 > 0) {
             orParts.push(`and(sender_id.eq.${id1},receiver_id.eq.${id2})`);
             orParts.push(`and(sender_id.eq.${id2},receiver_id.eq.${id1})`);
+        }
+        if (myProfId && !isNaN(id2) && id2 > 0 && myProfId !== id1) {
+            orParts.push(`and(sender_id.eq.${myProfId},receiver_id.eq.${id2})`);
+            orParts.push(`and(sender_id.eq.${id2},receiver_id.eq.${myProfId})`);
         }
         if (strId1 && strId2 && (isNaN(id1) || isNaN(id2))) {
             orParts.push(`and(sender_id.eq.${strId1},receiver_id.eq.${strId2})`);
@@ -1811,15 +1881,16 @@ async function supabaseFetchChatMessages(myId, peerId, myEmail, peerEmail) {
         }
         return (data || [])
             .filter(m => {
-                const isDelId = isUserInDeletedList(m.deleted_for_users, myId);
-                const isDelEmail = normMyEmail ? isUserInDeletedList(m.deleted_for_users, normMyEmail) : false;
-                return !isDelId && !isDelEmail;
+                if (isUserInDeletedList(m.deleted_for_users, myId, normMyEmail, myProfId)) return false;
+                if (isChatClearedForUser(myId, peerId, normMyEmail, normPeerEmail, m.created_at)) return false;
+                return true;
             })
             .map(m => {
                 const sIdStr = String(m.sender_id);
                 const sEmail = String(m.sender_email || '').trim().toLowerCase();
                 const isMe = (strId1 && sIdStr === strId1) || 
                              (!isNaN(id1) && Number(m.sender_id) === id1) || 
+                             (myProfId && Number(m.sender_id) === myProfId) ||
                              (normMyEmail && sEmail === normMyEmail);
                 return {
                     id: m.id,
@@ -1855,16 +1926,24 @@ async function supabaseFetchAllUserMessages(userId, userEmail) {
         const numId = Number(userId || 0);
         const strId = String(userId || '').trim();
         const normEmail = (userEmail || '').trim().toLowerCase();
+        const myProfId = (typeof state !== 'undefined' && state.currentUser?.profileId) ? Number(state.currentUser.profileId) : 0;
 
         let query = client.from('messages').select('*');
-        if (!isNaN(numId) && numId > 0 && normEmail) {
-            query = query.or(`sender_id.eq.${numId},receiver_id.eq.${numId},sender_email.eq.${normEmail},receiver_email.eq.${normEmail}`);
-        } else if (!isNaN(numId) && numId > 0) {
-            query = query.or(`sender_id.eq.${numId},receiver_id.eq.${numId}`);
-        } else if (strId && normEmail) {
-            query = query.or(`sender_id.eq.${strId},receiver_id.eq.${strId},sender_email.eq.${normEmail},receiver_email.eq.${normEmail}`);
-        } else if (normEmail) {
-            query = query.or(`sender_email.eq.${normEmail},receiver_email.eq.${normEmail}`);
+        const orParts = [];
+        if (!isNaN(numId) && numId > 0) {
+            orParts.push(`sender_id.eq.${numId}`, `receiver_id.eq.${numId}`);
+        } else if (strId) {
+            orParts.push(`sender_id.eq.${strId}`, `receiver_id.eq.${strId}`);
+        }
+        if (myProfId && myProfId !== numId) {
+            orParts.push(`sender_id.eq.${myProfId}`, `receiver_id.eq.${myProfId}`);
+        }
+        if (normEmail) {
+            orParts.push(`sender_email.eq.${normEmail}`, `receiver_email.eq.${normEmail}`);
+        }
+
+        if (orParts.length > 0) {
+            query = query.or(orParts.join(','));
         } else {
             return [];
         }
@@ -1876,7 +1955,17 @@ async function supabaseFetchAllUserMessages(userId, userEmail) {
         }
 
         return (data || [])
-            .filter(m => !isUserInDeletedList(m.deleted_for_users, userId))
+            .filter(m => {
+                if (isUserInDeletedList(m.deleted_for_users, userId, userEmail, myProfId)) return false;
+                const peerId = (String(m.sender_id) === strId || Number(m.sender_id) === numId || (myProfId && Number(m.sender_id) === myProfId) || (normEmail && m.sender_email && m.sender_email.toLowerCase() === normEmail))
+                    ? m.receiver_id
+                    : m.sender_id;
+                const peerEmail = (String(m.sender_id) === strId || Number(m.sender_id) === numId || (myProfId && Number(m.sender_id) === myProfId) || (normEmail && m.sender_email && m.sender_email.toLowerCase() === normEmail))
+                    ? m.receiver_email
+                    : m.sender_email;
+                if (isChatClearedForUser(userId, peerId, userEmail, peerEmail, m.created_at)) return false;
+                return true;
+            })
             .map(m => ({
                 id: m.id,
                 threadId: m.thread_id,
@@ -1988,11 +2077,15 @@ async function supabaseDeleteChatMessageForEveryone(msgId) {
  * "Delete for Me":
  * Removes message from this user's view while leaving it 100% intact for the peer.
  */
-async function supabaseDeleteChatMessageForMe(msgId, myId) {
+async function supabaseDeleteChatMessageForMe(msgId, myId, myEmail) {
     const client = getSupabaseClient();
     if (!client || !msgId || !myId) return { success: true };
     try {
         const strMyId = String(myId).trim();
+        const numMyId = Number(myId);
+        const normMyEmail = String(myEmail || (typeof state !== 'undefined' && state.currentUser?.email) || '').trim().toLowerCase();
+        const myProfId = (typeof state !== 'undefined' && state.currentUser?.profileId) ? String(state.currentUser.profileId).trim() : '';
+
         const { data, error: fetchErr } = await client
             .from('messages')
             .select('id, sender_id, receiver_id, deleted_for_users')
@@ -2007,8 +2100,20 @@ async function supabaseDeleteChatMessageForMe(msgId, myId) {
                 try { curr = JSON.parse(data.deleted_for_users) || []; } catch(e) { curr = []; }
             }
 
-            if (!isUserInDeletedList(curr, strMyId)) {
-                curr.push(strMyId);
+            let changed = false;
+            const toAdd = [strMyId];
+            if (!isNaN(numMyId) && numMyId > 0) toAdd.push(numMyId);
+            if (normMyEmail) toAdd.push(normMyEmail);
+            if (myProfId) toAdd.push(myProfId);
+
+            toAdd.forEach(ident => {
+                if (!isUserInDeletedList(curr, ident)) {
+                    curr.push(ident);
+                    changed = true;
+                }
+            });
+
+            if (changed) {
                 await client.from('messages').update({
                     deleted_for_users: curr,
                     updated_at: new Date().toISOString()
@@ -2041,11 +2146,12 @@ async function supabaseDeleteChatMessage(msgId) {
 /**
  * Clear full chat history for a single user:
  * 1. Does NOT hard-delete messages so the other member's chat remains 100% intact!
- * 2. Adds this user's ID to deleted_for_users for all messages in the conversation.
+ * 2. Adds this user's IDs and email to deleted_for_users for all messages in the conversation.
  * 3. The other member continues to see all messages, even after page reloads or 5 days later!
  * 4. Admin can still inspect the full conversation in the Chat Monitor.
+ * 5. Uses local registered timestamps to prevent flash of cleared messages on immediate reload.
  */
-async function supabaseClearUserChat(myId, peerId, myEmail, peerEmail) {
+async function supabaseClearUserChat(myId, peerId, myEmail, peerEmail, options = {}) {
     const client = getSupabaseClient();
     if (!client || !myId || !peerId) return { success: true };
     try {
@@ -2055,62 +2161,131 @@ async function supabaseClearUserChat(myId, peerId, myEmail, peerEmail) {
         const numPeerId = Number(peerId);
         const normMyEmail = String(myEmail || (typeof state !== 'undefined' && state.currentUser?.email) || '').trim().toLowerCase();
         let normPeerEmail = String(peerEmail || '').trim().toLowerCase();
-        if (!normPeerEmail && typeof findProfile === 'function') {
+        if ((!normPeerEmail || normPeerEmail.includes('•')) && typeof findProfile === 'function') {
             const p = findProfile(peerId);
-            if (p && p.email) normPeerEmail = String(p.email).trim().toLowerCase();
+            if (p) normPeerEmail = String(p.rawEmail || p.email || '').trim().toLowerCase();
+        }
+        if (normPeerEmail.includes('•')) normPeerEmail = '';
+
+        const myProfId = options.myProfId || (typeof state !== 'undefined' && state.currentUser?.profileId) || 0;
+        const knownMsgIds = Array.isArray(options.knownMsgIds) ? options.knownMsgIds : (Array.isArray(options) ? options : []);
+        const extraPeerIds = Array.isArray(options.extraPeerIds) ? options.extraPeerIds : [];
+        const extraPeerEmails = Array.isArray(options.extraPeerEmails) ? options.extraPeerEmails : [];
+
+        // Register local cleared timestamp so any instant page reload or offline read hides them immediately
+        registerClearedChat(myId, peerId, normMyEmail, normPeerEmail);
+        if (myProfId && myProfId !== myId) {
+            registerClearedChat(myProfId, peerId, normMyEmail, normPeerEmail);
         }
 
-        let query = client.from('messages').select('id, sender_id, receiver_id, sender_email, receiver_email, deleted_for_users');
-        const orParts = [];
-        if (!isNaN(numMyId) && !isNaN(numPeerId) && numMyId > 0 && numPeerId > 0) {
-            orParts.push(`and(sender_id.eq.${numMyId},receiver_id.eq.${numPeerId})`);
-            orParts.push(`and(sender_id.eq.${numPeerId},receiver_id.eq.${numMyId})`);
-        } else {
-            orParts.push(`and(sender_id.eq.${strMyId},receiver_id.eq.${strPeerId})`);
-            orParts.push(`and(sender_id.eq.${strPeerId},receiver_id.eq.${strMyId})`);
-        }
-        if (normMyEmail && normPeerEmail) {
-            orParts.push(`and(sender_email.eq.${normMyEmail},receiver_email.eq.${normPeerEmail})`);
-            orParts.push(`and(sender_email.eq.${normPeerEmail},receiver_email.eq.${normMyEmail})`);
-        }
-        if (orParts.length > 0) {
-            query = query.or(orParts.join(','));
+        // All IDs representing "me"
+        const myIdentifiers = [strMyId];
+        if (normMyEmail) myIdentifiers.push(normMyEmail);
+        if (!isNaN(numMyId) && numMyId > 0) myIdentifiers.push(numMyId);
+        if (myProfId) {
+            myIdentifiers.push(String(myProfId));
+            if (!isNaN(Number(myProfId))) myIdentifiers.push(Number(myProfId));
         }
 
-        const { data: allMsgs, error: fetchErr } = await query;
-        if (fetchErr) {
-            console.warn('[Supabase] Clear chat fetch note:', fetchErr.message);
-            return { success: false, error: fetchErr };
-        }
+        // All IDs representing "peer"
+        const peerIdList = [strPeerId];
+        if (!isNaN(numPeerId) && numPeerId > 0) peerIdList.push(numPeerId);
+        extraPeerIds.forEach(id => {
+            if (id && !peerIdList.includes(id)) {
+                peerIdList.push(String(id));
+                const n = Number(id);
+                if (!isNaN(n) && n > 0 && !peerIdList.includes(n)) peerIdList.push(n);
+            }
+        });
 
-        if (Array.isArray(allMsgs) && allMsgs.length > 0) {
-            for (const m of allMsgs) {
-                let curr = [];
-                if (Array.isArray(m.deleted_for_users)) {
-                    curr = [...m.deleted_for_users];
-                } else if (typeof m.deleted_for_users === 'string') {
-                    try { curr = JSON.parse(m.deleted_for_users) || []; } catch(e) { curr = []; }
-                }
+        const peerEmailList = [];
+        if (normPeerEmail && !normPeerEmail.includes('•')) peerEmailList.push(normPeerEmail);
+        extraPeerEmails.forEach(em => {
+            const clean = String(em || '').trim().toLowerCase();
+            if (clean && !clean.includes('•') && !peerEmailList.includes(clean)) peerEmailList.push(clean);
+        });
 
-                let changed = false;
-                if (!isUserInDeletedList(curr, strMyId)) {
-                    curr.push(strMyId);
-                    changed = true;
-                }
-                if (normMyEmail && !isUserInDeletedList(curr, normMyEmail)) {
-                    curr.push(normMyEmail);
-                    changed = true;
-                }
+        // Map of messages to update in Supabase
+        const messagesToUpdate = new Map();
 
-                if (changed) {
-                    await client.from('messages').update({
-                        deleted_for_users: curr,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', m.id);
+        // 1. Fetch by knownMsgIds directly if available (chunked)
+        if (knownMsgIds.length > 0) {
+            for (let i = 0; i < knownMsgIds.length; i += 50) {
+                const chunk = knownMsgIds.slice(i, i + 50);
+                const { data: chunkMsgs, error: cErr } = await client
+                    .from('messages')
+                    .select('id, sender_id, receiver_id, sender_email, receiver_email, deleted_for_users')
+                    .in('id', chunk);
+                if (!cErr && Array.isArray(chunkMsgs)) {
+                    chunkMsgs.forEach(m => messagesToUpdate.set(m.id, m));
                 }
             }
         }
-        return { success: true };
+
+        // 2. Query Supabase for any other messages between these users
+        const orParts = [];
+        const myIdList = [strMyId];
+        if (myProfId && String(myProfId) !== strMyId) myIdList.push(String(myProfId));
+
+        myIdList.forEach(mId => {
+            peerIdList.forEach(pId => {
+                orParts.push(`and(sender_id.eq.${mId},receiver_id.eq.${pId})`);
+                orParts.push(`and(sender_id.eq.${pId},receiver_id.eq.${mId})`);
+            });
+        });
+        if (normMyEmail) {
+            peerEmailList.forEach(pEm => {
+                orParts.push(`and(sender_email.eq.${normMyEmail},receiver_email.eq.${pEm})`);
+                orParts.push(`and(sender_email.eq.${pEm},receiver_email.eq.${normMyEmail})`);
+            });
+        }
+
+        if (orParts.length > 0) {
+            const queryParts = orParts.slice(0, 25);
+            const { data: dbMsgs, error: fetchErr } = await client
+                .from('messages')
+                .select('id, sender_id, receiver_id, sender_email, receiver_email, deleted_for_users')
+                .or(queryParts.join(','));
+
+            if (!fetchErr && Array.isArray(dbMsgs)) {
+                dbMsgs.forEach(m => messagesToUpdate.set(m.id, m));
+            }
+        }
+
+        // 3. Update all matched messages in Supabase: add my identifiers to deleted_for_users
+        const updatePromises = [];
+        messagesToUpdate.forEach(m => {
+            let curr = [];
+            if (Array.isArray(m.deleted_for_users)) {
+                curr = [...m.deleted_for_users];
+            } else if (typeof m.deleted_for_users === 'string') {
+                try { curr = JSON.parse(m.deleted_for_users) || []; } catch(e) { curr = []; }
+            }
+
+            let changed = false;
+            myIdentifiers.forEach(ident => {
+                const s = String(ident).trim();
+                if (s && !curr.some(x => String(x).toLowerCase().trim() === s.toLowerCase())) {
+                    curr.push(s);
+                    changed = true;
+                }
+            });
+
+            if (changed) {
+                updatePromises.push(
+                    client.from('messages').update({
+                        deleted_for_users: curr,
+                        updated_at: new Date().toISOString()
+                    }).eq('id', m.id)
+                );
+            }
+        });
+
+        if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+        }
+
+        return { success: true, count: updatePromises.length };
     } catch (e) {
         console.warn('[Supabase] Clear chat error:', e);
         return { success: false, error: e };
@@ -3161,6 +3336,8 @@ window.supabaseFetchAllInterestsForAdmin = supabaseFetchAllInterestsForAdmin;
 window.supabaseFetchChatMessagesForAdmin = supabaseFetchChatMessagesForAdmin;
 window.supabaseSubscribeAdminRealtime = supabaseSubscribeAdminRealtime;
 window.isUserInDeletedList = isUserInDeletedList;
+window.registerClearedChat = registerClearedChat;
+window.isChatClearedForUser = isChatClearedForUser;
 window.supabaseSaveUserFavorites = supabaseSaveUserFavorites;
 window.supabaseFetchUserFavorites = supabaseFetchUserFavorites;
 window.supabaseInitPresence = supabaseInitPresence;

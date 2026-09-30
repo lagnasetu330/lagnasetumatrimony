@@ -416,6 +416,10 @@ async function syncUserChatAndInterests() {
             if (peerId === myId || (myProfId && peerId === myProfId)) return;
             if (typeof isSelfProfile === 'function' && isSelfProfile(peerId)) return;
 
+            // Strictly exclude messages that are marked deleted or cleared for this user
+            if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(m.deletedForUsers || m.deleted_for_users, myId, myEmail, myProfId)) return;
+            if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(myId, peerId, myEmail, rawPeerEmail, m.createdAt)) return;
+
             if (!messagesByPeer.has(peerId)) {
                 messagesByPeer.set(peerId, []);
             }
@@ -882,19 +886,33 @@ function openChatFor(profileId) {
 
     // Asynchronously pull latest live messages from Supabase with Smart Merge
     if (typeof supabaseFetchChatMessages === 'function' && state.currentUser && state.currentUser.id) {
+        const myProfId = (state.currentUser && state.currentUser.profileId) ? Number(state.currentUser.profileId) : 0;
         supabaseFetchChatMessages(state.currentUser.id, pid, myEmail, peerEmail).then(dbMsgs => {
-            if (Array.isArray(dbMsgs) && dbMsgs.length > 0) {
-                // Ensure messages from peer are marked as read since chat is currently open
-                dbMsgs.forEach(m => {
+            if (Array.isArray(dbMsgs)) {
+                // Filter out messages that were cleared or deleted for this user
+                const validDbMsgs = dbMsgs.filter(m => {
+                    if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(m.deletedForUsers || m.deleted_for_users, state.currentUser.id, myEmail, myProfId)) return false;
+                    if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(state.currentUser.id, pid, myEmail, peerEmail, m.createdAt)) return false;
+                    return true;
+                });
+
+                validDbMsgs.forEach(m => {
                     if (m.from === 'them') m.isRead = true;
                 });
 
-                // SMART MERGE: Never discard existing thread messages, deduplicate by id
+                // Prune any deleted or cleared messages from thread.messages in memory too
+                thread.messages = (thread.messages || []).filter(m => {
+                    if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(m.deletedForUsers || m.deleted_for_users, state.currentUser.id, myEmail, myProfId)) return false;
+                    if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(state.currentUser.id, pid, myEmail, peerEmail, m.createdAt)) return false;
+                    return true;
+                });
+
+                // SMART MERGE: Deduplicate by id
                 const msgMap = new Map();
-                (thread.messages || []).forEach(m => {
+                thread.messages.forEach(m => {
                     if (m && m.id) msgMap.set(m.id, m);
                 });
-                dbMsgs.forEach(m => {
+                validDbMsgs.forEach(m => {
                     if (m && m.id) {
                         const existing = msgMap.get(m.id);
                         if (existing) {
@@ -1108,7 +1126,7 @@ function confirmDeleteChatMessage(mode = 'everyone') {
         renderChatMessages();
         showToast('Message deleted for you');
         if (typeof supabaseDeleteChatMessageForMe === 'function' && state.currentUser && state.currentUser.id) {
-            supabaseDeleteChatMessageForMe(pendingDeleteMsgId, state.currentUser.id).catch(e => console.warn('[Chat] Delete for me error:', e));
+            supabaseDeleteChatMessageForMe(pendingDeleteMsgId, state.currentUser.id, state.currentUser.email).catch(e => console.warn('[Chat] Delete for me error:', e));
         }
     }
 
@@ -1117,7 +1135,7 @@ function confirmDeleteChatMessage(mode = 'everyone') {
 }
 
 function promptClearChatHistory() {
-    const thread = CHAT_THREADS.find(t => t.profileId === state.activeChatId);
+    const thread = CHAT_THREADS.find(t => String(t.profileId) === String(state.activeChatId) || Number(t.profileId) === Number(state.activeChatId));
     if (!thread || !thread.messages || thread.messages.length === 0) {
         showToast('Chat is already empty');
         return;
@@ -1125,19 +1143,63 @@ function promptClearChatHistory() {
     openModal('modalClearChat');
 }
 
-function confirmClearChatHistory() {
-    const thread = CHAT_THREADS.find(t => String(t.profileId) === String(state.activeChatId) || Number(t.profileId) === Number(state.activeChatId));
+async function confirmClearChatHistory() {
+    const activeId = state.activeChatId;
+    const thread = CHAT_THREADS.find(t => String(t.profileId) === String(activeId) || Number(t.profileId) === Number(activeId));
     if (thread) {
         if (editingMessageId) cancelChatEdit();
+
+        // 1. Gather all message IDs and any peer sender/receiver IDs & emails from current thread
+        const msgIdsToClear = (thread.messages || []).map(m => m.id).filter(Boolean);
+        const extraPeerIds = [];
+        const extraPeerEmails = [];
+        const myIdStr = String(state.currentUser?.id || '');
+        const myProfIdStr = String(state.currentUser?.profileId || '');
+        const myEm = (state.currentUser?.email || '').trim().toLowerCase();
+
+        (thread.messages || []).forEach(m => {
+            if (m.senderId && String(m.senderId) !== myIdStr && String(m.senderId) !== myProfIdStr) {
+                extraPeerIds.push(m.senderId);
+            }
+            if (m.receiverId && String(m.receiverId) !== myIdStr && String(m.receiverId) !== myProfIdStr) {
+                extraPeerIds.push(m.receiverId);
+            }
+            if (m.senderEmail && m.senderEmail.trim().toLowerCase() !== myEm && !m.senderEmail.includes('•')) {
+                extraPeerEmails.push(m.senderEmail.trim().toLowerCase());
+            }
+            if (m.receiverEmail && m.receiverEmail.trim().toLowerCase() !== myEm && !m.receiverEmail.includes('•')) {
+                extraPeerEmails.push(m.receiverEmail.trim().toLowerCase());
+            }
+        });
+
+        // 2. Clear locally immediately for snappy UI
         thread.messages = [];
         saveSessionState();
         renderChatMessages();
         updateInboxBadge();
         showToast('Chat history cleared');
 
-        if (typeof supabaseClearUserChat === 'function' && state.currentUser && state.currentUser.id && state.activeChatId) {
-            const peer = findProfile(state.activeChatId);
-            supabaseClearUserChat(state.currentUser.id, state.activeChatId, state.currentUser.email, peer ? peer.email : '').catch(e => console.warn('[Chat] Clear chat error:', e));
+        // 3. Register cleared timestamp
+        const myId = state.currentUser ? (state.currentUser.id || state.currentUser.profileId) : '';
+        const peer = (typeof findProfile === 'function') ? findProfile(activeId) : null;
+        let peerEmail = peer ? (peer.rawEmail || peer.email || '') : (thread.peerEmail || '');
+        if (peerEmail && peerEmail.includes('•')) peerEmail = '';
+
+        if (typeof registerClearedChat === 'function') {
+            registerClearedChat(myId, activeId, myEm, peerEmail);
+            if (state.currentUser && state.currentUser.profileId) {
+                registerClearedChat(state.currentUser.profileId, activeId, myEm, peerEmail);
+            }
+        }
+
+        // 4. Persist to Supabase Database
+        if (typeof supabaseClearUserChat === 'function' && state.currentUser && state.currentUser.id && activeId) {
+            supabaseClearUserChat(state.currentUser.id, activeId, state.currentUser.email, peerEmail, {
+                knownMsgIds: msgIdsToClear,
+                extraPeerIds: extraPeerIds,
+                extraPeerEmails: extraPeerEmails,
+                myProfId: state.currentUser.profileId
+            }).catch(e => console.warn('[Chat] Clear chat error:', e));
         }
     }
     closeModal('modalClearChat');
@@ -1432,13 +1494,17 @@ function handleIncomingRealtimeMessage(dbMsg) {
     const senderEmail = (dbMsg.sender_email || '').trim().toLowerCase();
     const receiverEmail = (dbMsg.receiver_email || '').trim().toLowerCase();
 
-    const isMeSender = (myId && senderId === myId) || (myEmail && senderEmail === myEmail);
-    const isMeReceiver = (myId && receiverId === myId) || (myEmail && receiverEmail === myEmail);
+    const myProfId = (state.currentUser && state.currentUser.profileId) ? Number(state.currentUser.profileId) : 0;
+    const isMeSender = (myId && (senderId === myId || (myProfId && senderId === myProfId))) || (myEmail && senderEmail === myEmail);
+    const isMeReceiver = (myId && (receiverId === myId || (myProfId && receiverId === myProfId))) || (myEmail && receiverEmail === myEmail);
 
     if (!isMeSender && !isMeReceiver) return;
 
     const peerId = isMeSender ? receiverId : senderId;
     const peerEmail = isMeSender ? receiverEmail : senderEmail;
+
+    if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(dbMsg.deleted_for_users, myId, myEmail, myProfId)) return;
+    if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(myId, peerId, myEmail, peerEmail, dbMsg.created_at)) return;
 
     // Find thread by peerId OR by peer profile found via email
     let thread = CHAT_THREADS.find(t => Number(t.profileId) === peerId);
@@ -1521,12 +1587,13 @@ function handleIncomingRealtimeMessage(dbMsg) {
 function handleRealtimeMessageUpdate(dbMsg) {
     if (!dbMsg || !state.currentUser) return;
     const myId = state.currentUser.id;
+    const myProfId = state.currentUser.profileId;
     const myEmail = (state.currentUser.email || '').trim().toLowerCase();
     
     // Check if THIS user deleted or cleared this message
     const deletedForMe = typeof isUserInDeletedList === 'function'
-        ? (isUserInDeletedList(dbMsg.deleted_for_users, myId) || (myEmail && isUserInDeletedList(dbMsg.deleted_for_users, myEmail)))
-        : (Array.isArray(dbMsg.deleted_for_users) && (dbMsg.deleted_for_users.includes(myId) || dbMsg.deleted_for_users.includes(Number(myId)) || dbMsg.deleted_for_users.includes(String(myId)) || (myEmail && dbMsg.deleted_for_users.includes(myEmail))));
+        ? isUserInDeletedList(dbMsg.deleted_for_users, myId, myEmail, myProfId)
+        : (Array.isArray(dbMsg.deleted_for_users) && (dbMsg.deleted_for_users.includes(myId) || (myProfId && dbMsg.deleted_for_users.includes(myProfId)) || (myEmail && dbMsg.deleted_for_users.includes(myEmail))));
 
     if (deletedForMe) {
         // ONLY if it was deleted/cleared for THIS user, remove it from THIS user's in-memory view
