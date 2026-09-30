@@ -215,8 +215,18 @@ function go(id, replace = false) {
     saveSessionState();
     window.scrollTo(0, 0);
 
-    if (id === 'scr-home' && state.currentUser && !state.profileComplete) {
-        setTimeout(() => openModal('modalCompleteProfile'), 250);
+    if (id === 'scr-home' && state.currentUser) {
+        const isComplete = typeof isProfileFullyComplete === 'function' ? isProfileFullyComplete(state.currentUser) : state.profileComplete;
+        if (!isComplete) {
+            setTimeout(() => {
+                if (!state.profileComplete && (typeof isProfileFullyComplete === 'function' ? !isProfileFullyComplete(state.currentUser) : true)) {
+                    openModal('modalCompleteProfile');
+                }
+            }, 250);
+        } else {
+            state.profileComplete = true;
+            if (typeof closeModal === 'function') closeModal('modalCompleteProfile');
+        }
     }
 }
 

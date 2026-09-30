@@ -1184,6 +1184,14 @@ async function doLogin() {
 }
 
 function enterHome() {
+    // 0. Dismiss any payment or completion popups
+    if (typeof closeModal === 'function') {
+        closeModal('modalPaySuccess');
+        closeModal('modalBoyComplete');
+        closeModal('modalCompleteProfile');
+        closeModal('modalPaywall');
+    }
+
     // Ensure Girls are always 100% Free Lifetime
     if (state.currentUser && (typeof isGirlGender === 'function' ? isGirlGender(state.currentUser.gender) : String(state.currentUser.gender || '').toLowerCase().includes('girl'))) {
         state.currentUser.gender = 'Girl';

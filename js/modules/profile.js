@@ -323,6 +323,9 @@ function processSuccessfulPayment(txnId, upiMethod) {
 
     state.currentUser.paymentStatus = 'Active';
     state.membershipPaid = true;
+    state.profileComplete = true;
+    state.currentUser.profileComplete = true;
+
     const today = new Date();
     const expiry = new Date();
     expiry.setDate(today.getDate() + 30);
@@ -332,9 +335,58 @@ function processSuccessfulPayment(txnId, upiMethod) {
     // Cryptographic anti-tamper signature generation
     if (typeof computeSecureToken === 'function') {
         state.currentUser.paymentToken = computeSecureToken('payment', state.currentUser.id, state.currentUser.email, state.currentUser.planExpiry);
-        state.currentUser.genderToken = computeSecureToken('gender', state.currentUser.id, state.currentUser.email, state.currentUser.gender);
+        state.currentUser.genderToken = computeSecureToken('gender', state.currentUser.id, state.currentUser.email, state.currentUser.gender || 'Boy');
     }
     state.currentUser.lastTxnId = txnId;
+
+    // Auto-heal currentUser from window.PROFILES or state.regData if missing details
+    if (typeof PROFILES !== 'undefined' && Array.isArray(PROFILES)) {
+        const uEmail = (state.currentUser.email || '').trim().toLowerCase();
+        const curId = state.currentUser.id || state.currentUser.profileId;
+        const myProf = PROFILES.find(p => p && ((uEmail && p.email && p.email.trim().toLowerCase() === uEmail) || (curId && (p.id == curId || p.userId == curId))));
+        if (myProf) {
+            myProf.paymentStatus = 'paid';
+            myProf.planStart = state.currentUser.planStart;
+            myProf.planExpiry = state.currentUser.planExpiry;
+            if (!state.currentUser.name || state.currentUser.name === 'Member') state.currentUser.name = myProf.name;
+            if (!state.currentUser.gender) state.currentUser.gender = (myProf.gender === 'girls' || myProf.gender === 'Girl') ? 'Girl' : 'Boy';
+            if (!state.currentUser.caste) state.currentUser.caste = myProf.community || myProf.caste;
+            if (!state.currentUser.city) state.currentUser.city = myProf.city || myProf.village || '';
+            if (!state.currentUser.district) state.currentUser.district = myProf.district || '';
+            if (!state.currentUser.profileId) state.currentUser.profileId = myProf.id;
+            if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
+        }
+    }
+
+    if (typeof state.regData !== 'undefined' && state.regData && state.regData.name) {
+        if (!state.currentUser.name || state.currentUser.name === 'Member') state.currentUser.name = state.regData.name;
+        if (!state.currentUser.gender) state.currentUser.gender = state.regData.gender || 'Boy';
+        if (!state.currentUser.caste) state.currentUser.caste = state.regData.caste || '';
+        if (!state.currentUser.city) state.currentUser.city = state.regData.city || '';
+        if (!state.currentUser.district) state.currentUser.district = state.regData.district || '';
+    }
+
+    // Persist to stored accounts in localStorage
+    if (typeof getStoredAccounts === 'function' && typeof saveStoredAccounts === 'function') {
+        try {
+            const accounts = getStoredAccounts();
+            const normEmail = (state.currentUser.email || '').toLowerCase().trim();
+            const idx = accounts.findIndex(u => (normEmail && u.email && u.email.toLowerCase().trim() === normEmail) || (state.currentUser.id && u.id == state.currentUser.id));
+            if (idx !== -1) {
+                accounts[idx].paymentStatus = 'Active';
+                accounts[idx].planStart = state.currentUser.planStart;
+                accounts[idx].planExpiry = state.currentUser.planExpiry;
+                accounts[idx].paymentToken = state.currentUser.paymentToken;
+                accounts[idx].genderToken = state.currentUser.genderToken;
+                accounts[idx].profileComplete = true;
+                if (state.currentUser.name && state.currentUser.name !== 'Member') accounts[idx].name = state.currentUser.name;
+                if (state.currentUser.gender) accounts[idx].gender = state.currentUser.gender;
+                if (state.currentUser.caste) accounts[idx].caste = state.currentUser.caste;
+                saveStoredAccounts(accounts);
+            }
+        } catch (_) {}
+    }
+
     if (typeof saveSessionState === 'function') saveSessionState();
 
     // 1. Record in LS_ADMIN_PAYMENTS for admin sync (100% UPI via Razorpay)
@@ -351,13 +403,6 @@ function processSuccessfulPayment(txnId, upiMethod) {
             status: 'success'
         };
 
-        // Purge any legacy localStorage payment and notif cache
-        try {
-            localStorage.removeItem('LS_ADMIN_PAYMENTS');
-            localStorage.removeItem('LS_ADMIN_NOTIFS');
-            localStorage.removeItem('LS_COMMUNITY_USERS');
-        } catch (_) {}
-
         // Record payment in Supabase PostgreSQL live
         if (typeof supabaseRecordPayment === 'function') {
             supabaseRecordPayment({
@@ -368,8 +413,40 @@ function processSuccessfulPayment(txnId, upiMethod) {
                 amount: 99
             }).catch(err => console.warn('[Supabase] Payment record notice:', err));
         }
+
+        // Sync active payment status to Supabase public.users & public.profiles
+        if (typeof supabaseUpsertUser === 'function') {
+            supabaseUpsertUser({
+                id: String(state.currentUser.id),
+                email: state.currentUser.email,
+                name: state.currentUser.name,
+                gender: state.currentUser.gender || 'Boy',
+                caste: state.currentUser.caste,
+                paymentStatus: 'Active',
+                planStart: state.currentUser.planStart,
+                planExpiry: state.currentUser.planExpiry,
+                profileComplete: true
+            }).catch(err => console.warn('[Supabase] Payment user status sync note:', err));
+        }
+
+        if (typeof supabaseUpsertProfile === 'function') {
+            supabaseUpsertProfile({
+                id: state.currentUser.id,
+                user_id: String(state.currentUser.id),
+                email: state.currentUser.email,
+                paymentStatus: 'paid'
+            }).catch(err => console.warn('[Supabase] Payment profile status sync note:', err));
+        }
     } catch (e) {
         console.error('Payment sync error:', e);
+    }
+
+    // Close any blocking completion or paywall dialogs
+    if (typeof closeModal === 'function') {
+        closeModal('modalPaywall');
+        closeModal('modalBoyComplete');
+        closeModal('modalCompleteProfile');
+        closeModal('modalRazorpayCheckout');
     }
 
     if (typeof updateMembershipScreen === 'function') updateMembershipScreen();

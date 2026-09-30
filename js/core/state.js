@@ -99,6 +99,73 @@ window.isSelfProfile = isSelfProfile;
 function isProfileFullyComplete(user) {
     if (!user || typeof user !== 'object') return false;
     
+    // 1. Cross-check against PROFILES & auto-hydrate session if a completed profile exists
+    const allProfiles = (typeof window !== 'undefined' && Array.isArray(window.PROFILES))
+        ? window.PROFILES
+        : (typeof PROFILES !== 'undefined' && Array.isArray(PROFILES) ? PROFILES : []);
+    if (allProfiles.length > 0) {
+        const uEmail = (user.email || '').trim().toLowerCase();
+        const uId = String(user.id || user.userId || user.profileId || '');
+        const found = allProfiles.find(p => p && (
+            (uEmail && p.email && p.email.trim().toLowerCase() === uEmail) ||
+            (uId && (String(p.id) === uId || String(p.userId) === uId))
+        ));
+        if (found && found.name && found.name !== 'Member' && found.name !== '[Deleted Account]') {
+            const fGen = String(found.gender || '').trim().toLowerCase();
+            const fComm = String(found.community || found.caste || '').trim();
+            if ((fGen === 'boy' || fGen === 'girl' || fGen === 'boys' || fGen === 'girls') && fComm) {
+                // Auto-heal user session from verified matrimonial profile
+                if (!user.name || user.name === 'Member') user.name = found.name;
+                if (!user.gender) user.gender = (fGen === 'girls' || fGen === 'girl') ? 'Girl' : 'Boy';
+                if (!user.caste) user.caste = fComm;
+                if (!user.city) user.city = found.city || found.village || '';
+                if (!user.district) user.district = found.district || '';
+                if (!user.profileId) user.profileId = found.id;
+                user.profileComplete = true;
+                return true;
+            }
+        }
+    }
+
+    // 2. Cross-check against registered accounts store (localStorage)
+    if (typeof getStoredAccounts === 'function') {
+        try {
+            const accs = getStoredAccounts();
+            const uEmail = (user.email || '').trim().toLowerCase();
+            const matchedAcc = accs.find(a => a && (
+                (uEmail && a.email && a.email.trim().toLowerCase() === uEmail) ||
+                (user.id && (a.id == user.id || a.profileId == user.id))
+            ));
+            if (matchedAcc && matchedAcc.name && matchedAcc.name !== 'Member' && matchedAcc.profileComplete) {
+                const aGen = String(matchedAcc.gender || '').trim().toLowerCase();
+                const aComm = String(matchedAcc.caste || matchedAcc.community || '').trim();
+                if ((aGen === 'boy' || aGen === 'girl' || aGen === 'boys' || aGen === 'girls') && aComm) {
+                    if (!user.name || user.name === 'Member') user.name = matchedAcc.name;
+                    if (!user.gender) user.gender = (aGen === 'girls' || aGen === 'girl') ? 'Girl' : 'Boy';
+                    if (!user.caste) user.caste = aComm;
+                    if (!user.city) user.city = matchedAcc.city || '';
+                    if (!user.district) user.district = matchedAcc.district || '';
+                    if (!user.profileId) user.profileId = matchedAcc.profileId || matchedAcc.id;
+                    user.profileComplete = true;
+                    return true;
+                }
+            }
+        } catch (_) {}
+    }
+
+    // 3. Auto-sync from state.regData if user just completed wizard steps
+    if (typeof state !== 'undefined' && state.regData && state.regData.name && state.regData.gender && state.regData.caste) {
+        if (!user.name || user.name === 'Member') user.name = state.regData.name;
+        if (!user.gender) user.gender = state.regData.gender;
+        if (!user.caste) user.caste = state.regData.caste;
+        if (!user.city) user.city = state.regData.city || '';
+        if (!user.district) user.district = state.regData.district || '';
+        if (state.profileComplete) {
+            user.profileComplete = true;
+            return true;
+        }
+    }
+
     // Core identity requirements
     const name = String(user.name || '').trim();
     if (!name || name === 'Member' || name === '[Deleted Account]') return false;
@@ -110,7 +177,7 @@ function isProfileFullyComplete(user) {
     const caste = String(user.caste || user.community || '').trim();
     if (!caste) return false;
     
-    // Explicit incomplete flag takes highest precedence
+    // Explicit incomplete flag takes precedence only if no profile data exists anywhere
     if (user.profileComplete === false) return false;
 
     // If profileComplete is true with valid name, gender, and caste -> Complete!
@@ -122,19 +189,6 @@ function isProfileFullyComplete(user) {
     const hasLocation = Boolean(user.city || user.village || user.district || user.address || user.fullAddress);
     if (user.profileId || hasLocation) {
         return true;
-    }
-    
-    // Cross-check against window.PROFILES
-    if (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) {
-        const uEmail = (user.email || '').trim().toLowerCase();
-        const uId = String(user.id || user.userId || user.profileId || '');
-        const found = window.PROFILES.find(p => p && (
-            (uEmail && p.email && p.email.trim().toLowerCase() === uEmail) ||
-            (uId && (String(p.id) === uId || String(p.userId) === uId))
-        ));
-        if (found && found.name && found.gender && (found.community || found.caste || found.city || found.village || found.district)) {
-            return true;
-        }
     }
     
     return false;
