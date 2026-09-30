@@ -39,7 +39,7 @@ async function supabaseAuthSignUp(email, password, metadata = {}) {
         options: {
             data: {
                 name: metadata.name || '',
-                gender: metadata.gender || 'Boy'
+                gender: metadata.gender || ''
             }
         }
     });
@@ -1368,7 +1368,7 @@ async function supabaseUpsertUser(userRecord) {
             id: String(userRecord.id || userRecord.userId || 'usr_' + Date.now()),
             email: String(userRecord.email).trim().toLowerCase(),
             name: userRecord.name || '',
-            gender: (userRecord.gender === 'girls' || userRecord.gender === 'Girl') ? 'Girl' : 'Boy',
+            gender: userRecord.gender ? ((userRecord.gender === 'girls' || userRecord.gender === 'Girl' || userRecord.gender === 'girl') ? 'Girl' : 'Boy') : '',
             caste: userRecord.caste || userRecord.community || '',
             mobile: userRecord.mobile || userRecord.ownMobile || '',
             role: userRecord.role || 'member',

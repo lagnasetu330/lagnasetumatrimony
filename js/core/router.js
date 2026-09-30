@@ -70,28 +70,29 @@ function go(id, replace = false) {
         }
     }
 
-    // 3. Profile completion gatekeeper: only prompts if a logged-in user hasn't completed their profile
+    // 3. Profile completion verification using strict validator
+    if (state.currentUser) {
+        const isComplete = typeof isProfileFullyComplete === 'function' 
+            ? isProfileFullyComplete(state.currentUser) 
+            : false;
+        state.profileComplete = isComplete;
+        state.currentUser.profileComplete = isComplete;
+    }
+
+    // Incomplete Profile Gatekeeper:
+    // If user has NOT completed their profile, they MUST NOT access member screens (home, browse, inbox, etc.)
     if (state.currentUser && !state.profileComplete) {
-        if (state.currentUser.profileComplete || state.currentUser.profileId) {
-            state.profileComplete = true;
-        } else if (typeof getStoredAccounts === 'function') {
-            const accs = getStoredAccounts();
-            const myEm = (state.currentUser.email || '').toLowerCase().trim();
-            const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
-            if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
-                state.profileComplete = true;
-                state.currentUser.profileComplete = true;
-                if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
-            }
+        if (!INCOMPLETE_ALLOWED.has(id)) {
+            console.warn(`[Router] Profile incomplete. Blocking access to ${id}, strictly routing to scr-reg-caste.`);
+            id = 'scr-reg-caste';
+            replace = true;
+            setTimeout(() => {
+                if (typeof openModal === 'function') openModal('modalCompleteProfile');
+            }, 100);
         }
     }
 
-    if (state.currentUser && !state.profileComplete && !INCOMPLETE_ALLOWED.has(id)) {
-        openModal('modalCompleteProfile');
-        return;
-    }
-
-    // If profile is already complete, prevent navigation back into registration steps
+    // If profile is FULLY complete, prevent navigation back into registration steps
     if (state.currentUser && state.profileComplete) {
         if (id === 'scr-reg-caste' || id === 'scr-reg2' || id === 'scr-reg3' || id === 'scr-reg4') {
             const isBoy = typeof isBoyGender === 'function' ? isBoyGender(state.currentUser.gender) : (state.currentUser.gender === 'Boy' || state.currentUser.gender === 'boy');

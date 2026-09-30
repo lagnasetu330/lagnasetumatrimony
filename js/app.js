@@ -151,21 +151,13 @@ function initApp() {
                 targetScreen = 'scr-home';
             }
 
-            // Self-healing profile completion verification:
-            // Check if active user already has a complete profile before applying route guards
-            if (!state.profileComplete && state.currentUser) {
-                if (state.currentUser.profileComplete || state.currentUser.profileId) {
-                    state.profileComplete = true;
-                } else if (typeof getStoredAccounts === 'function') {
-                    const accs = getStoredAccounts();
-                    const myEm = (state.currentUser.email || '').toLowerCase().trim();
-                    const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
-                    if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
-                        state.profileComplete = true;
-                        state.currentUser.profileComplete = true;
-                        if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
-                    }
-                }
+            // Strict Profile Completion Evaluation
+            if (state.currentUser) {
+                const isComplete = typeof isProfileFullyComplete === 'function'
+                    ? isProfileFullyComplete(state.currentUser)
+                    : false;
+                state.profileComplete = isComplete;
+                state.currentUser.profileComplete = isComplete;
             }
 
             // Route Guard 0: Suspended Account Check (Strict non-dismissible modal)

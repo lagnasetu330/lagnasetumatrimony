@@ -91,6 +91,51 @@ function isSelfProfile(p) {
 }
 window.isSelfProfile = isSelfProfile;
 
+/**
+ * Strict Profile Completion Validator
+ * A profile is ONLY complete if name, valid gender ('Boy' or 'Girl'), and caste are present,
+ * and profileComplete is explicitly confirmed (with location/profileId).
+ */
+function isProfileFullyComplete(user) {
+    if (!user || typeof user !== 'object') return false;
+    
+    // Core identity requirements
+    const name = String(user.name || '').trim();
+    if (!name || name === 'Member' || name === '[Deleted Account]') return false;
+    
+    const gender = String(user.gender || '').trim().toLowerCase();
+    const isValidGender = (gender === 'boy' || gender === 'girl' || gender === 'boys' || gender === 'girls');
+    if (!isValidGender) return false;
+    
+    const caste = String(user.caste || user.community || '').trim();
+    if (!caste) return false;
+    
+    // Explicit incomplete flag takes highest precedence
+    if (user.profileComplete === false) return false;
+
+    // Check location or verified profile in PROFILES
+    const hasLocation = Boolean(user.city || user.village || user.district || user.address || user.fullAddress);
+    if (user.profileComplete === true && (user.profileId || hasLocation)) {
+        return true;
+    }
+    
+    // Cross-check against window.PROFILES
+    if (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) {
+        const uEmail = (user.email || '').trim().toLowerCase();
+        const uId = String(user.id || user.userId || user.profileId || '');
+        const found = window.PROFILES.find(p => p && (
+            (uEmail && p.email && p.email.trim().toLowerCase() === uEmail) ||
+            (uId && (String(p.id) === uId || String(p.userId) === uId))
+        ));
+        if (found && found.name && found.gender && (found.city || found.village || found.district)) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+window.isProfileFullyComplete = isProfileFullyComplete;
+
 function saveSessionState() {
     try {
         const currentScreen = document.querySelector('.screen.active')?.id || 'scr-home';
@@ -111,11 +156,16 @@ function saveSessionState() {
                 localStorage.removeItem('lagnaSetu_activeUser');
             } catch (_) {}
         }
-        sessionStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(state.profileComplete));
-        sessionStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(state.membershipPaid));
+
+        const profileDone = isProfileFullyComplete(state.currentUser);
+        state.profileComplete = profileDone;
+        if (state.currentUser) state.currentUser.profileComplete = profileDone;
+
+        sessionStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(profileDone));
+        sessionStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
         try {
             if (state.currentUser) {
-                localStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(Boolean(state.profileComplete)));
+                localStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(profileDone));
                 localStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
                 const activeScreen = (state.history && state.history[state.history.length - 1]) || 'scr-welcome';
                 localStorage.setItem('lagnaSetu_activeScreen', activeScreen);
@@ -186,10 +236,14 @@ function loadSessionState() {
                 const matchedProf = PROFILES.find(p => p && ((myEmail && p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId))));
                 if (matchedProf) {
                     state.currentUser.profileId = matchedProf.id;
-                    state.currentUser.profileComplete = true;
-                    state.profileComplete = true;
                     if (!state.currentUser.name || state.currentUser.name === 'Member') {
                         state.currentUser.name = matchedProf.name;
+                    }
+                    if (!state.currentUser.gender) {
+                        state.currentUser.gender = (matchedProf.gender === 'girls' || matchedProf.gender === 'Girl') ? 'Girl' : 'Boy';
+                    }
+                    if (!state.currentUser.caste) {
+                        state.currentUser.caste = matchedProf.community;
                     }
                     if (!state.currentUser.img || !state.currentUser.photo) {
                         state.currentUser.img = matchedProf.img || (matchedProf.photos && matchedProf.photos[0]);
@@ -198,38 +252,31 @@ function loadSessionState() {
                 }
             }
         }
-        let savedComplete = sessionStorage.getItem('lagnaSetu_profileComplete');
-        if (savedComplete === null) {
-            try { savedComplete = localStorage.getItem('lagnaSetu_profileComplete'); } catch(_) {}
-        }
-        if (savedComplete !== null) {
-            state.profileComplete = JSON.parse(savedComplete);
-        } else if (state.currentUser && (state.currentUser.profileId || state.currentUser.profileComplete)) {
-            state.profileComplete = true;
-        }
 
-        // Self-Healing: Check stored accounts to verify profile completion
-        if (state.currentUser && !state.profileComplete) {
-            const myEmail = (state.currentUser.email || '').trim().toLowerCase();
-            const curId = state.currentUser.id || state.currentUser.userId || state.currentUser.profileId;
-            if (typeof getStoredAccounts === 'function') {
-                const accounts = getStoredAccounts();
-                const matchedAcc = accounts.find(a => (myEmail && a.email && a.email.trim().toLowerCase() === myEmail) || (curId && (a.id == curId || a.userId == curId)));
-                if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
-                    state.profileComplete = true;
-                    state.currentUser.profileComplete = true;
-                    if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
-                    if (matchedAcc.paymentStatus) state.currentUser.paymentStatus = matchedAcc.paymentStatus;
+        // Strict Profile Completion Evaluation
+        const profileDone = isProfileFullyComplete(state.currentUser);
+        state.profileComplete = profileDone;
+        if (state.currentUser) state.currentUser.profileComplete = profileDone;
+
+        // Payment status derivation
+        if (state.currentUser && profileDone) {
+            const isGirl = (typeof isGirlGender === 'function') 
+                ? isGirlGender(state.currentUser.gender) 
+                : (state.currentUser.gender === 'Girl');
+            if (isGirl) {
+                state.currentUser.paymentStatus = 'Free';
+                state.membershipPaid = true;
+            } else {
+                const passCheck = (typeof checkBoyPassStatus === 'function') 
+                    ? checkBoyPassStatus(state.currentUser) 
+                    : { active: state.currentUser.paymentStatus === 'Active' };
+                state.membershipPaid = passCheck.active;
+                if (!passCheck.active && state.currentUser.paymentStatus === 'Active') {
+                    state.currentUser.paymentStatus = (passCheck.reason === 'expired') ? 'Expired' : 'Unpaid';
                 }
             }
-        }
-
-        let savedPaid = sessionStorage.getItem('lagnaSetu_membershipPaid');
-        if (savedPaid === null) {
-            try { savedPaid = localStorage.getItem('lagnaSetu_membershipPaid'); } catch(_) {}
-        }
-        if (savedPaid !== null) {
-            state.membershipPaid = JSON.parse(savedPaid);
+        } else {
+            state.membershipPaid = false;
         }
         const savedFavs = sessionStorage.getItem('lagnaSetu_favorites');
         if (savedFavs) {

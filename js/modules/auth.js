@@ -742,12 +742,34 @@ async function signupOtpVerified() {
         const accounts = getStoredAccounts();
         const existingIdx = accounts.findIndex(u => u.email && u.email.toLowerCase() === newUser.email.toLowerCase());
         if (existingIdx !== -1) {
-            accounts[existingIdx] = { ...accounts[existingIdx], ...newUser };
+            accounts[existingIdx] = newUser;
         } else {
             accounts.push(newUser);
         }
         saveStoredAccounts(accounts);
     } catch(e) {}
+
+    // Clear any stale flags from previous test sessions in browser storage
+    try {
+        localStorage.removeItem('lagnaSetu_profileComplete');
+        localStorage.removeItem('lagnaSetu_membershipPaid');
+        localStorage.removeItem('lagnaSetu_activeScreen');
+        sessionStorage.removeItem('lagnaSetu_profileComplete');
+        sessionStorage.removeItem('lagnaSetu_membershipPaid');
+    } catch (_) {}
+
+    // Initialize registration wizard state
+    if (typeof state.regData !== 'undefined') {
+        state.regData.email = newUser.email;
+        state.regData.name = '';
+        state.regData.gender = '';
+        state.regData.caste = '';
+        state.regData.city = '';
+        state.regData.district = '';
+        state.regData.address = '';
+        state.regData.photo = '';
+        state.regData.photos = ['', '', ''];
+    }
 
     // Also register in Supabase Auth & public.users table asynchronously
     if (typeof supabaseAuthSignUp === 'function') {
@@ -846,52 +868,57 @@ async function doLogin() {
 
     // If not in local storage or needs live sync from Supabase Single Source of Truth
     if (supabaseUserCheck && supabaseUserCheck.exists) {
-        const prof = supabaseUserCheck.profile || {};
+        const prof = supabaseUserCheck.profile || null;
         const usr = supabaseUserCheck.user || {};
-        const isProfileDone = Boolean(prof.id || prof.name || usr.profile_complete);
+        const isProfileDone = Boolean(prof && prof.id && prof.name && prof.community);
         const isGirlUser = typeof isGirlGender === 'function'
-            ? (isGirlGender(prof.gender) || isGirlGender(usr.gender))
-            : (String(prof.gender || usr.gender || '').toLowerCase().includes('girl') || String(prof.gender || usr.gender || '').toLowerCase() === 'female');
+            ? (isGirlGender(prof?.gender) || isGirlGender(usr?.gender))
+            : (String(prof?.gender || usr?.gender || '').toLowerCase().includes('girl') || String(prof?.gender || usr?.gender || '').toLowerCase() === 'female');
 
         if (!matchedUser) {
             // profiles.account_status is the primary source of truth for suspension status
             // Only use users.status as fallback if profiles table has no explicit 'active' status
-            const isSuspendedAtLogin = prof.account_status === 'suspended'
+            const isSuspendedAtLogin = (prof && prof.account_status === 'suspended')
                 ? true
-                : (prof.account_status === 'active' || prof.account_status === 'Active')
+                : (prof && (prof.account_status === 'active' || prof.account_status === 'Active'))
                     ? false
                     : (usr.status === 'Suspended');
             matchedUser = {
-                id: prof.id || usr.id || Date.now(),
+                id: (prof && prof.id) || usr.id || Date.now(),
                 email: email.toLowerCase(),
-                name: prof.name || usr.name || '',
-                gender: isGirlUser ? 'Girl' : 'Boy',
-                caste: prof.community || usr.caste || '',
-                mobile: prof.mobile || usr.mobile || '',
+                name: (prof && prof.name) || usr.name || '',
+                gender: (prof && prof.gender) ? (isGirlUser ? 'Girl' : 'Boy') : (usr.gender || ''),
+                caste: (prof && prof.community) || usr.caste || '',
+                mobile: (prof && prof.mobile) || usr.mobile || '',
                 status: isSuspendedAtLogin ? 'Suspended' : 'Active',
                 profileComplete: isProfileDone,
-                paymentStatus: isGirlUser ? 'Free' : ((prof.payment_status === 'paid' || prof.payment_status === 'active') ? 'Active' : 'Unpaid'),
+                paymentStatus: isGirlUser ? 'Free' : ((prof && (prof.payment_status === 'paid' || prof.payment_status === 'active')) ? 'Active' : (usr.payment_status || 'Unpaid')),
                 passwordHash: passHash
             };
             registeredUsers.push(matchedUser);
             saveStoredAccounts(registeredUsers);
         } else {
             // Live Reconciliation: Sync existing local cache with Supabase live truth
-            if (isProfileDone) {
-                matchedUser.profileComplete = true;
-            }
-            if (prof.name || usr.name) matchedUser.name = prof.name || usr.name;
-            if (isGirlUser || (typeof isGirlGender === 'function' && isGirlGender(matchedUser.gender))) {
-                matchedUser.gender = 'Girl';
-                matchedUser.paymentStatus = 'Free';
-            } else {
-                matchedUser.gender = 'Boy';
-                if (prof.payment_status === 'paid' || prof.payment_status === 'active') {
+            matchedUser.profileComplete = isProfileDone;
+            if (prof && prof.name) matchedUser.name = prof.name;
+            else if (usr && usr.name && !matchedUser.name) matchedUser.name = usr.name;
+
+            if (prof && prof.gender) {
+                matchedUser.gender = isGirlUser ? 'Girl' : 'Boy';
+                if (isGirlUser) {
+                    matchedUser.paymentStatus = 'Free';
+                } else if (prof.payment_status === 'paid' || prof.payment_status === 'active') {
                     matchedUser.paymentStatus = 'Active';
                 }
+            } else if (usr && usr.gender && !matchedUser.gender) {
+                matchedUser.gender = usr.gender;
             }
-            if (prof.community || usr.caste) matchedUser.caste = prof.community || usr.caste;
-            if (prof.mobile || usr.mobile) matchedUser.mobile = prof.mobile || usr.mobile;
+
+            if (prof && prof.community) matchedUser.caste = prof.community;
+            else if (usr && usr.caste && !matchedUser.caste) matchedUser.caste = usr.caste;
+
+            if (prof && prof.mobile) matchedUser.mobile = prof.mobile;
+            else if (usr && usr.mobile && !matchedUser.mobile) matchedUser.mobile = usr.mobile;
         }
     }
 
@@ -925,8 +952,8 @@ async function doLogin() {
 
         // Self-Healing Reconciliation: Check if user already completed profile in PROFILES
         const existingProfile = (window.PROFILES || []).find(p => p.email && p.email.toLowerCase() === email.toLowerCase());
-        if (existingProfile) {
-            matchedUser.profileComplete = true;
+        if (existingProfile && existingProfile.name && existingProfile.community) {
+            matchedUser.profileId = existingProfile.id;
             if (!matchedUser.name) matchedUser.name = existingProfile.name;
             const isGirl = typeof isGirlGender === 'function'
                 ? (isGirlGender(existingProfile.gender) || isGirlGender(matchedUser.gender))
@@ -948,7 +975,16 @@ async function doLogin() {
             }
             if (!matchedUser.caste) matchedUser.caste = existingProfile.community;
             if (!matchedUser.mobile) matchedUser.mobile = existingProfile.mobile;
+            if (existingProfile.city) matchedUser.city = existingProfile.city;
+            if (existingProfile.district) matchedUser.district = existingProfile.district;
         }
+
+        // Strict Profile Completion Evaluation
+        const profileDone = typeof isProfileFullyComplete === 'function'
+            ? isProfileFullyComplete(matchedUser)
+            : false;
+        matchedUser.profileComplete = profileDone;
+        state.profileComplete = profileDone;
 
         // Also check LS_ADMIN_PAYMENTS to see if boy has already paid (require genuine transaction ID)
         if (matchedUser.gender === 'Boy' && matchedUser.paymentStatus !== 'Active') {
@@ -1034,9 +1070,16 @@ async function doLogin() {
         if (passInput) passInput.value = '';
 
         // RULE 1: If profile is incomplete, NEVER SHOW HOME SCREEN!
-        if (!matchedUser.profileComplete) {
+        if (!profileDone) {
             state.profileComplete = false;
             state.membershipPaid = false;
+            if (state.currentUser) state.currentUser.profileComplete = false;
+            if (typeof state.regData !== 'undefined') {
+                state.regData.email = matchedUser.email || email;
+                state.regData.name = matchedUser.name || '';
+                state.regData.gender = matchedUser.gender || '';
+                state.regData.caste = matchedUser.caste || '';
+            }
             saveSessionState();
             showToast('Please complete your profile to continue');
             go('scr-reg-caste');
@@ -1116,23 +1159,15 @@ function enterHome() {
         state.membershipPaid = true;
     }
 
-    // Guard 1: Profile must be complete
-    if (state.currentUser && !state.profileComplete) {
-        if (state.currentUser.profileComplete || state.currentUser.profileId) {
-            state.profileComplete = true;
-        } else if (typeof getStoredAccounts === 'function') {
-            const accs = getStoredAccounts();
-            const myEm = (state.currentUser.email || '').toLowerCase().trim();
-            const matchedAcc = accs.find(a => myEm && a.email && a.email.toLowerCase().trim() === myEm);
-            if (matchedAcc && (matchedAcc.profileComplete || matchedAcc.city || (matchedAcc.name && matchedAcc.caste))) {
-                state.profileComplete = true;
-                state.currentUser.profileComplete = true;
-                if (matchedAcc.profileId) state.currentUser.profileId = matchedAcc.profileId;
-            }
-        }
-    }
+    // Guard 1: Profile must be strictly complete
+    const isComplete = typeof isProfileFullyComplete === 'function'
+        ? isProfileFullyComplete(state.currentUser)
+        : false;
+    state.profileComplete = isComplete;
+    if (state.currentUser) state.currentUser.profileComplete = isComplete;
 
-    if (state.currentUser && !state.profileComplete) {
+    if (!isComplete) {
+        state.profileComplete = false;
         openModal('modalCompleteProfile');
         showToast('Please complete your profile first');
         go('scr-reg-caste');

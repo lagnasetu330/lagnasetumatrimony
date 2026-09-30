@@ -42,18 +42,24 @@ async function syncProfilesFromSupabase(force = false) {
                 const myEmail = state.currentUser.email.trim().toLowerCase();
                 const curId = state.currentUser.id || state.currentUser.profileId;
                 const myProf = PROFILES.find(p => p && ((p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId))));
-                if (myProf) {
+                if (myProf && myProf.name && myProf.community) {
                     if (!state.currentUser.name || state.currentUser.name === 'Member') {
                         state.currentUser.name = myProf.name;
+                    }
+                    if (!state.currentUser.gender) {
+                        state.currentUser.gender = (myProf.gender === 'girls' || myProf.gender === 'Girl') ? 'Girl' : 'Boy';
+                    }
+                    if (!state.currentUser.caste) {
+                        state.currentUser.caste = myProf.community;
                     }
                     if (!state.currentUser.img || !state.currentUser.photo) {
                         state.currentUser.img = myProf.img || (Array.isArray(myProf.photos) && myProf.photos[0]);
                         state.currentUser.photo = state.currentUser.img;
                     }
                     state.currentUser.profileId = myProf.id;
-                    state.currentUser.profileComplete = true;
-                    state.profileComplete = true;
-                    try { localStorage.setItem('lagnaSetu_profileComplete', 'true'); } catch(_) {}
+                    const isDone = typeof isProfileFullyComplete === 'function' ? isProfileFullyComplete(state.currentUser) : true;
+                    state.currentUser.profileComplete = isDone;
+                    state.profileComplete = isDone;
                     if (typeof saveSessionState === 'function') saveSessionState();
                 }
             }
