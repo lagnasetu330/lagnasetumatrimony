@@ -1844,9 +1844,16 @@ async function supabaseFetchChatMessages(myId, peerId, myEmail, peerEmail) {
         const myProfId = (typeof state !== 'undefined' && state.currentUser?.profileId) ? Number(state.currentUser.profileId) : 0;
         const normMyEmail = String(myEmail || (typeof state !== 'undefined' && state.currentUser?.email) || '').trim().toLowerCase();
         let normPeerEmail = String(peerEmail || '').trim().toLowerCase();
-        if ((!normPeerEmail || normPeerEmail.includes('•')) && typeof findProfile === 'function') {
-            const p = findProfile(peerId);
-            if (p) normPeerEmail = String(p.rawEmail || p.email || '').trim().toLowerCase();
+        let peerUserId = 0;
+        if (typeof findProfile === 'function') {
+            const p = findProfile(peerId, peerEmail);
+            if (p) {
+                if ((!normPeerEmail || normPeerEmail.includes('•'))) {
+                    normPeerEmail = String(p.rawEmail || p.email || '').trim().toLowerCase();
+                }
+                if (p.userId && !isNaN(Number(p.userId))) peerUserId = Number(p.userId);
+                else if (p.user_id && !isNaN(Number(p.user_id))) peerUserId = Number(p.user_id);
+            }
         }
         if (normPeerEmail.includes('•')) normPeerEmail = '';
 
@@ -1855,6 +1862,16 @@ async function supabaseFetchChatMessages(myId, peerId, myEmail, peerEmail) {
         if (!isNaN(id1) && !isNaN(id2) && id1 > 0 && id2 > 0) {
             orParts.push(`and(sender_id.eq.${id1},receiver_id.eq.${id2})`);
             orParts.push(`and(sender_id.eq.${id2},receiver_id.eq.${id1})`);
+        }
+        if (peerUserId && peerUserId !== id2) {
+            if (!isNaN(id1) && id1 > 0) {
+                orParts.push(`and(sender_id.eq.${id1},receiver_id.eq.${peerUserId})`);
+                orParts.push(`and(sender_id.eq.${peerUserId},receiver_id.eq.${id1})`);
+            }
+            if (myProfId && myProfId !== id1) {
+                orParts.push(`and(sender_id.eq.${myProfId},receiver_id.eq.${peerUserId})`);
+                orParts.push(`and(sender_id.eq.${peerUserId},receiver_id.eq.${myProfId})`);
+            }
         }
         if (myProfId && !isNaN(id2) && id2 > 0 && myProfId !== id1) {
             orParts.push(`and(sender_id.eq.${myProfId},receiver_id.eq.${id2})`);
@@ -2001,13 +2018,21 @@ async function supabaseSaveChatMessage(msgData) {
             ? `thread_${id1}_${id2}` 
             : `thread_${msgData.senderId}_${msgData.receiverId}`;
 
+        let rEmail = (msgData.receiverEmail || '').trim().toLowerCase();
+        if ((!rEmail || rEmail.includes('•')) && typeof findProfile === 'function') {
+            const p = findProfile(msgData.receiverId);
+            if (p && (p.rawEmail || p.email) && !(p.rawEmail || p.email).includes('•')) {
+                rEmail = String(p.rawEmail || p.email).trim().toLowerCase();
+            }
+        }
+
         const payload = {
             id: msgData.id || ('msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6)),
             thread_id: threadId,
             sender_id: Number(msgData.senderId) || msgData.senderId,
             receiver_id: Number(msgData.receiverId) || msgData.receiverId,
             sender_email: (msgData.senderEmail || '').trim().toLowerCase(),
-            receiver_email: (msgData.receiverEmail || '').trim().toLowerCase(),
+            receiver_email: rEmail,
             text: msgData.text,
             time: msgData.time,
             edited: false,
@@ -2294,50 +2319,173 @@ async function supabaseClearUserChat(myId, peerId, myEmail, peerEmail, options =
 
 /**
  * Mark messages received from a specific sender as read
+ * Production Universal Implementation:
+ * 1. Supports direct primary key message IDs targeting (specificMsgIds) for 100% precision.
+ * 2. Gathers ALL candidate sender IDs & emails (peerId, peerProf.id, peerProf.userId, peerProf.user_id, rawEmail).
+ * 3. Gathers ALL candidate receiver IDs & emails (myId, state.currentUser.id, state.currentUser.profileId, rawEmail).
+ * 4. Executes comprehensive multi-identifier updates across IDs and emails in Supabase.
  */
-async function supabaseMarkMessagesAsRead(myId, peerId, myEmail, peerEmail) {
+async function supabaseMarkMessagesAsRead(myId, peerId, myEmail, peerEmail, specificMsgIds = []) {
     const client = getSupabaseClient();
-    if (!client || !myId || !peerId) return { success: true };
+    if (!client) return { success: false, error: 'No client' };
     try {
-        const numMyId = Number(myId);
-        const numPeerId = Number(peerId);
-        const normMyEmail = (myEmail || (window.state && state.currentUser && state.currentUser.email) || '').trim().toLowerCase();
-        let normPeerEmail = (peerEmail || '').trim().toLowerCase();
-        if (!normPeerEmail && typeof findProfile === 'function') {
-            const peerProf = findProfile(peerId);
-            if (peerProf && peerProf.email) normPeerEmail = peerProf.email.trim().toLowerCase();
-        }
         const nowIso = new Date().toISOString();
+        const updatePromises = [];
 
-        // 1. Primary update by numeric IDs
-        const p1 = client.from('messages')
-            .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
-            .eq('sender_id', numPeerId)
-            .eq('receiver_id', numMyId)
-            .eq('is_read', false);
-
-        // 2. Also update by receiver_email if available (handles user ID vs profile ID difference)
-        let p2 = null;
-        if (normMyEmail && numPeerId) {
-            p2 = client.from('messages')
-                .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
-                .eq('sender_id', numPeerId)
-                .eq('receiver_email', normMyEmail)
-                .eq('is_read', false);
+        // 1. Direct Message IDs update (100% accurate, immune to ID / email differences)
+        let idList = [];
+        if (Array.isArray(specificMsgIds) && specificMsgIds.length > 0) {
+            idList = specificMsgIds.map(x => String(x || '').trim()).filter(Boolean);
+        } else if (typeof specificMsgIds === 'string' && specificMsgIds.trim()) {
+            idList = [specificMsgIds.trim()];
         }
 
-        // 3. Check if currentUser has an explicit profileId that differs from numMyId
-        let p3 = null;
-        const myProfId = (window.state && state.currentUser && state.currentUser.profileId) ? Number(state.currentUser.profileId) : 0;
-        if (myProfId && myProfId !== numMyId) {
-            p3 = client.from('messages')
-                .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
-                .eq('sender_id', numPeerId)
-                .eq('receiver_id', myProfId)
-                .eq('is_read', false);
+        if (idList.length > 0) {
+            const chunkSize = 50;
+            for (let i = 0; i < idList.length; i += chunkSize) {
+                const chunk = idList.slice(i, i + chunkSize);
+                updatePromises.push(
+                    client.from('messages')
+                        .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
+                        .in('id', chunk)
+                        .eq('is_read', false)
+                );
+            }
         }
 
-        await Promise.all([p1, p2, p3].filter(Boolean));
+        // 2. Multi-Identifier Sender Candidate Resolution (the other user who dispatched the messages)
+        const senderIds = new Set();
+        const senderEmails = new Set();
+        if (peerId) {
+            const numPeer = Number(peerId);
+            if (!isNaN(numPeer) && numPeer > 0) senderIds.add(numPeer);
+            senderIds.add(String(peerId).trim());
+        }
+
+        let peerProf = null;
+        if (typeof findProfile === 'function' && peerId) {
+            peerProf = findProfile(peerId, peerEmail);
+            if (peerProf) {
+                if (peerProf.id) {
+                    const pid = Number(peerProf.id);
+                    if (!isNaN(pid) && pid > 0) senderIds.add(pid);
+                    senderIds.add(String(peerProf.id).trim());
+                }
+                const pUid = peerProf.userId || peerProf.user_id;
+                if (pUid) {
+                    const numUid = Number(pUid);
+                    if (!isNaN(numUid) && numUid > 0) senderIds.add(numUid);
+                    senderIds.add(String(pUid).trim());
+                }
+                const pEmail = peerProf.rawEmail || peerProf.email;
+                if (pEmail && !pEmail.includes('•')) senderEmails.add(pEmail.trim().toLowerCase());
+            }
+        }
+
+        const rawPeerEmail = String(peerEmail || '').trim().toLowerCase();
+        if (rawPeerEmail && !rawPeerEmail.includes('•')) {
+            senderEmails.add(rawPeerEmail);
+        }
+
+        if (typeof CHAT_THREADS !== 'undefined' && Array.isArray(CHAT_THREADS)) {
+            const th = CHAT_THREADS.find(t => String(t.profileId) === String(peerId) || Number(t.profileId) === Number(peerId));
+            if (th) {
+                if (th.peerEmail && !th.peerEmail.includes('•')) senderEmails.add(th.peerEmail.trim().toLowerCase());
+                if (Array.isArray(th.messages)) {
+                    th.messages.forEach(m => {
+                        if (m && m.from === 'them') {
+                            if (m.senderId) {
+                                const sid = Number(m.senderId);
+                                if (!isNaN(sid) && sid > 0) senderIds.add(sid);
+                                senderIds.add(String(m.senderId).trim());
+                            }
+                            if (m.senderEmail && !m.senderEmail.includes('•')) senderEmails.add(m.senderEmail.trim().toLowerCase());
+                        }
+                    });
+                }
+            }
+        }
+
+        // 3. Multi-Identifier Receiver Candidate Resolution (the current user reading messages)
+        const receiverIds = new Set();
+        const receiverEmails = new Set();
+        if (myId) {
+            const numMy = Number(myId);
+            if (!isNaN(numMy) && numMy > 0) receiverIds.add(numMy);
+            receiverIds.add(String(myId).trim());
+        }
+        if (typeof state !== 'undefined' && state && state.currentUser) {
+            const u = state.currentUser;
+            if (u.id) {
+                const uid = Number(u.id);
+                if (!isNaN(uid) && uid > 0) receiverIds.add(uid);
+                receiverIds.add(String(u.id).trim());
+            }
+            if (u.profileId) {
+                const upid = Number(u.profileId);
+                if (!isNaN(upid) && upid > 0) receiverIds.add(upid);
+                receiverIds.add(String(u.profileId).trim());
+            }
+            const uEmail = u.rawEmail || u.email;
+            if (uEmail && !uEmail.includes('•')) receiverEmails.add(uEmail.trim().toLowerCase());
+        }
+        const rawMyEmail = String(myEmail || '').trim().toLowerCase();
+        if (rawMyEmail && !rawMyEmail.includes('•')) {
+            receiverEmails.add(rawMyEmail);
+        }
+
+        const arrSenderIds = Array.from(senderIds);
+        const arrReceiverIds = Array.from(receiverIds);
+        const arrSenderEmails = Array.from(senderEmails);
+        const arrReceiverEmails = Array.from(receiverEmails);
+
+        // A. Match by candidate sender_id IN (...) AND receiver_id IN (...)
+        if (arrSenderIds.length > 0 && arrReceiverIds.length > 0) {
+            updatePromises.push(
+                client.from('messages')
+                    .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
+                    .in('sender_id', arrSenderIds)
+                    .in('receiver_id', arrReceiverIds)
+                    .eq('is_read', false)
+            );
+        }
+
+        // B. Match by candidate sender_email IN (...) AND receiver_id IN (...)
+        if (arrSenderEmails.length > 0 && arrReceiverIds.length > 0) {
+            updatePromises.push(
+                client.from('messages')
+                    .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
+                    .in('sender_email', arrSenderEmails)
+                    .in('receiver_id', arrReceiverIds)
+                    .eq('is_read', false)
+            );
+        }
+
+        // C. Match by candidate sender_id IN (...) AND receiver_email IN (...)
+        if (arrSenderIds.length > 0 && arrReceiverEmails.length > 0) {
+            updatePromises.push(
+                client.from('messages')
+                    .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
+                    .in('sender_id', arrSenderIds)
+                    .in('receiver_email', arrReceiverEmails)
+                    .eq('is_read', false)
+            );
+        }
+
+        // D. Match by candidate sender_email IN (...) AND receiver_email IN (...)
+        if (arrSenderEmails.length > 0 && arrReceiverEmails.length > 0) {
+            updatePromises.push(
+                client.from('messages')
+                    .update({ is_read: true, read_at: nowIso, updated_at: nowIso })
+                    .in('sender_email', arrSenderEmails)
+                    .in('receiver_email', arrReceiverEmails)
+                    .eq('is_read', false)
+            );
+        }
+
+        if (updatePromises.length > 0) {
+            await Promise.all(updatePromises);
+        }
         return { success: true };
     } catch (e) {
         console.warn('[Supabase] Mark read error:', e);

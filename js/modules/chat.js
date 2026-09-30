@@ -3,6 +3,40 @@ let INCOMING_REQUESTS = [];
 let OUTGOING_REQUESTS = [];
 let CHAT_THREADS = [];
 
+// Local Seen Messages Cache (Production-grade persistence against page reloads)
+const LS_SEEN_CACHE_PREFIX = 'ls_seen_msg_ids_';
+
+function getLocalSeenMsgIds(userId) {
+    if (!userId) return new Set();
+    try {
+        const raw = localStorage.getItem(LS_SEEN_CACHE_PREFIX + userId);
+        if (raw) {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) return new Set(arr);
+        }
+    } catch (_) {}
+    return new Set();
+}
+
+function markMessagesSeenLocally(userId, msgIds) {
+    if (!userId || !Array.isArray(msgIds) || msgIds.length === 0) return;
+    try {
+        const set = getLocalSeenMsgIds(userId);
+        let changed = false;
+        msgIds.forEach(id => {
+            if (id && !set.has(String(id))) {
+                set.add(String(id));
+                changed = true;
+            }
+        });
+        if (changed) {
+            const arr = Array.from(set);
+            const trimmed = arr.length > 2500 ? arr.slice(arr.length - 2500) : arr;
+            localStorage.setItem(LS_SEEN_CACHE_PREFIX + userId, JSON.stringify(trimmed));
+        }
+    } catch (_) {}
+}
+
 function findProfile(id, email) { 
     if (!id && !email) return null;
     const pid = Number(id);
@@ -485,6 +519,9 @@ async function syncUserChatAndInterests() {
             allDbMessages = await supabaseFetchAllUserMessages(myId, myEmail);
         }
 
+        const localSeenIds = getLocalSeenMsgIds(myId);
+        const pendingCloudSyncIds = [];
+
         // Group messages by peerId
         const messagesByPeer = new Map();
         (allDbMessages || []).forEach(m => {
@@ -502,6 +539,13 @@ async function syncUserChatAndInterests() {
             if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(m.deletedForUsers || m.deleted_for_users, myId, myEmail, myProfId)) return;
             if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(myId, peerId, myEmail, rawPeerEmail, m.createdAt)) return;
 
+            const isSeenLocally = m.id && localSeenIds.has(String(m.id));
+            const finalIsRead = isMe || !!m.isRead || !!m.is_read || isSeenLocally;
+
+            if (!isMe && isSeenLocally && (!m.isRead && !m.is_read) && m.id) {
+                pendingCloudSyncIds.push(String(m.id));
+            }
+
             if (!messagesByPeer.has(peerId)) {
                 messagesByPeer.set(peerId, []);
             }
@@ -517,10 +561,15 @@ async function syncUserChatAndInterests() {
                 edited: !!m.edited,
                 isDeleted: !!m.isDeleted,
                 deletedForUsers: Array.isArray(m.deletedForUsers) ? m.deletedForUsers : [],
-                isRead: !!m.isRead,
+                isRead: finalIsRead,
+                is_read: finalIsRead,
                 createdAt: m.createdAt
             });
         });
+
+        if (pendingCloudSyncIds.length > 0 && typeof supabaseMarkMessagesAsRead === 'function') {
+            supabaseMarkMessagesAsRead(myId, 0, myEmail, '', pendingCloudSyncIds).catch(() => {});
+        }
 
         // 3. Reconstruct CHAT_THREADS
         const updatedThreads = [];
@@ -1033,22 +1082,29 @@ function openChatFor(profileId) {
 
     // Mark all incoming messages in this thread as read immediately
     let hadUnread = false;
+    const readMsgIds = [];
     if (thread && Array.isArray(thread.messages)) {
         thread.messages.forEach(m => {
-            if (m.from === 'them' && (!m.isRead || !m.is_read)) {
+            if (m.from === 'them') {
+                if (!m.isRead || !m.is_read) {
+                    hadUnread = true;
+                    if (m.id) readMsgIds.push(String(m.id));
+                }
                 m.isRead = true;
                 m.is_read = true;
-                hadUnread = true;
             }
         });
     }
     if (hadUnread) {
         updateInboxBadge();
     }
+    if (readMsgIds.length > 0 && state.currentUser && state.currentUser.id) {
+        markMessagesSeenLocally(state.currentUser.id, readMsgIds);
+    }
     saveSessionState();
 
     if (typeof supabaseMarkMessagesAsRead === 'function' && state.currentUser && state.currentUser.id) {
-        supabaseMarkMessagesAsRead(state.currentUser.id, pid, myEmail, peerEmail).catch(e => console.warn('[Chat] Mark read note:', e));
+        supabaseMarkMessagesAsRead(state.currentUser.id, pid, myEmail, peerEmail, readMsgIds).catch(e => console.warn('[Chat] Mark read note:', e));
     }
 
     const aEl = document.getElementById('chatAvatar');
@@ -1081,9 +1137,19 @@ function openChatFor(profileId) {
                     return true;
                 });
 
+                const newlyReadDbIds = [];
                 validDbMsgs.forEach(m => {
-                    if (m.from === 'them') m.isRead = true;
+                    if (m.from === 'them') {
+                        if (!m.isRead || !m.is_read) {
+                            if (m.id) newlyReadDbIds.push(String(m.id));
+                        }
+                        m.isRead = true;
+                        m.is_read = true;
+                    }
                 });
+                if (newlyReadDbIds.length > 0 && state.currentUser && state.currentUser.id) {
+                    markMessagesSeenLocally(state.currentUser.id, newlyReadDbIds);
+                }
 
                 // Prune any deleted or cleared messages from thread.messages in memory too
                 thread.messages = (thread.messages || []).filter(m => {
@@ -1117,7 +1183,7 @@ function openChatFor(profileId) {
                 updateInboxBadge();
                 renderChatMessages();
                 if (typeof supabaseMarkMessagesAsRead === 'function') {
-                    supabaseMarkMessagesAsRead(state.currentUser.id, pid, myEmail, peerEmail).catch(() => {});
+                    supabaseMarkMessagesAsRead(state.currentUser.id, pid, myEmail, peerEmail, newlyReadDbIds).catch(() => {});
                 }
             }
         }).catch(e => console.warn('[Chat] Supabase messages fetch note:', e));
@@ -1137,6 +1203,30 @@ function renderChatMessages() {
                 <p>Say hello and start a polite conversation. Strictly text-only messaging with end-to-end privacy.</p>
             </div>`;
         return;
+    }
+
+    // Defensive read-check: ensure all rendered incoming messages in active chat are marked read
+    let unreadIncomingFound = false;
+    const incomingUnreadIds = [];
+    thread.messages.forEach(m => {
+        if (m && m.from === 'them' && (!m.isRead || !m.is_read)) {
+            m.isRead = true;
+            m.is_read = true;
+            unreadIncomingFound = true;
+            if (m.id) incomingUnreadIds.push(String(m.id));
+        }
+    });
+    if (unreadIncomingFound) {
+        if (incomingUnreadIds.length > 0 && state.currentUser && state.currentUser.id) {
+            markMessagesSeenLocally(state.currentUser.id, incomingUnreadIds);
+        }
+        updateInboxBadge();
+        saveSessionState();
+        if (typeof supabaseMarkMessagesAsRead === 'function' && state.currentUser && state.currentUser.id) {
+            const peerEmail = thread.peerEmail || '';
+            const myEmail = (state.currentUser && state.currentUser.email) || '';
+            supabaseMarkMessagesAsRead(state.currentUser.id, state.activeChatId, myEmail, peerEmail, incomingUnreadIds).catch(() => {});
+        }
     }
     thread.messages.forEach(m => {
         if (!m.id) {
@@ -1565,11 +1655,19 @@ function sendChatMessage() {
     // Persist to Supabase PostgreSQL
     if (typeof supabaseSaveChatMessage === 'function' && state.currentUser && state.currentUser.id) {
         const peer = findProfile(state.activeChatId);
-        const resolvedReceiverEmail = (peer && peer.email && !peer.email.includes('•'))
-            ? peer.email
-            : ((thread && thread.peerEmail && !thread.peerEmail.includes('•'))
-                ? thread.peerEmail
-                : (peer ? peer.email : ''));
+        let resolvedReceiverEmail = (peer && peer.rawEmail && !peer.rawEmail.includes('•'))
+            ? peer.rawEmail
+            : ((peer && peer.email && !peer.email.includes('•'))
+                ? peer.email
+                : ((thread && thread.peerEmail && !thread.peerEmail.includes('•'))
+                    ? thread.peerEmail
+                    : ''));
+        if (!resolvedReceiverEmail && peer && typeof PROFILES !== 'undefined' && Array.isArray(PROFILES)) {
+            const pMatch = PROFILES.find(x => x && (x.id === state.activeChatId || x.userId === state.activeChatId || x.id == peer.id));
+            if (pMatch && pMatch.rawEmail && !pMatch.rawEmail.includes('•')) {
+                resolvedReceiverEmail = pMatch.rawEmail;
+            }
+        }
         supabaseSaveChatMessage({
             id: newMsg.id,
             senderId: state.currentUser.id,
@@ -1791,6 +1889,7 @@ function handleIncomingRealtimeMessage(dbMsg) {
         edited: !!dbMsg.edited,
         isDeleted: !!dbMsg.is_deleted,
         isRead: isInThisChat || isMeSender,
+        is_read: isInThisChat || isMeSender,
         createdAt: dbMsg.created_at
     };
 
@@ -1801,13 +1900,16 @@ function handleIncomingRealtimeMessage(dbMsg) {
         CHAT_THREADS.splice(threadIdx, 1);
         CHAT_THREADS.unshift(thread);
     }
+    if (isInThisChat && !isMeSender && dbMsg.id && state.currentUser && state.currentUser.id) {
+        markMessagesSeenLocally(state.currentUser.id, [dbMsg.id]);
+    }
     saveSessionState();
 
     if (isInThisChat) {
         renderChatMessages();
         setTimeout(() => scrollChatToBottom(true), 40);
         if (!isMeSender && typeof supabaseMarkMessagesAsRead === 'function') {
-            supabaseMarkMessagesAsRead(myId, canonicalPeerId, myEmail, peerEmail).catch(() => {});
+            supabaseMarkMessagesAsRead(myId, canonicalPeerId, myEmail, peerEmail, [dbMsg.id]).catch(() => {});
         }
     } else {
         updateInboxBadge();
@@ -1968,7 +2070,11 @@ function handleRealtimeMessageUpdate(dbMsg) {
             m.text = dbMsg.text;
             m.edited = !!dbMsg.edited;
             m.isDeleted = !!dbMsg.is_deleted;
-            m.isRead = !!dbMsg.is_read;
+            const curUserId = state.currentUser ? state.currentUser.id : 0;
+            const localSeen = curUserId ? getLocalSeenMsgIds(curUserId) : null;
+            const wasRead = !!m.isRead || !!m.is_read || (localSeen && localSeen.has(String(dbMsg.id)));
+            m.isRead = wasRead || !!dbMsg.is_read;
+            m.is_read = m.isRead;
             m.readAt = dbMsg.read_at;
             saveSessionState();
             updateInboxBadge();
