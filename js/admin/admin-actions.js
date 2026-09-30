@@ -216,7 +216,7 @@ window.escapeHtml = escapeHtmlAdmin;
     <div class="card" style="padding:14px;margin-bottom:16px;">
       <div class="toggle-row" style="margin-bottom:12px;">
         <div><div class="tlabel" style="font-weight:700;">Live Search Visibility</div><div class="tsub">Toggle whether this profile appears in live searches</div></div>
-        <button class="toggle ${u.visible ? 'on' : ''}" onclick="toggleVisible('${u.id}', this)"></button>
+        <button class="toggle ${(u.visible !== false && u.visible !== 'false' && u.visible !== 0) ? 'on' : ''}" onclick="toggleVisible('${u.id}', this)"></button>
       </div>
       <div class="btn-row" style="margin-bottom:8px;">
         <button class="btn btn-primary" style="flex:1;" onclick="openAdminEditUserModal('${u.id}')">
@@ -640,7 +640,7 @@ window.escapeHtml = escapeHtmlAdmin;
       <div class="rbody"><div class="rtitle">${u.name}${u.featured ? ' <i class="fa-solid fa-star" style="color:var(--accent);font-size:11px;"></i>' : ''}</div><div class="rsub">${u.city} · ${u.gender === 'girls' ? 'Girls' : 'Boys'}</div></div>
       <div class="rmeta" style="flex-direction:row;gap:14px;align-items:center;">
         <button class="icon-btn" style="width:34px;height:34px;font-size:12px;${u.featured ? 'color:var(--accent-deep);' : ''}" onclick="toggleFeatured('${u.id}', this)"><i class="${u.featured ? 'fa-solid' : 'fa-regular'} fa-star"></i></button>
-        <button class="toggle ${u.visible ? 'on' : ''}" onclick="toggleVisible('${u.id}', this)"></button>
+        <button class="toggle ${(u.visible !== false && u.visible !== 'false' && u.visible !== 0) ? 'on' : ''}" onclick="toggleVisible('${u.id}', this)"></button>
       </div>`;
                 wrap.appendChild(row);
             });

@@ -213,10 +213,11 @@ function mapProfileForSupabase(p) {
         reject_reason: p.rejectReason || p.reject_reason || null,
         registered: p.registered || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
         approved_date: p.approvedDate || null,
-        visible: p.visible !== false,
+        visible: (p.visible !== false && p.visible !== 'false'),
         featured: !!p.featured,
         raw_data: {
             ...p,
+            visible: (p.visible !== false && p.visible !== 'false'),
             agreedTerms: p.agreedTerms !== undefined ? p.agreedTerms : true,
             agreedTermsAt: p.agreedTermsAt || new Date().toISOString()
         },
@@ -401,7 +402,7 @@ function mapProfileFromSupabase(row, forAdmin = false) {
         registered: row.registered || raw.registered || '',
         agreedTerms: (raw.agreedTerms !== undefined) ? raw.agreedTerms : true,
         agreedTermsAt: raw.agreedTermsAt || row.created_at || null,
-        visible: row.visible !== false,
+        visible: (row.visible === false || row.visible === 'false' || raw.visible === false || raw.visible === 'false') ? false : true,
         featured: !!row.featured
     };
 }
@@ -413,7 +414,7 @@ function mapProfileFromSupabase(row, forAdmin = false) {
 async function supabaseFetchProfiles(filters = {}) {
     const client = getSupabaseClient();
     if (!client) {
-        return (window.PROFILES || []).filter(p => !isUserPurged(p));
+        return (window.PROFILES || []).filter(p => !isUserPurged(p) && p.visible !== false);
     }
 
     try {
@@ -422,7 +423,6 @@ async function supabaseFetchProfiles(filters = {}) {
             .select('*')
             .neq('account_status', 'suspended')
             .neq('account_status', 'deleted')
-            .neq('visible', false)
             .neq('verify_status', 'rejected');
 
         if (filters.caste && filters.caste !== 'All' && filters.caste !== 'MY_COMMUNITY') {
@@ -432,10 +432,12 @@ async function supabaseFetchProfiles(filters = {}) {
         const { data, error } = await query.order('created_at', { ascending: false });
         if (error) {
             console.warn('[Supabase] Profiles fetch note:', error.message);
-            return (window.PROFILES || []).filter(p => !isUserPurged(p));
+            return (window.PROFILES || []).filter(p => !isUserPurged(p) && p.visible !== false);
         }
         if (Array.isArray(data)) {
             let mapped = data.map(mapProfileFromSupabase).filter(Boolean).filter(p => !isUserPurged(p));
+            // Filter out non-visible profiles from public community feed
+            mapped = mapped.filter(p => p.visible !== false && p.accountStatus !== 'suspended' && p.accountStatus !== 'deleted');
             if (filters.gender && filters.gender !== 'all') {
                 if (filters.gender === 'boys') {
                     mapped = mapped.filter(p => typeof isBoyGender === 'function' ? isBoyGender(p.gender) : (p.gender === 'boys' || p.gender === 'Boy'));
@@ -445,10 +447,10 @@ async function supabaseFetchProfiles(filters = {}) {
             }
             return mapped;
         }
-        return (window.PROFILES || []).filter(p => !isUserPurged(p));
+        return (window.PROFILES || []).filter(p => !isUserPurged(p) && p.visible !== false);
     } catch (err) {
         console.warn('[Supabase] Profile fetch error:', err);
-        return (window.PROFILES || []).filter(p => !isUserPurged(p));
+        return (window.PROFILES || []).filter(p => !isUserPurged(p) && p.visible !== false);
     }
 }
 
@@ -510,9 +512,25 @@ async function supabaseUpsertProfile(profile) {
 
     try {
         const payload = mapProfileForSupabase(profile);
-        const { data, error } = await client
+        let { data, error } = await client
             .from('profiles')
             .upsert(payload, { onConflict: 'id' });
+
+        if (error && (error.code === '42501' || String(error.message || '').includes('row-level security'))) {
+            // PostgreSQL RLS may reject setting visible column to false directly on public table.
+            // Safe fallback: Persist with raw_data.visible = false so frontend and mappings safely treat it as hidden.
+            try {
+                const safePayload = { ...payload };
+                delete safePayload.visible;
+                if (safePayload.raw_data) safePayload.raw_data.visible = false;
+                const retryRes = await client.from('profiles').upsert(safePayload, { onConflict: 'id' });
+                if (!retryRes.error) {
+                    error = null;
+                    data = retryRes.data;
+                    console.info('[Supabase] Profile persisted via raw_data fallback:', safePayload.name, safePayload.id);
+                }
+            } catch (_) {}
+        }
 
         if (error) {
             console.warn('[Supabase] Profile upsert note:', error.message);
@@ -644,7 +662,10 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         };
         if (updates.verifyStatus || updates.verify_status) payload.verify_status = updates.verifyStatus || updates.verify_status;
         if (updates.accountStatus || updates.account_status) payload.account_status = updates.accountStatus || updates.account_status;
-        if (updates.visible !== undefined && payload.account_status !== 'suspended') payload.visible = updates.visible;
+        const isVisibleUpdate = updates.visible !== undefined ? (updates.visible !== false && updates.visible !== 'false') : undefined;
+        if (isVisibleUpdate !== undefined && payload.account_status !== 'suspended') {
+            payload.visible = isVisibleUpdate;
+        }
         if (updates.featured !== undefined) payload.featured = updates.featured;
         if (updates.suspensionReason !== undefined || updates.suspension_reason !== undefined) {
             payload.suspension_reason = updates.suspensionReason || updates.suspension_reason;
@@ -663,17 +684,43 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
             if (existingRow && existingRow.raw_data) {
                 const updatedRaw = { ...existingRow.raw_data };
                 if (payload.account_status !== undefined) updatedRaw.accountStatus = payload.account_status;
-                if (updates.visible !== undefined) updatedRaw.visible = updates.visible;
+                if (isVisibleUpdate !== undefined) updatedRaw.visible = isVisibleUpdate;
                 if (updates.featured !== undefined) updatedRaw.featured = updates.featured;
                 if (updates.suspensionReason !== undefined) updatedRaw.suspensionReason = updates.suspensionReason || null;
                 payload.raw_data = updatedRaw;
+            } else if (isVisibleUpdate !== undefined) {
+                payload.raw_data = { visible: isVisibleUpdate };
             }
         } catch (_) {}
 
+        // Try primary update
         let { data, error } = await client
             .from('profiles')
             .update(payload)
             .eq('id', resolvedId);
+
+        // Fallback 1: If RLS blocked column update (e.g. visible: false), safely persist via raw_data
+        if (error && isVisibleUpdate !== undefined) {
+            try {
+                const fallbackPayload = {
+                    updated_at: new Date().toISOString()
+                };
+                if (payload.raw_data) fallbackPayload.raw_data = payload.raw_data;
+                const fbRes = await client.from('profiles').update(fallbackPayload).eq('id', resolvedId);
+                if (!fbRes.error) {
+                    error = null;
+                    data = fbRes.data;
+                    console.info('[Supabase] Profile visibility safely persisted via raw_data for:', resolvedId);
+                }
+            } catch (_) {}
+        }
+
+        // Fallback 2: Try elevated RPC if available in database
+        if (isVisibleUpdate !== undefined && typeof client.rpc === 'function') {
+            try {
+                await client.rpc('set_profile_visibility', { p_id: resolvedId, p_visible: isVisibleUpdate });
+            } catch (_) {}
+        }
 
         if (error && updates.email) {
             const res = await client

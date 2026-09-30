@@ -970,7 +970,8 @@
         function toggleVisible(id, btn) {
             const u = findUser(id);
             if (!u) return;
-            u.visible = !u.visible;
+            const currentVis = (u.visible !== false && u.visible !== 'false' && u.visible !== 0);
+            u.visible = !currentVis;
             if (btn) {
                 if (u.visible) {
                     btn.classList.add('on');
@@ -979,6 +980,24 @@
                 }
             }
             saveAdminData();
+
+            // Synchronize local caches for any active tab or storage
+            try {
+                if (Array.isArray(window.PROFILES)) {
+                    const pIdx = window.PROFILES.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
+                    if (pIdx !== -1) {
+                        window.PROFILES[pIdx].visible = u.visible;
+                    }
+                }
+                const cachedProfiles = JSON.parse(sessionStorage.getItem('lagnaSetu_profiles') || '[]');
+                if (Array.isArray(cachedProfiles) && cachedProfiles.length > 0) {
+                    const cpIdx = cachedProfiles.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
+                    if (cpIdx !== -1) {
+                        cachedProfiles[cpIdx].visible = u.visible;
+                        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(cachedProfiles));
+                    }
+                }
+            } catch (_) {}
 
             // 1. Sync to Supabase PostgreSQL database
             if (typeof supabaseUpdateProfileStatus === 'function') {

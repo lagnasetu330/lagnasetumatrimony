@@ -747,6 +747,11 @@ function openProfile(id) {
         return;
     }
 
+    if (p.visible === false || p.visible === 'false') {
+        showToast('This profile is currently hidden from search.');
+        return;
+    }
+
     // Strict Gender Isolation Rule:
     // A boy can NEVER open/view another boy's profile!
     // A girl can NEVER open/view another girl's profile!

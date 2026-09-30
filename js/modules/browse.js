@@ -218,7 +218,7 @@ function getCurrentUserProfile() {
             ownMobile: state.currentUser.mobile || state.regData?.ownMobile || '',
             img: state.currentUser.img || state.regData?.photo || '',
             photos: (state.currentUser.photos && state.currentUser.photos.length) ? state.currentUser.photos : (state.regData?.photos || []),
-            visible: state.currentUser.visible !== false,
+            visible: (state.currentUser.visible !== false && state.currentUser.visible !== 'false'),
             accountStatus: state.currentUser.status === 'Suspended' ? 'suspended' : 'active',
             paymentStatus: state.currentUser.paymentStatus || 'unpaid'
         };
@@ -349,7 +349,9 @@ function populateEditProfile() {
     // Visibility toggle
     const visibleToggle = document.getElementById('editVisibleToggle');
     if (visibleToggle) {
-        if (myProfile.visible !== false) {
+        const isVis = (myProfile.visible !== false && myProfile.visible !== 'false') &&
+                      (!state.currentUser || (state.currentUser.visible !== false && state.currentUser.visible !== 'false'));
+        if (isVis) {
             visibleToggle.classList.add('on');
         } else {
             visibleToggle.classList.remove('on');
@@ -498,6 +500,7 @@ function saveEditProfile() {
     }
 
     if (state.currentUser) {
+        state.currentUser.visible = isVisible;
         state.currentUser.name = fullName;
         state.currentUser.mobile = formatPhoneNumber(cleanOwnMobile);
         state.currentUser.dob = dobVal;
@@ -513,6 +516,7 @@ function saveEditProfile() {
     }
 
     if (state.regData) {
+        state.regData.visible = isVisible;
         state.regData.name = fullName;
         state.regData.city = city;
         state.regData.taluka = talukaVal;
@@ -527,6 +531,7 @@ function saveEditProfile() {
             const accounts = getStoredAccounts();
             const uIdx = accounts.findIndex(u => (u.email && state.currentUser?.email && u.email.toLowerCase() === state.currentUser.email.toLowerCase()) || (state.currentUser && u.id === state.currentUser.id));
             if (uIdx !== -1) {
+                accounts[uIdx].visible = isVisible;
                 accounts[uIdx].name = fullName;
                 accounts[uIdx].mobile = formatPhoneNumber(cleanOwnMobile);
                 accounts[uIdx].city = city;
@@ -540,6 +545,14 @@ function saveEditProfile() {
             }
         }
     } catch(e) { console.warn(e); }
+
+    // Keep active in-memory window.PROFILES strictly in sync
+    if (Array.isArray(window.PROFILES) && myProfile) {
+        const pIdx = window.PROFILES.findIndex(p => p && (p.id == myProfile.id || (p.email && myProfile.email && p.email.toLowerCase() === myProfile.email.toLowerCase())));
+        if (pIdx !== -1) {
+            window.PROFILES[pIdx].visible = isVisible;
+        }
+    }
 
     // Show live loader during cloud save
     if (typeof showGlobalLoader === 'function') {
@@ -579,7 +592,9 @@ function saveEditProfile() {
         saveCommunityProfiles();
         saveSessionState();
         updateHeaderUserDisplay();
-        showToast('Profile updated successfully! ✨');
+        if (typeof renderHome === 'function' && document.getElementById('homeGirlsList')) renderHome();
+        if (typeof renderBrowse === 'function' && document.getElementById('browseList')) renderBrowse();
+        showToast(isVisible ? 'Profile updated successfully! ✨' : 'Profile updated! Your profile is now hidden from search.');
         go('scr-home');
     });
 }
@@ -792,6 +807,7 @@ function updateHomeStats() {
         p.account_status !== 'deleted' && 
         p.name !== '[Deleted Account]' && 
         p.visible !== false && 
+        p.visible !== 'false' && 
         (typeof isUserPurged !== 'function' || !isUserPurged(p))
     );
     
@@ -878,7 +894,7 @@ function renderHome() {
     const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
 
     const feedProfiles = (window.PROFILES || []).filter(p => {
-        if (!p || p.accountStatus === 'suspended' || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]' || p.visible === false) return false;
+        if (!p || p.accountStatus === 'suspended' || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]' || p.visible === false || p.visible === 'false') return false;
         if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
         if (typeof isSelfProfile === 'function' && isSelfProfile(p)) return false;
         if (state.currentUser) {
@@ -1361,7 +1377,7 @@ function renderBrowse(query) {
 
         // 0. Account Status & Visibility (Admin Moderation & Deletion)
         if (p.accountStatus === 'suspended' || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return false;
-        if (p.visible === false) return false;
+        if (p.visible === false || p.visible === 'false') return false;
         if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
 
         // 1. Strict Matrimonial Gender Isolation Rule:
@@ -1580,7 +1596,7 @@ function renderFavorites() {
     const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
 
     const list = PROFILES.filter(p => {
-        if (!p || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return false;
+        if (!p || p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]' || p.visible === false || p.visible === 'false') return false;
         if (typeof isUserPurged === 'function' && isUserPurged(p)) return false;
         if (!state.favorites.has(p.id)) return false;
         if (isUserBoy && !checkGirl(p.gender)) return false;
