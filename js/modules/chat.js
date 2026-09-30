@@ -3,24 +3,29 @@ let INCOMING_REQUESTS = [];
 let OUTGOING_REQUESTS = [];
 let CHAT_THREADS = [];
 
-function findProfile(id) { 
-    if (!id) return null;
+function findProfile(id, email) { 
+    if (!id && !email) return null;
     const pid = Number(id);
-    const strId = String(id).trim();
+    const strId = String(id || '').trim();
+    const strEmail = String(email || (strId.includes('@') ? strId : '')).trim().toLowerCase();
 
-    if (typeof isUserPurged === 'function' && (isUserPurged(strId) || (!isNaN(pid) && isUserPurged(pid)))) return null;
-
-    // 1. Direct match in window.PROFILES (number or string)
-    let p = (window.PROFILES || []).find(x => x && (x.id === id || String(x.id) === strId || (!isNaN(pid) && Number(x.id) === pid)));
-    if (p) {
-        if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
-        if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
-        return p;
+    if (typeof isUserPurged === 'function') {
+        if (strId && isUserPurged(strId)) return null;
+        if (!isNaN(pid) && pid > 0 && isUserPurged(pid)) return null;
+        if (strEmail && isUserPurged(strEmail)) return null;
     }
 
-    // 2. Match by email if strId contains @
-    if (strId.includes('@')) {
-        p = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === strId.toLowerCase());
+    const profilesList = Array.isArray(window.PROFILES) ? window.PROFILES : [];
+
+    // 1. Direct match by id or userId / user_id in window.PROFILES
+    if (id) {
+        let p = profilesList.find(x => x && (
+            x.id === id || 
+            String(x.id) === strId || 
+            (!isNaN(pid) && pid > 0 && Number(x.id) === pid) ||
+            (x.userId && (String(x.userId) === strId || (!isNaN(pid) && pid > 0 && Number(x.userId) === pid))) ||
+            (x.user_id && (String(x.user_id) === strId || (!isNaN(pid) && pid > 0 && Number(x.user_id) === pid)))
+        ));
         if (p) {
             if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
             if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
@@ -28,15 +33,48 @@ function findProfile(id) {
         }
     }
 
-    // 3. Fallback: Lookup in INCOMING_REQUESTS and OUTGOING_REQUESTS
-    const allReqs = [...(typeof INCOMING_REQUESTS !== 'undefined' ? INCOMING_REQUESTS : []), ...(typeof OUTGOING_REQUESTS !== 'undefined' ? OUTGOING_REQUESTS : [])];
-    const matchedReq = allReqs.find(r => r && (Number(r.profileId) === pid || Number(r.senderId) === pid || Number(r.receiverId) === pid));
+    // 2. Match by email in window.PROFILES
+    if (strEmail && !strEmail.includes('•')) {
+        let p = profilesList.find(x => x && x.email && x.email.trim().toLowerCase() === strEmail);
+        if (p) {
+            if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
+            if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
+            return p;
+        }
+    }
+
+    // 3. Match from existing CHAT_THREADS in memory
+    if (typeof CHAT_THREADS !== 'undefined' && Array.isArray(CHAT_THREADS)) {
+        const thread = CHAT_THREADS.find(t => t && (
+            (id && (String(t.profileId) === strId || (!isNaN(pid) && pid > 0 && Number(t.profileId) === pid))) ||
+            (strEmail && t.peerEmail && t.peerEmail.trim().toLowerCase() === strEmail)
+        ));
+        if (thread && thread.name && thread.name !== 'Community Member' && thread.name !== 'Community Match' && thread.name !== 'Member') {
+            return {
+                id: thread.profileId || pid || id,
+                name: thread.name,
+                img: thread.img || thread.peerAvatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+                email: thread.peerEmail || strEmail || ''
+            };
+        }
+    }
+
+    // 4. Fallback: Lookup in INCOMING_REQUESTS and OUTGOING_REQUESTS
+    const allReqs = [
+        ...(typeof INCOMING_REQUESTS !== 'undefined' && Array.isArray(INCOMING_REQUESTS) ? INCOMING_REQUESTS : []),
+        ...(typeof OUTGOING_REQUESTS !== 'undefined' && Array.isArray(OUTGOING_REQUESTS) ? OUTGOING_REQUESTS : [])
+    ];
+    const matchedReq = allReqs.find(r => r && (
+        (id && (Number(r.profileId) === pid || Number(r.senderId) === pid || Number(r.receiverId) === pid || String(r.profileId) === strId)) ||
+        (strEmail && ((r.senderEmail && r.senderEmail.trim().toLowerCase() === strEmail) || (r.receiverEmail && r.receiverEmail.trim().toLowerCase() === strEmail)))
+    ));
     if (matchedReq) {
-        const isSender = Number(matchedReq.senderId) === pid;
-        const reqEmail = (isSender ? matchedReq.senderEmail : matchedReq.receiverEmail) || '';
+        const isSender = (id && (Number(matchedReq.senderId) === pid || String(matchedReq.senderId) === strId)) || 
+                         (strEmail && matchedReq.senderEmail && matchedReq.senderEmail.trim().toLowerCase() === strEmail);
+        const reqEmail = (isSender ? matchedReq.senderEmail : matchedReq.receiverEmail) || strEmail || '';
         if (typeof isUserPurged === 'function' && (isUserPurged(reqEmail) || isUserPurged(pid))) return null;
-        if (reqEmail) {
-            p = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === reqEmail.trim().toLowerCase());
+        if (reqEmail && !reqEmail.includes('•')) {
+            let p = profilesList.find(x => x && x.email && x.email.trim().toLowerCase() === reqEmail.trim().toLowerCase());
             if (p) {
                 if (p.accountStatus === 'deleted' || p.account_status === 'deleted' || p.name === '[Deleted Account]') return null;
                 if (typeof isUserPurged === 'function' && isUserPurged(p)) return null;
@@ -46,7 +84,7 @@ function findProfile(id) {
         const name = (isSender ? matchedReq.senderName : matchedReq.receiverName) || 'Community Member';
         const img = (isSender ? matchedReq.senderPhoto : matchedReq.receiverPhoto) || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
         return {
-            id: pid,
+            id: (isSender ? matchedReq.senderId : matchedReq.receiverId) || pid || id,
             name: name,
             img: img,
             email: reqEmail,
@@ -54,6 +92,27 @@ function findProfile(id) {
             city: (isSender ? matchedReq.senderCity : matchedReq.receiverCity) || 'Gujarat',
             community: (isSender ? matchedReq.senderCaste : matchedReq.receiverCaste) || 'Community Member'
         };
+    }
+
+    // 5. Fallback: Match from getStoredAccounts (LocalStorage)
+    if (typeof getStoredAccounts === 'function') {
+        try {
+            const accs = getStoredAccounts();
+            if (Array.isArray(accs) && accs.length > 0) {
+                const acc = accs.find(a => a && (
+                    (id && (String(a.id) === strId || (!isNaN(pid) && pid > 0 && Number(a.id) === pid))) ||
+                    (strEmail && a.email && a.email.trim().toLowerCase() === strEmail)
+                ));
+                if (acc && acc.name && acc.name !== 'Community Member' && acc.name !== 'Community Match' && acc.name !== 'Member') {
+                    return {
+                        id: acc.id || pid || id,
+                        name: acc.name,
+                        img: acc.photo || acc.img || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+                        email: acc.email || strEmail || ''
+                    };
+                }
+            }
+        } catch (_) {}
     }
 
     return null;
@@ -1380,12 +1439,17 @@ function sendChatMessage() {
     // Persist to Supabase PostgreSQL
     if (typeof supabaseSaveChatMessage === 'function' && state.currentUser && state.currentUser.id) {
         const peer = findProfile(state.activeChatId);
+        const resolvedReceiverEmail = (peer && peer.email && !peer.email.includes('•'))
+            ? peer.email
+            : ((thread && thread.peerEmail && !thread.peerEmail.includes('•'))
+                ? thread.peerEmail
+                : (peer ? peer.email : ''));
         supabaseSaveChatMessage({
             id: newMsg.id,
             senderId: state.currentUser.id,
             receiverId: state.activeChatId,
             senderEmail: state.currentUser.email,
-            receiverEmail: peer ? peer.email : '',
+            receiverEmail: resolvedReceiverEmail || '',
             text: text,
             time: time,
             edited: false
@@ -1429,8 +1493,46 @@ function showChatToast(senderProfile, messageText, peerId) {
     const senderEl = document.getElementById('chatToastSender');
     const textEl = document.getElementById('chatToastText');
 
-    if (avatarEl) avatarEl.src = senderProfile?.img || senderProfile?.photo || 'images/default_avatar.png';
-    if (senderEl) senderEl.textContent = senderProfile?.name || 'Community Match';
+    const defaultImg = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
+    let profileImg = (senderProfile?.img && !senderProfile.img.includes('default_avatar')) ? senderProfile.img : (senderProfile?.photo || '');
+    if (!profileImg) {
+        const thread = typeof CHAT_THREADS !== 'undefined' ? CHAT_THREADS.find(t => Number(t.profileId) === Number(peerId)) : null;
+        if (thread && thread.img && !thread.img.includes('default_avatar')) {
+            profileImg = thread.img;
+        }
+    }
+    if (!profileImg) profileImg = defaultImg;
+
+    if (avatarEl) {
+        avatarEl.src = profileImg;
+        avatarEl.onerror = function() { this.src = defaultImg; };
+    }
+
+    let name = senderProfile?.name || '';
+    if (!name || name === 'Community Match' || name === 'Community Member') {
+        const thread = typeof CHAT_THREADS !== 'undefined' ? CHAT_THREADS.find(t => Number(t.profileId) === Number(peerId)) : null;
+        if (thread && thread.name && thread.name !== 'Community Match' && thread.name !== 'Community Member') {
+            name = thread.name;
+        } else if (typeof findProfile === 'function') {
+            const fp = findProfile(peerId, senderProfile?.email);
+            if (fp && fp.name && fp.name !== 'Community Match' && fp.name !== 'Community Member') {
+                name = fp.name;
+            }
+        }
+    }
+    if (!name || name === 'Community Match' || name === 'Community Member') {
+        if (senderProfile?.email) {
+            const parts = senderProfile.email.split('@')[0].split(/[._-]/).filter(Boolean);
+            name = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+        }
+    }
+    if (!name || name === 'Community Match') {
+        name = 'Member';
+    }
+
+    if (senderEl) {
+        senderEl.textContent = name;
+    }
     if (textEl) textEl.textContent = messageText || 'Sent you a message';
 
     banner.classList.remove('dismissing');
@@ -1506,23 +1608,50 @@ function handleIncomingRealtimeMessage(dbMsg) {
     if (typeof isUserInDeletedList === 'function' && isUserInDeletedList(dbMsg.deleted_for_users, myId, myEmail, myProfId)) return;
     if (typeof isChatClearedForUser === 'function' && isChatClearedForUser(myId, peerId, myEmail, peerEmail, dbMsg.created_at)) return;
 
-    // Find thread by peerId OR by peer profile found via email
-    let thread = CHAT_THREADS.find(t => Number(t.profileId) === peerId);
-    if (!thread && peerEmail) {
-        const p = (window.PROFILES || []).find(prof => prof && prof.email && prof.email.toLowerCase().trim() === peerEmail);
-        if (p) {
-            thread = CHAT_THREADS.find(t => Number(t.profileId) === Number(p.id));
-        }
-    }
+    // 1. Resolve peer profile through comprehensive multi-tier lookup (Profiles, Threads, Requests, Accounts)
+    let peerProf = (typeof findProfile === 'function') ? findProfile(peerId, peerEmail) : null;
+
+    // 2. Find thread by peerId OR by peerEmail OR by resolved profile ID
+    let thread = CHAT_THREADS.find(t => {
+        if (!t) return false;
+        if (peerId && Number(t.profileId) === peerId) return true;
+        if (peerProf && peerProf.id && Number(t.profileId) === Number(peerProf.id)) return true;
+        if (peerEmail && t.peerEmail && t.peerEmail.trim().toLowerCase() === peerEmail) return true;
+        return false;
+    });
+
+    const canonicalPeerId = (peerProf && peerProf.id)
+        ? Number(peerProf.id)
+        : (thread && thread.profileId ? Number(thread.profileId) : peerId);
+
+    // If thread not found, initialize it with all known attributes
     if (!thread) {
-        thread = { profileId: peerId, messages: [] };
+        thread = {
+            profileId: canonicalPeerId,
+            peerEmail: peerEmail || (peerProf ? peerProf.email : ''),
+            name: peerProf ? peerProf.name : '',
+            img: peerProf ? peerProf.img : '',
+            messages: []
+        };
         CHAT_THREADS.push(thread);
+    } else {
+        // Backfill missing info in existing thread
+        if (!thread.name && peerProf && peerProf.name) thread.name = peerProf.name;
+        if (!thread.img && peerProf && peerProf.img) thread.img = peerProf.img;
+        if (!thread.peerEmail && peerEmail) thread.peerEmail = peerEmail;
+        if (canonicalPeerId && Number(thread.profileId) !== canonicalPeerId) {
+            thread.profileId = canonicalPeerId;
+        }
     }
 
     if (thread.messages.some(m => m.id === dbMsg.id)) return;
 
     const activeScreen = document.querySelector('.screen.active');
-    const isInThisChat = activeScreen && activeScreen.id === 'scr-chat' && (Number(state.activeChatId) === peerId || (thread && Number(state.activeChatId) === Number(thread.profileId)));
+    const isInThisChat = activeScreen && activeScreen.id === 'scr-chat' && (
+        Number(state.activeChatId) === peerId ||
+        Number(state.activeChatId) === canonicalPeerId ||
+        (thread && Number(state.activeChatId) === Number(thread.profileId))
+    );
 
     const incomingObj = {
         id: dbMsg.id,
@@ -1552,7 +1681,7 @@ function handleIncomingRealtimeMessage(dbMsg) {
         renderChatMessages();
         setTimeout(() => scrollChatToBottom(true), 40);
         if (!isMeSender && typeof supabaseMarkMessagesAsRead === 'function') {
-            supabaseMarkMessagesAsRead(myId, peerId, myEmail, peerEmail).catch(() => {});
+            supabaseMarkMessagesAsRead(myId, canonicalPeerId, myEmail, peerEmail).catch(() => {});
         }
     } else {
         updateInboxBadge();
@@ -1560,25 +1689,109 @@ function handleIncomingRealtimeMessage(dbMsg) {
             renderInbox();
         }
         if (!isMeSender) {
-            const peer = findProfile(peerId) || {
-                name: dbMsg.sender_name || 'Community Match',
-                img: dbMsg.sender_photo || 'images/default_avatar.png'
+            // High-fidelity sender name and avatar resolution
+            const fallbackAvatar = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
+            let bestName = '';
+            if (peerProf && peerProf.name && peerProf.name !== 'Community Match' && peerProf.name !== 'Community Member' && peerProf.name !== 'Member') {
+                bestName = peerProf.name;
+            } else if (thread && thread.name && thread.name !== 'Community Match' && thread.name !== 'Community Member' && thread.name !== 'Member') {
+                bestName = thread.name;
+            } else if (peerEmail) {
+                const parts = peerEmail.split('@')[0].split(/[._-]/).filter(Boolean);
+                bestName = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
+            }
+            if (!bestName || bestName === 'Community Match') bestName = 'Member';
+
+            let bestImg = (peerProf && peerProf.img && !peerProf.img.includes('default_avatar')) ? (peerProf.img || peerProf.photo) : null;
+            if (!bestImg && thread && thread.img && !thread.img.includes('default_avatar')) {
+                bestImg = thread.img;
+            }
+            if (!bestImg) {
+                bestImg = fallbackAvatar;
+            }
+
+            const toastPeerObj = {
+                id: canonicalPeerId,
+                name: bestName,
+                img: bestImg,
+                email: peerEmail
             };
-            showChatToast(peer, dbMsg.text, peerId);
+
+            showChatToast(toastPeerObj, dbMsg.text, canonicalPeerId);
+
             if (typeof addUserRealtimeNotification === 'function') {
                 const activeScr = document.querySelector('.screen.active');
                 if (!activeScr || activeScr.id !== 'scr-chat') {
                     addUserRealtimeNotification({
                         id: `msg_${dbMsg.id || Date.now()}`,
                         icon: 'fa-comment-dots',
-                        title: `New message from ${peer.name}`,
+                        title: `New message from ${bestName}`,
                         desc: String(dbMsg.text || 'Sent you a message').slice(0, 70),
                         time: 'Just now',
                         unread: true,
                         actionType: 'chat',
-                        actionTarget: String(peerId)
+                        actionTarget: String(canonicalPeerId)
                     });
                 }
+            }
+
+            // Realtime async backfill from Supabase to guarantee 100% profile accuracy
+            if (typeof getSupabaseClient === 'function' && getSupabaseClient() && (peerEmail || canonicalPeerId)) {
+                (async () => {
+                    try {
+                        const client = getSupabaseClient();
+                        let pQuery = client.from('profiles').select('id, name, email, user_id, img, photo, photos');
+                        if (peerEmail && !peerEmail.includes('•')) {
+                            pQuery = pQuery.ilike('email', peerEmail);
+                        } else if (canonicalPeerId) {
+                            pQuery = pQuery.or(`id.eq.${canonicalPeerId},user_id.eq.${canonicalPeerId}`);
+                        }
+                        const { data: dbProfs } = await pQuery.limit(1);
+                        if (Array.isArray(dbProfs) && dbProfs.length > 0) {
+                            const rawP = dbProfs[0];
+                            const realName = rawP.name || '';
+                            const realImg = rawP.img || rawP.photo || (Array.isArray(rawP.photos) ? rawP.photos[0] : '');
+                            if (realName && realName !== 'Community Match' && realName !== 'Member') {
+                                if (thread) {
+                                    thread.name = realName;
+                                    if (realImg) thread.img = realImg;
+                                    if (rawP.id) thread.profileId = Number(rawP.id);
+                                }
+                                if (Array.isArray(window.PROFILES)) {
+                                    const ex = window.PROFILES.find(x => x && (Number(x.id) === Number(rawP.id) || (x.email && x.email.toLowerCase() === (rawP.email || '').toLowerCase())));
+                                    if (ex) {
+                                        ex.name = realName;
+                                        if (realImg) ex.img = realImg;
+                                    } else {
+                                        window.PROFILES.push({
+                                            id: rawP.id,
+                                            userId: rawP.user_id || rawP.id,
+                                            name: realName,
+                                            email: rawP.email,
+                                            img: realImg,
+                                            photos: rawP.photos || [realImg]
+                                        });
+                                    }
+                                }
+                                // Update toast DOM live if currently visible
+                                const banner = document.getElementById('chatToastBanner');
+                                if (banner && banner.style.display !== 'none' && (activeChatToastPeerId === canonicalPeerId || activeChatToastPeerId === Number(rawP.id) || activeChatToastPeerId === Number(peerId))) {
+                                    const senderEl = document.getElementById('chatToastSender');
+                                    const avatarEl = document.getElementById('chatToastAvatar');
+                                    if (senderEl) senderEl.textContent = realName;
+                                    if (avatarEl && realImg) avatarEl.src = realImg;
+                                }
+                                // Refresh inbox if currently visible
+                                const curScr = document.querySelector('.screen.active');
+                                if (curScr && curScr.id === 'scr-inbox' && typeof renderInbox === 'function') {
+                                    renderInbox();
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('[Chat] Async profile backfill note:', e);
+                    }
+                })();
             }
         }
     }
