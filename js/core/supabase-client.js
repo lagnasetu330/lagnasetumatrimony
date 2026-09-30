@@ -1329,7 +1329,19 @@ async function supabaseCheckUserExists(email) {
         const user = Array.isArray(uData) && uData.length > 0 ? uData[0] : null;
 
         const exists = Boolean(profile || user);
-        const isSuspended = (profile && profile.account_status === 'suspended') || (user && user.status === 'Suspended');
+        // profiles.account_status is the PRIMARY source of truth for suspension.
+        // Only fall back to users.status if the profile explicitly has no 'active' status
+        // to prevent stale users table data from falsely flagging active users as suspended.
+        let isSuspended = false;
+        if (profile && profile.account_status === 'suspended') {
+            isSuspended = true;
+        } else if (profile && (profile.account_status === 'active' || profile.account_status === 'Active')) {
+            // Profile explicitly active — never suspended regardless of users table
+            isSuspended = false;
+        } else if (!profile && user && (user.status === 'Suspended' || user.status === 'suspended')) {
+            // No profile row yet, fall back to users table
+            isSuspended = true;
+        }
 
         return {
             online: true,

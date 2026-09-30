@@ -618,7 +618,12 @@ window.escapeHtml = escapeHtmlAdmin;
             let list = USERS.filter(u => u.accountStatus !== 'suspended');
             if (query) {
                 const q = query.toLowerCase();
-                list = list.filter(u => u.name.toLowerCase().includes(q) || u.city.toLowerCase().includes(q));
+                list = list.filter(u =>
+                    ((u.name || '').toLowerCase().includes(q)) ||
+                    ((u.city || u.village || '').toLowerCase().includes(q)) ||
+                    ((u.email || '').toLowerCase().includes(q)) ||
+                    ((u.community || u.caste || '').toLowerCase().includes(q))
+                );
             }
             const wrap = document.getElementById('profileMgmtList');
             wrap.innerHTML = '';

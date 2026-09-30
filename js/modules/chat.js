@@ -467,11 +467,36 @@ async function syncUserChatAndInterests() {
             if (typeof isSelfProfile === 'function' && isSelfProfile(pid)) return;
             if (!processedPeers.has(pid)) {
                 processedPeers.add(pid);
-                const peerProf = findProfile(pid);
+                let peerProf = findProfile(pid);
+                // If not found by ID, try finding by peerEmail from messages
+                if (!peerProf && msgs && msgs.length > 0) {
+                    const firstMsg = msgs[0];
+                    const peerEmail = (Number(firstMsg.senderId) === myId || (firstMsg.senderEmail || '').toLowerCase() === myEmail)
+                        ? firstMsg.receiverEmail
+                        : firstMsg.senderEmail;
+                    if (peerEmail) {
+                        peerProf = (window.PROFILES || []).find(x => x && x.email && x.email.trim().toLowerCase() === peerEmail.trim().toLowerCase()) || null;
+                    }
+                }
+                // Try finding name from interest requests as final fallback
+                let peerName = 'Member';
+                let peerImg = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop';
+                if (peerProf) {
+                    peerName = peerProf.name || 'Member';
+                    peerImg = peerProf.img || peerImg;
+                } else {
+                    const allReqs = [...INCOMING_REQUESTS, ...OUTGOING_REQUESTS];
+                    const matchedReq = allReqs.find(r => r && (Number(r.profileId) === pid || Number(r.senderId) === pid || Number(r.receiverId) === pid));
+                    if (matchedReq) {
+                        const isSender = Number(matchedReq.senderId) === pid;
+                        peerName = (isSender ? matchedReq.senderName : matchedReq.receiverName) || peerName;
+                        peerImg = (isSender ? matchedReq.senderPhoto : matchedReq.receiverPhoto) || peerImg;
+                    }
+                }
                 updatedThreads.push({
                     profileId: pid,
-                    name: peerProf ? peerProf.name : 'Community Member',
-                    img: peerProf ? peerProf.img : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+                    name: peerName,
+                    img: peerImg,
                     messages: msgs
                 });
             }

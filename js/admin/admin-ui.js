@@ -1000,6 +1000,7 @@
                 const uid = state.activeUserId || sessionStorage.getItem('admin_activeUserId');
                 if (uid) openUserDetail(uid);
             }
+            if (active.id === 'scr-profiles' && typeof renderProfileMgmt === 'function') renderProfileMgmt();
             if (active.id === 'scr-interests' && typeof renderInterests === 'function') renderInterests();
             if (active.id === 'scr-interestdetail' && typeof openInterestDetail === 'function') {
                 const iid = state.activeInterestId || sessionStorage.getItem('admin_activeInterestId');
@@ -1007,6 +1008,7 @@
             }
             if (active.id === 'scr-payments' && typeof renderPayments === 'function') renderPayments();
             if (active.id === 'scr-reports' && typeof renderReports === 'function') renderReports();
+            if (active.id === 'scr-castes' && typeof renderCastes === 'function') renderCastes();
         }
         window.refreshCurrentScreen = refreshCurrentScreen;
 

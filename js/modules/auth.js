@@ -854,6 +854,13 @@ async function doLogin() {
             : (String(prof.gender || usr.gender || '').toLowerCase().includes('girl') || String(prof.gender || usr.gender || '').toLowerCase() === 'female');
 
         if (!matchedUser) {
+            // profiles.account_status is the primary source of truth for suspension status
+            // Only use users.status as fallback if profiles table has no explicit 'active' status
+            const isSuspendedAtLogin = prof.account_status === 'suspended'
+                ? true
+                : (prof.account_status === 'active' || prof.account_status === 'Active')
+                    ? false
+                    : (usr.status === 'Suspended');
             matchedUser = {
                 id: prof.id || usr.id || Date.now(),
                 email: email.toLowerCase(),
@@ -861,7 +868,7 @@ async function doLogin() {
                 gender: isGirlUser ? 'Girl' : 'Boy',
                 caste: prof.community || usr.caste || '',
                 mobile: prof.mobile || usr.mobile || '',
-                status: (prof.account_status === 'suspended' || usr.status === 'Suspended') ? 'Suspended' : 'Active',
+                status: isSuspendedAtLogin ? 'Suspended' : 'Active',
                 profileComplete: isProfileDone,
                 paymentStatus: isGirlUser ? 'Free' : ((prof.payment_status === 'paid' || prof.payment_status === 'active') ? 'Active' : 'Unpaid'),
                 passwordHash: passHash

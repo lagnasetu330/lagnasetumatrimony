@@ -217,7 +217,10 @@ function getCurrentUserProfile() {
             hobbies: state.currentUser.hobbies || state.regData?.hobbies || [],
             ownMobile: state.currentUser.mobile || state.regData?.ownMobile || '',
             img: state.currentUser.img || state.regData?.photo || '',
-            photos: (state.currentUser.photos && state.currentUser.photos.length) ? state.currentUser.photos : (state.regData?.photos || [])
+            photos: (state.currentUser.photos && state.currentUser.photos.length) ? state.currentUser.photos : (state.regData?.photos || []),
+            visible: state.currentUser.visible !== false,
+            accountStatus: state.currentUser.status === 'Suspended' ? 'suspended' : 'active',
+            paymentStatus: state.currentUser.paymentStatus || 'unpaid'
         };
         window.PROFILES = window.PROFILES || [];
         window.PROFILES.unshift(myProfile);
@@ -547,6 +550,15 @@ function saveEditProfile() {
     const promises = [];
     if (typeof supabaseUpsertProfile === 'function' && myProfile) {
         promises.push(supabaseUpsertProfile(myProfile).catch(err => console.warn('[Supabase] Edit sync notice:', err)));
+    }
+    // Explicit visibility sync — ensures visible field is always saved correctly
+    if (typeof supabaseUpdateProfileStatus === 'function' && myProfile && myProfile.id) {
+        promises.push(
+            supabaseUpdateProfileStatus(myProfile.id, {
+                visible: isVisible,
+                email: myProfile.email || (state.currentUser && state.currentUser.email)
+            }).catch(err => console.warn('[Supabase] Visibility sync notice:', err))
+        );
     }
     if (typeof supabaseUpsertUser === 'function' && state.currentUser) {
         promises.push(supabaseUpsertUser({
