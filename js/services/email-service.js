@@ -396,13 +396,46 @@ function getInterestDeclinedEmailHtml(sender, receiver) {
  * @param {string} toEmail
  * @param {string} toName
  * @param {string} reason - Admin-entered reason for deletion
+ * @param {string|number} [extraUserId] - Optional user/profile ID for unmasked email lookup
  */
-async function sendAccountDeletionEmail(toEmail, toName, reason) {
-    if (!toEmail) {
-        console.warn('[EmailService] sendAccountDeletionEmail: recipient email missing.');
-        return { success: false, reason: 'missing_email' };
+async function sendAccountDeletionEmail(toEmail, toName, reason, extraUserId) {
+    let cleanEmail = String(toEmail || '').trim().toLowerCase();
+    const isCleanEmail = (str) => Boolean(
+        str && 
+        typeof str === 'string' && 
+        str.includes('@') && 
+        !str.includes('•') && 
+        !str.includes('*') && 
+        !str.endsWith('@deleted.local')
+    );
+
+    // Self-healing: If email is missing or masked, attempt lookup from Supabase using extraUserId
+    if (!isCleanEmail(cleanEmail) && extraUserId && typeof getSupabaseClient === 'function') {
+        try {
+            const client = getSupabaseClient();
+            if (client) {
+                const numId = Number(extraUserId);
+                if (!isNaN(numId) && numId > 0) {
+                    const { data: p } = await client.from('profiles').select('email, raw_data').eq('id', numId).maybeSingle();
+                    if (p && isCleanEmail(p.email)) cleanEmail = p.email.trim().toLowerCase();
+                    else if (p?.raw_data && isCleanEmail(p.raw_data.rawEmail)) cleanEmail = p.raw_data.rawEmail.trim().toLowerCase();
+                    else if (p?.raw_data && isCleanEmail(p.raw_data.email)) cleanEmail = p.raw_data.email.trim().toLowerCase();
+                }
+                if (!isCleanEmail(cleanEmail)) {
+                    const { data: u } = await client.from('users').select('email').eq('id', extraUserId).maybeSingle();
+                    if (u && isCleanEmail(u.email)) cleanEmail = u.email.trim().toLowerCase();
+                }
+            }
+        } catch(e) {
+            console.warn('[EmailService] Self-healing unmasked email note:', e);
+        }
     }
-    const cleanEmail = String(toEmail).trim().toLowerCase();
+
+    if (!isCleanEmail(cleanEmail)) {
+        console.warn('[EmailService] sendAccountDeletionEmail: Valid unmasked recipient email missing or invalid:', toEmail);
+        return { success: false, reason: 'missing_or_invalid_email' };
+    }
+
     const safeName = safeEmailText(toName || 'Member');
     const safeReason = safeEmailText(reason || 'Violation of community guidelines');
     const subject = `Lagna Setu — Important Notice: Your Account Has Been Removed`;
@@ -462,50 +495,112 @@ async function sendAccountDeletionEmail(toEmail, toName, reason) {
 
     console.info(`[EmailService] 🗑️ Sending account deletion notice to: ${cleanEmail} | Reason: ${safeReason}`);
 
-    // Log to Supabase
-    try {
-        const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-        if (client) {
+    const logId = 'del_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+    const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+
+    // Log intent to Supabase email_logs
+    if (client) {
+        try {
             await client.from('email_logs').insert({
-                id: 'del_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+                id: logId,
                 recipient_email: cleanEmail,
                 recipient_name: toName || '',
                 subject: subject,
                 notification_type: 'ACCOUNT_DELETED',
                 payload: { reason: safeReason, deleted_at: new Date().toISOString() },
-                status: 'sent'
+                status: 'sending'
             });
+        } catch(e) {
+            console.warn('[EmailService] email_logs initial note:', e);
         }
-    } catch(e) {
-        console.warn('[EmailService] email_logs note (deletion):', e);
     }
 
-    // Dispatch via EmailJS
+    const templateParams = {
+        to_email: cleanEmail,
+        recipient_email: cleanEmail,
+        user_email: cleanEmail,
+        email: cleanEmail,
+        to: cleanEmail,
+        reply_to: 'lagnasetu330@gmail.com',
+        to_name: safeName,
+        recipient_name: safeName,
+        user_name: safeName,
+        name: safeName,
+        from_name: EMAIL_CONFIG.fromName,
+        subject: subject,
+        reason: safeReason,
+        deletion_reason: safeReason,
+        message: html,
+        message_html: html,
+        html: html,
+        body: html,
+        content: html
+    };
+
+    let dispatchSuccess = false;
+    let dispatchError = null;
+
+    // Method 1: EmailJS SDK
     if (window.emailjs && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey) {
         try {
             await window.emailjs.send(
                 EMAIL_CONFIG.emailjs.serviceId,
                 EMAIL_CONFIG.emailjs.templateId,
-                {
-                    to_email: cleanEmail,
-                    to_name: toName || 'Member',
-                    recipient_email: cleanEmail,
-                    recipient_name: toName || 'Member',
-                    from_name: EMAIL_CONFIG.fromName,
-                    subject: subject,
-                    message: html,
-                    message_html: html
-                },
+                templateParams,
                 EMAIL_CONFIG.emailjs.publicKey
             );
-            console.info(`[EmailService] ✅ Account deletion email sent to ${cleanEmail}`);
-            return { success: true };
-        } catch(e) {
-            console.warn('[EmailService] Deletion email dispatch note:', e);
-            return { success: false, error: e };
+            dispatchSuccess = true;
+            console.info(`[EmailService] ✅ Account deletion email sent via EmailJS SDK to ${cleanEmail}`);
+        } catch(sdkErr) {
+            console.warn('[EmailService] EmailJS SDK note, attempting REST API fallback:', sdkErr);
+            dispatchError = sdkErr;
         }
     }
-    return { success: false, reason: 'emailjs_unconfigured' };
+
+    // Method 2: Direct REST API Fallback
+    if (!dispatchSuccess && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey && typeof fetch === 'function') {
+        try {
+            const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: EMAIL_CONFIG.emailjs.serviceId,
+                    template_id: EMAIL_CONFIG.emailjs.templateId,
+                    user_id: EMAIL_CONFIG.emailjs.publicKey,
+                    template_params: templateParams
+                })
+            });
+            if (resp.ok) {
+                dispatchSuccess = true;
+                console.info(`[EmailService] ✅ Account deletion email sent via EmailJS REST API to ${cleanEmail}`);
+            } else {
+                const respText = await resp.text();
+                dispatchError = new Error(`EmailJS REST returned ${resp.status}: ${respText}`);
+                console.warn('[EmailService] EmailJS REST API dispatch failed:', respText);
+            }
+        } catch(fetchErr) {
+            console.warn('[EmailService] EmailJS REST API fetch error:', fetchErr);
+            dispatchError = fetchErr;
+        }
+    }
+
+    // Finalize log status in Supabase email_logs
+    if (client) {
+        try {
+            await client.from('email_logs').update({
+                status: dispatchSuccess ? 'sent' : 'failed',
+                payload: {
+                    reason: safeReason,
+                    deleted_at: new Date().toISOString(),
+                    error: dispatchSuccess ? null : (dispatchError?.message || String(dispatchError))
+                }
+            }).eq('id', logId);
+        } catch(updErr) {
+            console.warn('[EmailService] email_logs update note:', updErr);
+        }
+    }
+
+    return { success: dispatchSuccess, email: cleanEmail, error: dispatchError };
 }
 
 /**

@@ -1058,6 +1058,98 @@
             }
         }
 
+        /* ========== UNMASKED EMAIL RESOLVER (FOR ADMIN DELETION) ========== */
+        async function resolveUnmaskedUserEmail(userObj, userId, userUid) {
+            const isCleanEmail = (str) => Boolean(
+                str && 
+                typeof str === 'string' && 
+                str.includes('@') && 
+                !str.includes('•') && 
+                !str.includes('*') && 
+                !str.endsWith('@deleted.local')
+            );
+
+            // 1. Direct inspection on provided userObj
+            if (userObj && typeof userObj === 'object') {
+                if (isCleanEmail(userObj.rawEmail)) return userObj.rawEmail.trim().toLowerCase();
+                if (isCleanEmail(userObj.userEmail)) return userObj.userEmail.trim().toLowerCase();
+                if (isCleanEmail(userObj.email)) return userObj.email.trim().toLowerCase();
+                if (userObj.raw_data && typeof userObj.raw_data === 'object') {
+                    if (isCleanEmail(userObj.raw_data.rawEmail)) return userObj.raw_data.rawEmail.trim().toLowerCase();
+                    if (isCleanEmail(userObj.raw_data.email)) return userObj.raw_data.email.trim().toLowerCase();
+                }
+            }
+
+            const tid = (userObj && userObj.id) ? String(userObj.id) : (userId ? String(userId) : '');
+            const tuid = (userObj && (userObj.userId || userObj.user_id)) ? String(userObj.userId || userObj.user_id) : (userUid ? String(userUid) : '');
+
+            // 2. Search in global USERS array
+            if (typeof USERS !== 'undefined' && Array.isArray(USERS)) {
+                const found = USERS.find(x => x && (
+                    (tid && String(x.id) === tid) ||
+                    (tuid && (String(x.userId) === tuid || String(x.user_id) === tuid))
+                ));
+                if (found) {
+                    if (isCleanEmail(found.rawEmail)) return found.rawEmail.trim().toLowerCase();
+                    if (isCleanEmail(found.email)) return found.email.trim().toLowerCase();
+                    if (isCleanEmail(found.userEmail)) return found.userEmail.trim().toLowerCase();
+                }
+            }
+
+            // 3. Search in local storage accounts
+            try {
+                const rawAuth = localStorage.getItem('LS_AUTH_ACCOUNTS');
+                if (rawAuth) {
+                    const list = JSON.parse(rawAuth);
+                    if (Array.isArray(list)) {
+                        const m = list.find(a => a && ((tid && String(a.id) === tid) || (tuid && String(a.id) === tuid) || (a.phone && userObj?.mobile && a.phone === userObj.mobile)));
+                        if (m && isCleanEmail(m.email)) return m.email.trim().toLowerCase();
+                    }
+                }
+            } catch(e) {}
+
+            // 4. Fetch directly from Supabase tables (profiles and users) before deletion
+            try {
+                const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+                if (client) {
+                    // Try profiles table by numeric ID
+                    const numId = Number(tid);
+                    if (!isNaN(numId) && numId > 0) {
+                        const { data: p } = await client.from('profiles').select('email, raw_data').eq('id', numId).maybeSingle();
+                        if (p) {
+                            if (isCleanEmail(p.email)) return p.email.trim().toLowerCase();
+                            if (p.raw_data && isCleanEmail(p.raw_data.rawEmail)) return p.raw_data.rawEmail.trim().toLowerCase();
+                            if (p.raw_data && isCleanEmail(p.raw_data.email)) return p.raw_data.email.trim().toLowerCase();
+                        }
+                    }
+
+                    // Try profiles table by user_id
+                    if (tuid) {
+                        const { data: p2 } = await client.from('profiles').select('email, raw_data').eq('user_id', tuid).maybeSingle();
+                        if (p2) {
+                            if (isCleanEmail(p2.email)) return p2.email.trim().toLowerCase();
+                            if (p2.raw_data && isCleanEmail(p2.raw_data.rawEmail)) return p2.raw_data.rawEmail.trim().toLowerCase();
+                            if (p2.raw_data && isCleanEmail(p2.raw_data.email)) return p2.raw_data.email.trim().toLowerCase();
+                        }
+                    }
+
+                    // Try public.users table
+                    const searchId = tuid || tid;
+                    if (searchId) {
+                        const { data: u } = await client.from('users').select('email').eq('id', searchId).maybeSingle();
+                        if (u && isCleanEmail(u.email)) {
+                            return u.email.trim().toLowerCase();
+                        }
+                    }
+                }
+            } catch(supErr) {
+                console.warn('[Admin Delete] Supabase email resolution note:', supErr);
+            }
+
+            return '';
+        }
+        window.resolveUnmaskedUserEmail = resolveUnmaskedUserEmail;
+
         function openDeleteModal(id) {
             state.activeUserId = id;
             state.deleteTargetUser = findUser(id);
@@ -1067,7 +1159,28 @@
             const nameLabel = document.getElementById('deleteUserNameLabel');
             const emailLabel = document.getElementById('deleteUserEmailLabel');
             if (nameLabel) nameLabel.textContent = u.name || 'this member';
-            if (emailLabel) emailLabel.textContent = u.email || 'this member';
+
+            // Show initial best known email or placeholder
+            const initialEmail = (u.rawEmail && !u.rawEmail.includes('•')) 
+                ? u.rawEmail 
+                : ((u.email && !u.email.includes('•')) ? u.email : '');
+            if (emailLabel) {
+                emailLabel.textContent = initialEmail || 'this member';
+            }
+
+            // Asynchronously resolve true unmasked email and update label
+            (async () => {
+                try {
+                    const resolved = await resolveUnmaskedUserEmail(u, id, u.userId || u.user_id);
+                    if (resolved && state.activeUserId === id) {
+                        if (emailLabel) emailLabel.textContent = resolved;
+                        if (state.deleteTargetUser) {
+                            state.deleteTargetUser.rawEmail = resolved;
+                            state.deleteTargetUser.email = resolved;
+                        }
+                    }
+                } catch(e) {}
+            })();
 
             // Reset .dd dropdown state
             const ddDel = document.getElementById('ddDeleteReason');
@@ -1151,16 +1264,24 @@
                 return; // Stop — reason is required
             }
 
-
             const u = findUser(state.activeUserId) || state.deleteTargetUser || { id: state.activeUserId };
             const targetId = u.id || state.activeUserId;
-            const targetEmail = u.email || '';
             const targetUid = u.userId || u.user_id || '';
             const userName = u.name || 'Member';
 
             closeModal('modalDelete');
 
-            const normEmail = (targetEmail || '').toLowerCase().trim();
+            // 1. CRITICAL: Resolve real unmasked recipient email BEFORE local purge or database wipe!
+            showGlobalLoader(`Preparing account deletion notice for ${userName}...`);
+            let targetEmail = '';
+            try {
+                targetEmail = await resolveUnmaskedUserEmail(u, targetId, targetUid);
+                console.info(`[Admin Delete] Resolved unmasked email for deletion: "${targetEmail}" (ID: ${targetId})`);
+            } catch(resolveErr) {
+                console.warn('[Admin Delete] Email resolution exception:', resolveErr);
+            }
+
+            const normEmail = (targetEmail || u.rawEmail || u.email || '').toLowerCase().trim();
             const normId = String(targetId || '').trim();
             const normUid = String(targetUid || '').trim();
             const ids = [normId, normUid].filter(Boolean);
@@ -1170,12 +1291,31 @@
                 registerPurgedUserId(normId, normUid, normEmail);
             }
 
-            // 1. Immediately remove from local memory & storage so UI is updated without waiting
+            // 2. Send branded account deletion email notification FIRST (BEFORE database purge)
+            let emailSent = false;
+            if (targetEmail && typeof sendAccountDeletionEmail === 'function') {
+                try {
+                    showGlobalLoader(`Sending deletion notice to ${targetEmail}...`);
+                    const emailRes = await sendAccountDeletionEmail(targetEmail, userName, deleteReason, targetId);
+                    if (emailRes && emailRes.success) {
+                        emailSent = true;
+                        console.info(`[Admin Delete] ✅ Deletion email dispatched successfully to ${emailRes.email || targetEmail}`);
+                    } else {
+                        console.warn('[Admin Delete] ⚠️ Deletion email delivery warning:', emailRes);
+                    }
+                } catch(emailErr) {
+                    console.warn('[Admin Delete] Email dispatch exception:', emailErr);
+                }
+            } else if (!targetEmail) {
+                console.warn(`[Admin Delete] No unmasked email found for ${userName} (${targetId}). Deletion email skipped.`);
+            }
+
+            // 3. Immediately remove from local memory & storage so UI is updated cleanly
             USERS = USERS.filter(x => {
                 if (!x) return false;
                 const xId = String(x.id || '');
                 const xUid = String(x.userId || x.user_id || '');
-                const xEml = (x.email || '').toLowerCase().trim();
+                const xEml = (x.rawEmail || x.email || '').toLowerCase().trim();
                 if (ids.includes(xId) || ids.includes(xUid)) return false;
                 if (normEmail && xEml === normEmail) return false;
                 return true;
@@ -1238,7 +1378,7 @@
                                 if (!item) return false;
                                 const iId = String(item.id || '');
                                 const iUid = String(item.userId || item.user_id || '');
-                                const iEml = String(item.email || (isObjWithUserEmail ? item.userEmail : '') || '').toLowerCase().trim();
+                                const iEml = String(item.rawEmail || item.email || (isObjWithUserEmail ? item.userEmail : '') || '').toLowerCase().trim();
                                 if (ids.includes(iId) || ids.includes(iUid)) return false;
                                 if (normEmail && iEml === normEmail) return false;
                                 return true;
@@ -1260,19 +1400,8 @@
             // Navigate cleanly to Users table screen (NEVER splash) and refresh UI
             go('scr-users', true);
             renderUsers();
-            showToast(`Sending deletion notice to ${userName}...`);
 
-            // 2. Send branded account deletion email notification FIRST (before purge)
-            if (targetEmail && typeof sendAccountDeletionEmail === 'function') {
-                try {
-                    await sendAccountDeletionEmail(targetEmail, userName, deleteReason);
-                    console.info(`[Admin Delete] Deletion email sent to ${targetEmail}`);
-                } catch(emailErr) {
-                    console.warn('[Admin Delete] Email dispatch note:', emailErr);
-                }
-            }
-
-            // 3. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
+            // 4. Perform live Supabase purge (Cloudinary photos, RPC, DB wipe, direct delete)
             showGlobalLoader(`Permanently deleting ${userName} from Supabase...`);
             try {
                 if (typeof supabaseDeleteUserCompletely === 'function') {
@@ -1299,7 +1428,13 @@
             }
 
             renderUsers();
-            showToast(`✅ ${userName}'s account removed & deletion notice emailed`);
+            if (emailSent) {
+                showToast(`✅ ${userName}'s account removed & notice emailed to ${targetEmail}`);
+            } else if (targetEmail) {
+                showToast(`✅ ${userName}'s account removed (Notice attempted)`);
+            } else {
+                showToast(`✅ ${userName}'s account permanently removed`);
+            }
         }
 
 
