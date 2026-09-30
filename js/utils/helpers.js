@@ -391,11 +391,20 @@ function goToRegStep3() {
         return;
     }
 
-    // 2. Gender Selection
-    if (!state.regData.gender) {
-        const dd = document.getElementById('ddGender');
-        const trigger = dd ? dd.querySelector('.dd-trigger') : null;
-        highlightFieldError(trigger, 'Please select your gender (Boy or Girl)');
+    // 2. Gender Selection (Strict Mandatory: Boy or Girl)
+    if (!state.regData.gender || (state.regData.gender !== 'Boy' && state.regData.gender !== 'Girl')) {
+        const grid = document.getElementById('genderCardGrid');
+        const err = document.getElementById('genderErrorMsg');
+        if (err) err.style.display = 'block';
+        if (grid) {
+            grid.style.outline = '2px solid var(--error)';
+            grid.style.borderRadius = '14px';
+            grid.style.padding = '4px';
+            if (typeof grid.scrollIntoView === 'function') {
+                grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+        showToast('Please select your gender: Boy (વર) or Girl (કન્યા) is mandatory.');
         return;
     }
 

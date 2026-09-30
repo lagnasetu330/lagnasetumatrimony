@@ -870,7 +870,10 @@ async function doLogin() {
     if (supabaseUserCheck && supabaseUserCheck.exists) {
         const prof = supabaseUserCheck.profile || null;
         const usr = supabaseUserCheck.user || {};
-        const isProfileDone = Boolean(prof && prof.id && prof.name && prof.community);
+        const isProfileDone = Boolean(
+            (prof && prof.id && prof.name && prof.community) ||
+            (usr && usr.profile_complete && usr.name && usr.caste)
+        );
         const isGirlUser = typeof isGirlGender === 'function'
             ? (isGirlGender(prof?.gender) || isGirlGender(usr?.gender))
             : (String(prof?.gender || usr?.gender || '').toLowerCase().includes('girl') || String(prof?.gender || usr?.gender || '').toLowerCase() === 'female');
@@ -887,9 +890,15 @@ async function doLogin() {
                 id: (prof && prof.id) || usr.id || Date.now(),
                 email: email.toLowerCase(),
                 name: (prof && prof.name) || usr.name || '',
-                gender: (prof && prof.gender) ? (isGirlUser ? 'Girl' : 'Boy') : (usr.gender || ''),
+                gender: (prof && prof.gender) ? (isGirlUser ? 'Girl' : 'Boy') : (usr.gender ? ((typeof isGirlGender === 'function' && isGirlGender(usr.gender)) ? 'Girl' : 'Boy') : ''),
                 caste: (prof && prof.community) || usr.caste || '',
-                mobile: (prof && prof.mobile) || usr.mobile || '',
+                mobile: (prof && (prof.own_mobile || prof.mobile)) || usr.mobile || '',
+                city: (prof && (prof.village || prof.city)) || '',
+                district: (prof && prof.district) || '',
+                address: (prof && (prof.full_address || prof.address)) || '',
+                profileId: (prof && prof.id) || usr.id || null,
+                img: (prof && (prof.img || (Array.isArray(prof.photos) && prof.photos[0]))) || '',
+                photo: (prof && (prof.img || (Array.isArray(prof.photos) && prof.photos[0]))) || '',
                 status: isSuspendedAtLogin ? 'Suspended' : 'Active',
                 profileComplete: isProfileDone,
                 paymentStatus: isGirlUser ? 'Free' : ((prof && (prof.payment_status === 'paid' || prof.payment_status === 'active')) ? 'Active' : (usr.payment_status || 'Unpaid')),
@@ -899,9 +908,11 @@ async function doLogin() {
             saveStoredAccounts(registeredUsers);
         } else {
             // Live Reconciliation: Sync existing local cache with Supabase live truth
-            matchedUser.profileComplete = isProfileDone;
+            if (isProfileDone) {
+                matchedUser.profileComplete = true;
+            }
             if (prof && prof.name) matchedUser.name = prof.name;
-            else if (usr && usr.name && !matchedUser.name) matchedUser.name = usr.name;
+            else if (usr && usr.name) matchedUser.name = usr.name;
 
             if (prof && prof.gender) {
                 matchedUser.gender = isGirlUser ? 'Girl' : 'Boy';
@@ -910,15 +921,29 @@ async function doLogin() {
                 } else if (prof.payment_status === 'paid' || prof.payment_status === 'active') {
                     matchedUser.paymentStatus = 'Active';
                 }
-            } else if (usr && usr.gender && !matchedUser.gender) {
-                matchedUser.gender = usr.gender;
+            } else if (usr && usr.gender) {
+                matchedUser.gender = (typeof isGirlGender === 'function' && isGirlGender(usr.gender)) ? 'Girl' : 'Boy';
+                if (matchedUser.gender === 'Girl') {
+                    matchedUser.paymentStatus = 'Free';
+                } else if (usr.payment_status === 'Active' || usr.payment_status === 'paid') {
+                    matchedUser.paymentStatus = 'Active';
+                }
             }
 
             if (prof && prof.community) matchedUser.caste = prof.community;
-            else if (usr && usr.caste && !matchedUser.caste) matchedUser.caste = usr.caste;
+            else if (usr && usr.caste) matchedUser.caste = usr.caste;
 
-            if (prof && prof.mobile) matchedUser.mobile = prof.mobile;
-            else if (usr && usr.mobile && !matchedUser.mobile) matchedUser.mobile = usr.mobile;
+            if (prof && (prof.own_mobile || prof.mobile)) matchedUser.mobile = prof.own_mobile || prof.mobile;
+            else if (usr && usr.mobile) matchedUser.mobile = usr.mobile;
+
+            if (prof && (prof.village || prof.city)) matchedUser.city = prof.village || prof.city;
+            if (prof && prof.district) matchedUser.district = prof.district;
+            if (prof && (prof.full_address || prof.address)) matchedUser.address = prof.full_address || prof.address;
+            if (prof && prof.id) matchedUser.profileId = prof.id;
+            if (prof && (prof.img || (Array.isArray(prof.photos) && prof.photos[0]))) {
+                matchedUser.img = prof.img || prof.photos[0];
+                matchedUser.photo = matchedUser.img;
+            }
         }
     }
 
@@ -1016,7 +1041,14 @@ async function doLogin() {
         // Seal secure tokens on login
         if (typeof computeSecureToken === 'function') {
             matchedUser.genderToken = computeSecureToken('gender', matchedUser.id, matchedUser.email, matchedUser.gender);
-            if (matchedUser.paymentStatus === 'Active' && matchedUser.planExpiry && !matchedUser.paymentToken) {
+            if (matchedUser.gender === 'Boy' && (matchedUser.paymentStatus === 'Active' || matchedUser.paymentStatus === 'paid')) {
+                matchedUser.paymentStatus = 'Active';
+                if (!matchedUser.planExpiry) {
+                    const exp = new Date();
+                    exp.setDate(exp.getDate() + 30);
+                    matchedUser.planExpiry = exp.toISOString().split('T')[0];
+                    matchedUser.planStart = new Date().toISOString().split('T')[0];
+                }
                 matchedUser.paymentToken = computeSecureToken('payment', matchedUser.id, matchedUser.email, matchedUser.planExpiry);
             }
         }

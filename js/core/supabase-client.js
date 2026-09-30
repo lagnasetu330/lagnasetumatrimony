@@ -1310,17 +1310,17 @@ async function supabaseCheckUserExists(email) {
     if (!normEmail) return { online: true, exists: false };
 
     try {
-        // Check profiles table
+        // Check profiles table (fetch full profile record)
         const { data: pData, error: pErr } = await client
             .from('profiles')
-            .select('id, email, account_status, verify_status')
+            .select('*')
             .ilike('email', normEmail)
             .limit(1);
 
-        // Check users table
+        // Check users table (fetch full user record)
         const { data: uData, error: uErr } = await client
             .from('users')
-            .select('id, email, status')
+            .select('*')
             .ilike('email', normEmail)
             .limit(1);
 

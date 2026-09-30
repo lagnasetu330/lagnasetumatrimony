@@ -31,7 +31,20 @@ function submitProfileCompletion() {
     state.profileComplete = true;
 
     // Accurately determine gender (Girl vs Boy) before creating profile
-    const isGirl = (state.regData.gender || state.currentUser?.gender) === 'Girl';
+    const userGender = state.regData.gender || state.currentUser?.gender;
+    if (!userGender || (userGender !== 'Boy' && userGender !== 'Girl')) {
+        showToast('Gender is mandatory. Please select Boy or Girl.');
+        navTo('scr-reg');
+        const grid = document.getElementById('genderCardGrid');
+        const err = document.getElementById('genderErrorMsg');
+        if (err) err.style.display = 'block';
+        if (grid) {
+            grid.style.outline = '2px solid var(--error)';
+            grid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+    }
+    const isGirl = userGender === 'Girl';
 
     // Synchronize ID and Email across users and profiles tables
     const profileId = (state.currentUser && state.currentUser.id) ? state.currentUser.id : (state.regData.userId || Date.now());

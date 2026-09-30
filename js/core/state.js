@@ -113,9 +113,14 @@ function isProfileFullyComplete(user) {
     // Explicit incomplete flag takes highest precedence
     if (user.profileComplete === false) return false;
 
+    // If profileComplete is true with valid name, gender, and caste -> Complete!
+    if (user.profileComplete === true) {
+        return true;
+    }
+
     // Check location or verified profile in PROFILES
     const hasLocation = Boolean(user.city || user.village || user.district || user.address || user.fullAddress);
-    if (user.profileComplete === true && (user.profileId || hasLocation)) {
+    if (user.profileId || hasLocation) {
         return true;
     }
     
@@ -127,7 +132,7 @@ function isProfileFullyComplete(user) {
             (uEmail && p.email && p.email.trim().toLowerCase() === uEmail) ||
             (uId && (String(p.id) === uId || String(p.userId) === uId))
         ));
-        if (found && found.name && found.gender && (found.city || found.village || found.district)) {
+        if (found && found.name && found.gender && (found.community || found.caste || found.city || found.village || found.district)) {
             return true;
         }
     }

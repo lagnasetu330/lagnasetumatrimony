@@ -303,6 +303,58 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function pickGender(g, li) {
     state.regData.gender = g;
+
+    // Card visual updates
+    const boyCard = document.getElementById('genderCardBoy');
+    const girlCard = document.getElementById('genderCardGirl');
+    const boyCheck = document.getElementById('genderCheckBoy');
+    const girlCheck = document.getElementById('genderCheckGirl');
+    const errEl = document.getElementById('genderErrorMsg');
+    const gridEl = document.getElementById('genderCardGrid');
+
+    if (errEl) errEl.style.display = 'none';
+    if (gridEl) gridEl.style.outline = 'none';
+
+    if (g === 'Boy') {
+        if (boyCard) {
+            boyCard.style.borderColor = 'var(--primary)';
+            boyCard.style.background = 'rgba(123,44,191,0.06)';
+            boyCard.style.boxShadow = '0 0 0 3px rgba(123,44,191,0.15)';
+        }
+        if (boyCheck) {
+            boyCheck.className = 'fa-solid fa-circle-check gender-card-check';
+            boyCheck.style.color = 'var(--primary)';
+        }
+        if (girlCard) {
+            girlCard.style.borderColor = 'var(--border)';
+            girlCard.style.background = '#fff';
+            girlCard.style.boxShadow = 'none';
+        }
+        if (girlCheck) {
+            girlCheck.className = 'fa-regular fa-circle gender-card-check';
+            girlCheck.style.color = 'var(--text-faint)';
+        }
+    } else if (g === 'Girl') {
+        if (girlCard) {
+            girlCard.style.borderColor = '#E91E63';
+            girlCard.style.background = 'rgba(233,30,99,0.06)';
+            girlCard.style.boxShadow = '0 0 0 3px rgba(233,30,99,0.15)';
+        }
+        if (girlCheck) {
+            girlCheck.className = 'fa-solid fa-circle-check gender-card-check';
+            girlCheck.style.color = '#E91E63';
+        }
+        if (boyCard) {
+            boyCard.style.borderColor = 'var(--border)';
+            boyCard.style.background = '#fff';
+            boyCard.style.boxShadow = 'none';
+        }
+        if (boyCheck) {
+            boyCheck.className = 'fa-regular fa-circle gender-card-check';
+            boyCheck.style.color = 'var(--text-faint)';
+        }
+    }
+
     const dd = document.getElementById('ddGender');
     if (dd) {
         const trigger = dd.querySelector('.dd-trigger');
