@@ -1016,11 +1016,9 @@ async function doLogin() {
             try {
                 const adminPayments = JSON.parse(localStorage.getItem('LS_ADMIN_PAYMENTS') || '[]');
                 const validPay = adminPayments.find(p => 
-                    (p.userId === matchedUser.id || 
-                    (p.userEmail && p.userEmail.toLowerCase() === email.toLowerCase()) || 
-                    (p.userName && matchedUser.name && p.userName.toLowerCase() === matchedUser.name.toLowerCase())) && 
+                    p && String(p.userId) === String(matchedUser.id) && 
                     p.status === 'success' &&
-                    (p.id && (p.id.startsWith('RZP_') || p.id.startsWith('pay_')))
+                    (p.id && (p.id.startsWith('RZP_') || p.id.startsWith('pay_') || p.id.startsWith('DEMO_')))
                 );
                 if (validPay) {
                     matchedUser.paymentStatus = 'Active';

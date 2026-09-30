@@ -1256,7 +1256,12 @@ async function supabaseDeleteUserCompletely(id, email, extraId, options = {}) {
         // 7. Delete from payments (payments table stores user_id)
         for (const uid of idList) {
             try {
-                await client.from('payments').delete().eq('user_id', uid);
+                await client.from('payments').delete().eq('user_id', String(uid));
+            } catch(e) {}
+        }
+        if (normId) {
+            try {
+                await client.from('payments').delete().eq('user_id', String(normId));
             } catch(e) {}
         }
 
