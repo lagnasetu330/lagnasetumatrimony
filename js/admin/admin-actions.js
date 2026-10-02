@@ -1317,6 +1317,7 @@ async function updateAdminEmail() {
         return;
     }
     ADMIN_CREDS.email = newEmail;
+    window.ADMIN_CREDS = ADMIN_CREDS;
     localStorage.setItem(LS_ADMIN_CREDS_KEY, JSON.stringify(ADMIN_CREDS));
 
     // Save directly to Supabase app_settings
@@ -1327,6 +1328,19 @@ async function updateAdminEmail() {
         } catch(e) {
             console.warn('[Admin] Failed saving email to Supabase:', e);
         }
+    }
+
+    // Refresh session token so active admin remains authenticated
+    if (typeof generateAdminSessionToken === 'function') {
+        try {
+            const refreshedToken = await generateAdminSessionToken(ADMIN_CREDS.email, ADMIN_CREDS.passHash);
+            sessionStorage.setItem('admin_session_token', refreshedToken);
+        } catch(e) {}
+    }
+
+    // If Remember Me is active, sync stored email
+    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
+        localStorage.setItem('lagnaSetu_admin_rememberEmail', newEmail);
     }
 
     syncSettingsUI();

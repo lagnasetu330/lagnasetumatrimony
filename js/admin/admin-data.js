@@ -274,8 +274,9 @@ function loadAdminData() {
         if (storedCreds) {
             try {
                 const parsedCreds = JSON.parse(storedCreds);
-                if (parsedCreds && parsedCreds.email && parsedCreds.pass) {
+                if (parsedCreds && parsedCreds.email && (parsedCreds.passHash || parsedCreds.pass)) {
                     ADMIN_CREDS = parsedCreds;
+                    window.ADMIN_CREDS = ADMIN_CREDS;
                 }
             } catch(e) {}
         }

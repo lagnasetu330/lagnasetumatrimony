@@ -199,7 +199,7 @@
                 <div style="margin-top:26px;">
                     <div class="field"><label>Admin email</label>
                         <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
-                                id="loginEmail" type="email" placeholder="admin@lagnasetu.app" autocomplete="username">
+                                id="loginEmail" type="email" placeholder="Enter Admin ID or Email" autocomplete="username">
                         </div>
                     </div>
                     <div class="field"><label>Password</label>
@@ -240,14 +240,14 @@
                     <i class="fa-solid fa-key"></i>
                 </div>
                 <div class="h-display h-xl">Reset password</div>
-                <p class="p-muted" style="margin-top:6px;">Enter your admin email and we'll send a 6-digit code to
+                <p class="p-muted" style="margin-top:6px;">Enter your registered admin email and we'll send a 6-digit code to
                     verify it's you.</p>
                 <div style="margin-top:26px;">
                     <div class="field"><label>Admin email</label>
                         <div class="input-icon-wrap"><i class="fa-solid fa-envelope leading"></i><input class="input"
-                                id="forgotAdminEmail" type="email" placeholder="admin@lagnasetu.app"></div>
+                                id="forgotAdminEmail" type="email" placeholder="Enter Admin Email" autocomplete="email"></div>
                     </div>
-                    <button class="btn btn-primary" onclick="go('scr-forgot-otp')"><i
+                    <button class="btn btn-primary" id="btnAdminForgotSend" onclick="sendAdminForgotOtp()"><i
                             class="fa-solid fa-paper-plane"></i> Send code</button>
                 </div>
             </div>
@@ -262,18 +262,18 @@
                     <i class="fa-solid fa-envelope-open-text"></i>
                 </div>
                 <div class="h-display h-lg">Verify your email</div>
-                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit code to <b>admin@lagnasetu.app</b></p>
-                <div class="otp-boxes">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
-                    <input maxlength="1" inputmode="numeric" onkeyup="otpMove(this)">
+                <p class="p-muted" style="margin-top:6px;">We sent a 6-digit code to <b id="adminForgotTargetEmail">admin@lagnasetu.app</b></p>
+                <div class="otp-boxes" id="adminForgotOtpBoxes" onpaste="handleAdminForgotOtpPaste(event)">
+                    <input id="adminForgotOtp1" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
+                    <input id="adminForgotOtp2" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
+                    <input id="adminForgotOtp3" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
+                    <input id="adminForgotOtp4" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
+                    <input id="adminForgotOtp5" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
+                    <input id="adminForgotOtp6" maxlength="1" inputmode="numeric" onkeyup="handleAdminForgotOtpInput(this, event)">
                 </div>
-                <div class="p-muted" style="margin-bottom:22px;">Didn't get it? <span class="link-txt"
-                        onclick="showToast('Code re-sent')">Resend code</span></div>
-                <button class="btn btn-primary" onclick="go('scr-newpass')"><i class="fa-solid fa-check"></i> Verify
+                <div class="p-muted" style="margin-bottom:22px;">Didn't get it? <span class="link-txt" id="adminForgotResendBtn"
+                        onclick="resendAdminForgotOtp()">Resend code</span> <span id="adminForgotTimerText" style="display:none;font-weight:600;font-size:12.5px;color:var(--text-muted);margin-left:4px;"></span></div>
+                <button class="btn btn-primary" id="btnAdminForgotVerify" onclick="verifyAdminForgotOtp()"><i class="fa-solid fa-check"></i> Verify
                     code</button>
             </div>
         </section>
@@ -287,15 +287,16 @@
                 <div style="margin-top:26px;">
                     <div class="field"><label>New password</label>
                         <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
-                                type="password" placeholder="••••••••"><button class="trailing-btn"><i
+                                id="adminResetNewPass" type="password" placeholder="••••••••" autocomplete="new-password"><button class="trailing-btn" type="button" onclick="togglePw('adminResetNewPass', this)"><i
                                     class="fa-solid fa-eye"></i></button></div>
                         <span class="hint">Minimum 8 characters</span>
                     </div>
                     <div class="field"><label>Confirm password</label>
-                        <div class="input-icon-wrap"><i class="fa-solid fa-lock leading"></i><input class="input"
-                                type="password" placeholder="••••••••"></div>
+                        <div class="input-icon-wrap"><i class="fa-solid fa-circle-check leading"></i><input class="input"
+                                id="adminResetConfirmPass" type="password" placeholder="••••••••" autocomplete="new-password"><button class="trailing-btn" type="button" onclick="togglePw('adminResetConfirmPass', this)"><i
+                                    class="fa-solid fa-eye"></i></button></div>
                     </div>
-                    <button class="btn btn-primary" onclick="showToast('Password updated'); go('scr-login')"><i
+                    <button class="btn btn-primary" id="btnAdminResetComplete" onclick="completeAdminPasswordReset()"><i
                             class="fa-solid fa-rotate"></i> Update &amp; log in</button>
                 </div>
             </div>
@@ -626,8 +627,7 @@
                 <div class="field"><label>Admin email address</label>
                     <div class="input-icon-wrap">
                         <i class="fa-solid fa-envelope leading"></i>
-                        <input class="input" id="settingsAdminEmail" type="email" placeholder="admin@lagnasetu.app"
-                            value="admin@lagnasetu.app">
+                        <input class="input" id="settingsAdminEmail" type="email" placeholder="Enter Admin Email">
                     </div>
                 </div>
                 <button class="btn btn-outline" type="button" onclick="updateAdminEmail()"><i
@@ -1455,10 +1455,10 @@
         <script src="js/utils/helpers.js?v=3.8"></script>
         <!-- Admin Modular Scripts -->
         <script src="js/core/supabase-client.js?v=3.8"></script>
-        <script src="js/admin/admin-security.js?v=3.6"></script>
-        <script src="js/admin/admin-data.js?v=3.6"></script>
+        <script src="js/admin/admin-security.js?v=3.7"></script>
+        <script src="js/admin/admin-data.js?v=3.7"></script>
         <script src="js/admin/admin-charts.js?v=3.6"></script>
-        <script src="js/admin/admin-actions.js?v=3.6"></script>
+        <script src="js/admin/admin-actions.js?v=3.7"></script>
         <script src="js/admin/admin-analytics.js?v=4.6"></script>
         <!-- EmailJS SDK (for account deletion email notification) -->
         <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>

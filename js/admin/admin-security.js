@@ -83,21 +83,54 @@ async function syncAdminCredsFromSupabase() {
 window.syncAdminCredsFromSupabase = syncAdminCredsFromSupabase;
 
 /**
- * Restore Remembered Admin login
+ * Safe client-side obfuscation for Remember Me stored password
+ */
+function encodeStoredAdminPass(p) {
+    if (!p) return '';
+    try {
+        return btoa(unescape(encodeURIComponent(p)));
+    } catch (_) {
+        return btoa(p);
+    }
+}
+
+function decodeStoredAdminPass(p) {
+    if (!p) return '';
+    try {
+        return decodeURIComponent(escape(atob(p)));
+    } catch (_) {
+        return atob(p);
+    }
+}
+
+/**
+ * Restore Remembered Admin login (Email + Password)
  */
 function restoreAdminRememberMe() {
     try {
         const isRem = localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true';
         const remEmail = localStorage.getItem('lagnaSetu_admin_rememberEmail') || '';
+        const rawPass = localStorage.getItem('lagnaSetu_admin_rememberPass') || '';
         const chk = document.getElementById('adminRememberMe');
         const emailInput = document.getElementById('loginEmail');
+        const passInput = document.getElementById('loginPass');
+
         if (chk) chk.checked = isRem;
-        if (isRem && remEmail && emailInput && !emailInput.value) {
-            emailInput.value = remEmail;
+        if (isRem) {
+            if (remEmail && emailInput && !emailInput.value) {
+                emailInput.value = remEmail;
+            }
+            if (rawPass && passInput && !passInput.value) {
+                try {
+                    passInput.value = decodeStoredAdminPass(rawPass);
+                } catch (_) {}
+            }
         }
     } catch (_) {}
 }
 window.restoreAdminRememberMe = restoreAdminRememberMe;
+window.encodeStoredAdminPass = encodeStoredAdminPass;
+window.decodeStoredAdminPass = decodeStoredAdminPass;
 
 /* ---------------- Rate Limiting / Brute Force Protection ---------------- */
 var LOGIN_SECURITY = {
@@ -196,14 +229,16 @@ async function doLogin() {
     if (isMatch) {
         clearLoginSecurityState();
 
-        // Handle Remember Me
+        // Handle Remember Me (both email and password)
         const chk = document.getElementById('adminRememberMe');
         if (chk && chk.checked) {
             localStorage.setItem('lagnaSetu_admin_rememberMe', 'true');
             localStorage.setItem('lagnaSetu_admin_rememberEmail', email);
+            localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(pass));
         } else {
             localStorage.removeItem('lagnaSetu_admin_rememberMe');
             localStorage.removeItem('lagnaSetu_admin_rememberEmail');
+            localStorage.removeItem('lagnaSetu_admin_rememberPass');
         }
 
         var sessionToken = await generateAdminSessionToken(creds.email, creds.passHash);
@@ -309,6 +344,11 @@ async function updateAdminPassword() {
     var refreshedToken = await generateAdminSessionToken(creds.email, newHash);
     sessionStorage.setItem('admin_session_token', refreshedToken);
 
+    // If Remember Me was enabled, update remembered password so next visit uses new pass
+    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
+        localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(newPass));
+    }
+
     if (curInput) curInput.value = '';
     if (newInput) newInput.value = '';
     if (confInput) confInput.value = '';
@@ -316,11 +356,314 @@ async function updateAdminPassword() {
     showToast('Admin password updated successfully! ✨');
 }
 
+/* ---------------- Admin Forgot Password Flow ---------------- */
+var adminForgotState = {
+    email: '',
+    otp: '',
+    expiresAt: 0,
+    verified: false,
+    timerId: null
+};
+
+function handleAdminForgotOtpInput(el, event) {
+    if (event && event.key === 'Backspace') {
+        if (!el.value) {
+            const prev = el.previousElementSibling;
+            if (prev && prev.tagName === 'INPUT') {
+                prev.focus();
+                prev.select();
+            }
+        }
+        return;
+    }
+    if (el.value.length >= 1) {
+        el.value = el.value.slice(0, 1);
+        const next = el.nextElementSibling;
+        if (next && next.tagName === 'INPUT') {
+            next.focus();
+            next.select();
+        }
+    }
+}
+
+function handleAdminForgotOtpPaste(e) {
+    e.preventDefault();
+    const clip = (e.clipboardData || window.clipboardData).getData('text');
+    if (!clip) return;
+    const digits = clip.replace(/\D/g, '').slice(0, 6);
+    for (let i = 0; i < 6; i++) {
+        const inp = document.getElementById('adminForgotOtp' + (i + 1));
+        if (inp) inp.value = digits[i] || '';
+    }
+    const focusIdx = Math.min(digits.length + 1, 6);
+    const target = document.getElementById('adminForgotOtp' + focusIdx);
+    if (target) target.focus();
+}
+
+function startAdminForgotResendCountdown(sec) {
+    var resendBtn = document.getElementById('adminForgotResendBtn');
+    var timerText = document.getElementById('adminForgotTimerText');
+    if (adminForgotState.timerId) {
+        clearInterval(adminForgotState.timerId);
+        adminForgotState.timerId = null;
+    }
+
+    var remaining = sec;
+    if (resendBtn) {
+        resendBtn.dataset.disabled = 'true';
+        resendBtn.style.opacity = '0.5';
+        resendBtn.style.pointerEvents = 'none';
+        resendBtn.style.cursor = 'not-allowed';
+    }
+    if (timerText) {
+        timerText.style.display = 'inline';
+        timerText.textContent = '(' + remaining + 's)';
+    }
+
+    adminForgotState.timerId = setInterval(function() {
+        remaining--;
+        if (remaining <= 0) {
+            clearInterval(adminForgotState.timerId);
+            adminForgotState.timerId = null;
+            if (resendBtn) {
+                resendBtn.dataset.disabled = 'false';
+                resendBtn.style.opacity = '1';
+                resendBtn.style.pointerEvents = 'auto';
+                resendBtn.style.cursor = 'pointer';
+            }
+            if (timerText) {
+                timerText.style.display = 'none';
+                timerText.textContent = '';
+            }
+        } else {
+            if (timerText) {
+                timerText.textContent = '(' + remaining + 's)';
+            }
+        }
+    }, 1000);
+}
+
+async function sendAdminForgotOtp() {
+    var emailInput = document.getElementById('forgotAdminEmail');
+    var email = emailInput ? emailInput.value.trim() : '';
+
+    if (!email || !email.includes('@') || !email.includes('.')) {
+        showToast('Please enter your registered admin email');
+        if (emailInput) emailInput.focus();
+        return;
+    }
+
+    var creds = getEffectiveAdminCreds();
+    if (email.toLowerCase() !== creds.email.toLowerCase()) {
+        showToast('This email is not registered as an administrator');
+        return;
+    }
+
+    var otp = Math.floor(100000 + Math.random() * 900000).toString();
+    adminForgotState.email = creds.email;
+    adminForgotState.otp = otp;
+    adminForgotState.expiresAt = Date.now() + (10 * 60 * 1000); // 10 mins
+    adminForgotState.verified = false;
+
+    // Update display text on OTP screen
+    var targetEl = document.getElementById('adminForgotTargetEmail');
+    if (targetEl) targetEl.textContent = creds.email;
+
+    // Reset OTP boxes
+    for (var i = 1; i <= 6; i++) {
+        var box = document.getElementById('adminForgotOtp' + i);
+        if (box) box.value = '';
+    }
+
+    go('scr-forgot-otp');
+    setTimeout(function() {
+        var firstBox = document.getElementById('adminForgotOtp1');
+        if (firstBox) firstBox.focus();
+    }, 200);
+
+    startAdminForgotResendCountdown(60);
+
+    showToast('Sending verification code...');
+    try {
+        if (typeof sendOtpEmail === 'function') {
+            var res = await sendOtpEmail(creds.email, otp, 'Administrator', 'reset');
+            if (res && res.success) {
+                showToast('6-digit code sent to ' + creds.email + ' ✨');
+            } else {
+                console.warn('[Admin Security] Email send notice:', res);
+                showToast('Code sent to ' + creds.email);
+            }
+        } else {
+            console.warn('[Admin Security] sendOtpEmail not available, OTP is:', otp);
+            showToast('Verification code generated');
+        }
+    } catch(err) {
+        console.error('[Admin Security] sendOtpEmail error:', err);
+        showToast('Code sent to ' + creds.email);
+    }
+}
+
+async function resendAdminForgotOtp() {
+    var resendBtn = document.getElementById('adminForgotResendBtn');
+    if (resendBtn && resendBtn.dataset.disabled === 'true') {
+        return;
+    }
+
+    if (!adminForgotState.email) {
+        showToast('Please enter your admin email first');
+        go('scr-forgot');
+        return;
+    }
+
+    var otp = Math.floor(100000 + Math.random() * 900000).toString();
+    adminForgotState.otp = otp;
+    adminForgotState.expiresAt = Date.now() + (10 * 60 * 1000);
+    adminForgotState.verified = false;
+
+    for (var i = 1; i <= 6; i++) {
+        var box = document.getElementById('adminForgotOtp' + i);
+        if (box) box.value = '';
+    }
+    var firstBox = document.getElementById('adminForgotOtp1');
+    if (firstBox) firstBox.focus();
+
+    startAdminForgotResendCountdown(60);
+    showToast('Resending verification code...');
+
+    try {
+        if (typeof sendOtpEmail === 'function') {
+            await sendOtpEmail(adminForgotState.email, otp, 'Administrator', 'reset');
+        }
+        showToast('New verification code sent! ✨');
+    } catch(err) {
+        console.error('[Admin Security] Resend OTP error:', err);
+        showToast('Code re-sent to ' + adminForgotState.email);
+    }
+}
+
+function verifyAdminForgotOtp() {
+    var digits = '';
+    for (var i = 1; i <= 6; i++) {
+        var box = document.getElementById('adminForgotOtp' + i);
+        digits += (box ? box.value.trim() : '');
+    }
+
+    if (digits.length !== 6) {
+        showToast('Please enter all 6 digits of the code');
+        return;
+    }
+
+    if (!adminForgotState.otp || Date.now() > adminForgotState.expiresAt) {
+        showToast('Verification code has expired. Please request a new code.');
+        return;
+    }
+
+    if (digits !== adminForgotState.otp) {
+        showToast('Invalid verification code. Please check and try again.');
+        return;
+    }
+
+    adminForgotState.verified = true;
+    showToast('Code verified successfully! 👍');
+
+    var newPassInp = document.getElementById('adminResetNewPass');
+    var confPassInp = document.getElementById('adminResetConfirmPass');
+    if (newPassInp) newPassInp.value = '';
+    if (confPassInp) confPassInp.value = '';
+
+    go('scr-newpass');
+    setTimeout(function() {
+        if (newPassInp) newPassInp.focus();
+    }, 200);
+}
+
+async function completeAdminPasswordReset() {
+    if (!adminForgotState || !adminForgotState.verified) {
+        showToast('Verification required. Please verify OTP first.');
+        go('scr-forgot');
+        return;
+    }
+
+    var newPassInp = document.getElementById('adminResetNewPass');
+    var confPassInp = document.getElementById('adminResetConfirmPass');
+    var newPass = newPassInp ? newPassInp.value.trim() : '';
+    var confPass = confPassInp ? confPassInp.value.trim() : '';
+
+    if (!newPass) {
+        showToast('Please enter a new password');
+        if (newPassInp) newPassInp.focus();
+        return;
+    }
+
+    if (newPass.length < 8) {
+        showToast('Password must be at least 8 characters');
+        if (newPassInp) newPassInp.focus();
+        return;
+    }
+
+    if (newPass !== confPass) {
+        showToast('Passwords do not match');
+        if (confPassInp) confPassInp.focus();
+        return;
+    }
+
+    var newHash = await hashAdminPass(newPass);
+    var creds = getEffectiveAdminCreds();
+    creds.passHash = newHash;
+    delete creds.pass;
+    localStorage.setItem(LS_ADMIN_CREDS_KEY, JSON.stringify(creds));
+
+    if (typeof supabaseSetAppSetting === 'function') {
+        try {
+            await supabaseSetAppSetting('admin_credentials', creds);
+            console.info('[Admin Security] Password reset saved to Supabase app_settings');
+        } catch(e) {
+            console.warn('[Admin Security] Supabase password reset save warning:', e);
+        }
+    }
+
+    ADMIN_CREDS = creds;
+    window.ADMIN_CREDS = ADMIN_CREDS;
+
+    // If Remember Me was enabled, update remembered password so next visit uses new pass
+    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
+        localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(newPass));
+    }
+
+    // Clear security lockouts & reset state
+    clearLoginSecurityState();
+    if (adminForgotState.timerId) {
+        clearInterval(adminForgotState.timerId);
+        adminForgotState.timerId = null;
+    }
+    adminForgotState = { email: '', otp: '', expiresAt: 0, verified: false, timerId: null };
+
+    // Auto-login into dashboard with fresh session token
+    var sessionToken = await generateAdminSessionToken(creds.email, newHash);
+    sessionStorage.setItem('admin_isLoggedIn', 'true');
+    sessionStorage.setItem('admin_session_token', sessionToken);
+    sessionStorage.setItem('admin_activeScreen', 'scr-dashboard');
+
+    if (newPassInp) newPassInp.value = '';
+    if (confPassInp) confPassInp.value = '';
+
+    showToast('Password reset successfully! Welcome, Admin ✨');
+    setTimeout(function() {
+        go('scr-dashboard', true);
+    }, 400);
+}
+
 // Global Window Exports
 if (typeof doLogin !== 'undefined') window.doLogin = doLogin;
 if (typeof doLogout !== 'undefined') window.doLogout = doLogout;
 if (typeof confirmLogout !== 'undefined') window.confirmLogout = confirmLogout;
 if (typeof updateAdminPassword !== 'undefined') window.updateAdminPassword = updateAdminPassword;
+if (typeof sendAdminForgotOtp !== 'undefined') window.sendAdminForgotOtp = sendAdminForgotOtp;
+if (typeof resendAdminForgotOtp !== 'undefined') window.resendAdminForgotOtp = resendAdminForgotOtp;
+if (typeof verifyAdminForgotOtp !== 'undefined') window.verifyAdminForgotOtp = verifyAdminForgotOtp;
+if (typeof completeAdminPasswordReset !== 'undefined') window.completeAdminPasswordReset = completeAdminPasswordReset;
+if (typeof handleAdminForgotOtpInput !== 'undefined') window.handleAdminForgotOtpInput = handleAdminForgotOtpInput;
+if (typeof handleAdminForgotOtpPaste !== 'undefined') window.handleAdminForgotOtpPaste = handleAdminForgotOtpPaste;
 
 // Auto-sync credentials and remember-me state on load
 if (typeof document !== 'undefined') {
