@@ -521,6 +521,34 @@ async function supabaseFetchAuthorizedContact(profileId) {
     }
 
     try {
+        // 1. Primary Enterprise Level: Execute PostgreSQL RPC on Supabase server
+        try {
+            const { data: rpcData, error: rpcErr } = await client.rpc('get_authorized_contact', {
+                target_profile_id: numId,
+                viewer_email: myEmail
+            });
+            if (!rpcErr && rpcData && typeof rpcData.authorized !== 'undefined') {
+                if (!rpcData.authorized) {
+                    return {
+                        authorized: false,
+                        fatherMobile: null,
+                        ownMobile: null,
+                        email: local ? maskEmailAddress(local.email || '') : '',
+                        fullAddress: local ? (local.village || local.city ? `${local.village || local.city}, Dist. ${local.district || ''}` : 'Gujarat, India') : '',
+                        message: rpcData.message || 'Direct contact details unlock only after Interest is accepted by member.'
+                    };
+                }
+                return {
+                    authorized: true,
+                    fatherMobile: rpcData.father_mobile || '',
+                    ownMobile: rpcData.own_mobile || '',
+                    email: rpcData.email || '',
+                    fullAddress: rpcData.full_address || ''
+                };
+            }
+        } catch (_) {}
+
+        // 2. Direct Authorized Query (Only reached if already validated through interest check)
         let query = client.from('profiles').select('id, email, mobile, own_mobile, father_mobile, full_address, address');
         if (!isNaN(numId) && numId > 0) {
             query = query.eq('id', numId);
