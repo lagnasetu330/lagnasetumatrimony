@@ -596,28 +596,35 @@
                         <span>Gender (લિંગ પસંદ કરો) <span style="color:var(--error);">*</span></span>
                         <span style="font-size:11px;font-weight:700;color:var(--primary);">Mandatory / ફરજિયાત</span>
                     </label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;" id="genderCardGrid">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;"
+                        id="genderCardGrid">
                         <!-- Boy Card -->
-                        <div class="gender-pick-card" id="genderCardBoy" onclick="pickGender('Boy')" style="border:2px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;background:#fff;transition:all 0.2s ease;">
-                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(123,44,191,0.1);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:17px;flex-shrink:0;">
+                        <div class="gender-pick-card" id="genderCardBoy" onclick="pickGender('Boy')"
+                            style="border:2px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;background:#fff;transition:all 0.2s ease;">
+                            <div
+                                style="width:36px;height:36px;border-radius:50%;background:rgba(123,44,191,0.1);display:flex;align-items:center;justify-content:center;color:var(--primary);font-size:17px;flex-shrink:0;">
                                 <i class="fa-solid fa-mars"></i>
                             </div>
                             <div style="flex:1;">
                                 <div style="font-weight:700;font-size:14px;color:var(--text);">Boy (વર)</div>
                                 <div style="font-size:11px;color:var(--text-muted);">₹99 Pass</div>
                             </div>
-                            <i class="fa-regular fa-circle gender-card-check" id="genderCheckBoy" style="color:var(--text-faint);font-size:16px;"></i>
+                            <i class="fa-regular fa-circle gender-card-check" id="genderCheckBoy"
+                                style="color:var(--text-faint);font-size:16px;"></i>
                         </div>
                         <!-- Girl Card -->
-                        <div class="gender-pick-card" id="genderCardGirl" onclick="pickGender('Girl')" style="border:2px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;background:#fff;transition:all 0.2s ease;">
-                            <div style="width:36px;height:36px;border-radius:50%;background:rgba(233,30,99,0.1);display:flex;align-items:center;justify-content:center;color:#E91E63;font-size:17px;flex-shrink:0;">
+                        <div class="gender-pick-card" id="genderCardGirl" onclick="pickGender('Girl')"
+                            style="border:2px solid var(--border);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;background:#fff;transition:all 0.2s ease;">
+                            <div
+                                style="width:36px;height:36px;border-radius:50%;background:rgba(233,30,99,0.1);display:flex;align-items:center;justify-content:center;color:#E91E63;font-size:17px;flex-shrink:0;">
                                 <i class="fa-solid fa-venus"></i>
                             </div>
                             <div style="flex:1;">
                                 <div style="font-weight:700;font-size:14px;color:var(--text);">Girl (કન્યા)</div>
                                 <div style="font-size:10px;font-weight:700;color:#10b981;">100% Free</div>
                             </div>
-                            <i class="fa-regular fa-circle gender-card-check" id="genderCheckGirl" style="color:var(--text-faint);font-size:16px;"></i>
+                            <i class="fa-regular fa-circle gender-card-check" id="genderCheckGirl"
+                                style="color:var(--text-faint);font-size:16px;"></i>
                         </div>
                     </div>
                     <!-- Hidden Dropdown for complete backward compatibility -->
@@ -628,11 +635,14 @@
                         </div>
                         <ul class="dd-menu">
                             <li onclick="pickGender('Boy', this)"><i class="fa-solid fa-mars"></i>Boy</li>
-                            <li onclick="pickGender('Girl', this)"><i class="fa-solid fa-venus"></i>Girl (100% Lifetime Free)</li>
+                            <li onclick="pickGender('Girl', this)"><i class="fa-solid fa-venus"></i>Girl (100% Lifetime
+                                Free)</li>
                         </ul>
                     </div>
-                    <div id="genderErrorMsg" style="display:none;color:var(--error);font-size:12px;font-weight:600;margin-top:6px;">
-                        <i class="fa-solid fa-circle-exclamation"></i> Please select your gender: Boy or Girl is mandatory.
+                    <div id="genderErrorMsg"
+                        style="display:none;color:var(--error);font-size:12px;font-weight:600;margin-top:6px;">
+                        <i class="fa-solid fa-circle-exclamation"></i> Please select your gender: Boy or Girl is
+                        mandatory.
                     </div>
                 </div>
 
@@ -1685,7 +1695,7 @@
                     style="background:var(--success-bg);color:var(--success);font-size:32px;">
                     <i class="fa-solid fa-circle-check"></i>
                 </div>
-                <div class="h-display h-lg">Profile Completed! ðŸŽ‰</div>
+                <div class="h-display h-lg">Profile Completed!</div>
                 <p class="p-muted" style="margin-top:8px;">Your account and profile have been successfully completed.
                     You can now explore the home screen.</p>
                 <div class="card"
