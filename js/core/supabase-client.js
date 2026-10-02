@@ -456,26 +456,71 @@ async function supabaseFetchProfiles(filters = {}) {
 
 /**
  * Fetch unmasked contact details on-demand for authorized users
- * (Girl viewing Boy, or Boy with verified 30-Day pass viewing Girl)
+ * (ONLY when an Interest request is ACCEPTED, or viewer is viewing own profile, or Admin)
  * @param {string|number} profileId
  */
 async function supabaseFetchAuthorizedContact(profileId) {
+    const numId = Number(profileId);
+    const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
+    const myEmail = (curUser && curUser.email) ? curUser.email.trim().toLowerCase() : '';
+    const myId = (curUser && curUser.id) ? curUser.id : null;
+
+    const isAdmin = (typeof forAdmin !== 'undefined' && forAdmin) || 
+                    (typeof isSessionValidSync === 'function' && isSessionValidSync()) || 
+                    (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
+
+    const local = (typeof findProfile === 'function') ? findProfile(profileId) : null;
+    const isSelf = (curUser && (
+        (myId && (String(myId) === String(profileId) || (local && String(local.userId) === String(myId)))) ||
+        (myEmail && local && local.email && myEmail === local.email.trim().toLowerCase())
+    ));
+
+    // Check in-memory interest status first
+    let isAccepted = (typeof interestStatusFor === 'function') && interestStatusFor(numId) === 'accepted';
+
     const client = getSupabaseClient();
+
+    // If not self, not admin, and not accepted locally, verify in Supabase 'interests' table
+    if (!isSelf && !isAdmin && !isAccepted && client && myEmail) {
+        try {
+            const { data: intRow } = await client
+                .from('interests')
+                .select('id, status')
+                .eq('status', 'accepted')
+                .or(`and(sender_email.ilike.${myEmail},receiver_id.eq.${numId}),and(receiver_email.ilike.${myEmail},sender_id.eq.${numId})`)
+                .maybeSingle();
+            if (intRow && intRow.status === 'accepted') {
+                isAccepted = true;
+            }
+        } catch (_) {}
+    }
+
+    // STRICT GATEKEEPER: Direct father contact reveals ONLY if Interest is accepted, self, or admin
+    if (!isSelf && !isAdmin && !isAccepted) {
+        return {
+            authorized: false,
+            fatherMobile: null,
+            ownMobile: null,
+            email: local ? maskEmailAddress(local.email || '') : '',
+            fullAddress: local ? (local.village || local.city ? `${local.village || local.city}, Dist. ${local.district || ''}` : 'Gujarat, India') : '',
+            message: 'Direct family WhatsApp and Call contacts unlock only after Interest is accepted by member.'
+        };
+    }
+
     if (!client) {
-        const local = (typeof findProfile === 'function') ? findProfile(profileId) : null;
         if (local) {
             return {
-                fatherMobile: local.fatherMobile || local.father_mobile || '',
-                ownMobile: local.ownMobile || local.mobile || '',
-                email: local.email || '',
-                fullAddress: local.fullAddress || local.address || ''
+                authorized: true,
+                fatherMobile: local.rawFatherMobile || local.fatherMobile || local.father_mobile || '',
+                ownMobile: local.rawOwnMobile || local.ownMobile || local.mobile || '',
+                email: local.rawEmail || local.email || '',
+                fullAddress: local.rawFullAddress || local.fullAddress || local.address || ''
             };
         }
         return null;
     }
 
     try {
-        const numId = Number(profileId);
         let query = client.from('profiles').select('id, email, mobile, own_mobile, father_mobile, full_address, address');
         if (!isNaN(numId) && numId > 0) {
             query = query.eq('id', numId);
@@ -490,6 +535,7 @@ async function supabaseFetchAuthorizedContact(profileId) {
         }
 
         return {
+            authorized: true,
             fatherMobile: data.father_mobile || '',
             ownMobile: data.own_mobile || data.mobile || '',
             email: data.email || '',

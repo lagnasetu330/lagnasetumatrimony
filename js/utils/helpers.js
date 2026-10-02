@@ -627,9 +627,21 @@ function quickInterest(id) {
     openInterestModal(id);
 }
 function quickCall(phone) {
+    if (!phone || phone.includes('•') || phone.replace(/[^0-9]/g, '').length < 10) {
+        if (typeof showToast === 'function') {
+            showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+        }
+        return;
+    }
     window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
 }
 function quickWhatsApp(phone, name) {
+    if (!phone || phone.includes('•') || phone.replace(/[^0-9]/g, '').length < 10) {
+        if (typeof showToast === 'function') {
+            showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+        }
+        return;
+    }
     const clean = phone.replace(/[^0-9]/g, '');
     const text = encodeURIComponent(`Namaste, we saw ${name}'s profile on Lagna Setu Matrimony and would like to connect.`);
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');

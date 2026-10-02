@@ -300,6 +300,9 @@ function refreshProfileButtons() {
     if (btn) {
         const pid = parseInt(btn.dataset.pid);
         setInterestBtnState(btn, pid);
+        if (typeof window.refreshProfileContactState === 'function') {
+            window.refreshProfileContactState(pid);
+        }
     }
 }
 
@@ -940,11 +943,14 @@ async function acceptRequest(profileId) {
         if (!thread.peerEmail && peerEmail) thread.peerEmail = peerEmail;
     }
 
-    showToast(`Matched with ${peerName}! Safe text chat unlocked 🎉`);
+    showToast(`Matched with ${peerName}! Safe text chat & family contact unlocked 🎉`);
     saveSessionState();
     renderInbox();
     updateInboxBadge();
     refreshProfileButtons();
+    if (typeof window.refreshProfileContactState === 'function') {
+        window.refreshProfileContactState(pid);
+    }
 
     // Persist to Supabase and send congratulatory email to sender
     if (typeof supabaseUpdateInterestStatus === 'function') {
@@ -2181,13 +2187,16 @@ function handleRealtimeInterestUpdate(dbInterest) {
 
     // Celebratory instant alert when interest is accepted
     if (isMeSender && dbInterest.status === 'accepted') {
-        showToast(`🎉 ${resolvedName} accepted your interest request! Safe text chat is now unlocked.`);
+        showToast(`🎉 ${resolvedName} accepted your interest request! Safe text chat & family contact are now unlocked.`);
+        if (typeof window.refreshProfileContactState === 'function') {
+            window.refreshProfileContactState(peerId);
+        }
         if (typeof addUserRealtimeNotification === 'function') {
             addUserRealtimeNotification({
                 id: `interest_acc_${peerId}_${Date.now()}`,
                 icon: 'fa-heart',
                 title: `🎉 ${resolvedName} accepted your interest request!`,
-                desc: 'Match accepted! Safe text chat is now unlocked.',
+                desc: 'Match accepted! Safe text chat & family contact are now unlocked.',
                 time: 'Just now',
                 unread: true,
                 actionType: 'chat',

@@ -728,6 +728,77 @@ function sendInterest(id) {
 }
 window.sendInterest = sendInterest;
 
+function renderFatherContactSection(p) {
+    if (!p) return '';
+    const curUser = state.currentUser;
+    const isSelf = curUser && (
+        (curUser.id && (curUser.id === p.id || curUser.id === p.userId)) ||
+        (curUser.email && p.email && curUser.email.trim().toLowerCase() === p.email.trim().toLowerCase())
+    );
+    const isAdmin = (typeof isSessionValidSync === 'function' && isSessionValidSync()) || 
+                    (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
+
+    const interestStatus = typeof interestStatusFor === 'function' ? interestStatusFor(p.id) : null;
+    const isAccepted = interestStatus === 'accepted';
+    const isContactUnlocked = isSelf || isAdmin || isAccepted;
+
+    if (isSelf) {
+        return `
+        <div id="profileFatherContactWrap">
+            <div class="section-label"><i class="fa-solid fa-user-shield" style="color:var(--primary);"></i> Father's Contact (Your Profile)</div>
+            <div class="contact-unlocked-banner" style="background:var(--primary-light);border:1.5px solid rgba(123,44,191,0.2);border-radius:14px;padding:12px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px;">
+                <i class="fa-solid fa-eye" style="font-size:16px;color:var(--primary);"></i>
+                <div style="font-size:12.5px;color:var(--primary-dark);line-height:1.45;">
+                    <b>Your Verified Family Contact:</b> ${escapeHtml(p.fatherMobile || p.father_mobile || 'Configured')} (Protected — visible to others only upon accepted interest).
+                </div>
+            </div>
+        </div>`;
+    }
+
+    if (isContactUnlocked) {
+        const phone = p.fatherMobile || p.father_mobile || '';
+        return `
+        <div id="profileFatherContactWrap">
+            <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+                <i class="fa-solid fa-circle-check" style="color:var(--success);"></i>
+                <span>Father's Contact (Unlocked)</span>
+            </div>
+            <div class="contact-unlocked-banner">
+                <i class="fa-solid fa-shield-heart" style="font-size:18px;color:#1D7A44;flex-shrink:0;"></i>
+                <div style="font-size:12.5px;color:#065F46;line-height:1.45;">
+                    <b>Interest Accepted!</b> Matrimonial connection with ${escapeHtml(p.name)}'s family is verified. Direct WhatsApp &amp; Call options are unlocked below.
+                </div>
+            </div>
+            <div class="contact-btn-row">
+                <button class="contact-btn wa" onclick="quickWhatsApp('${phone}','${escapeHtml(p.name)}')"><i class="fa-brands fa-whatsapp"></i> WhatsApp Father</button>
+                <button class="contact-btn call" onclick="quickCall('${phone}')"><i class="fa-solid fa-phone"></i> Call Father</button>
+            </div>
+        </div>`;
+    }
+
+    // LOCKED STATE (Interest not sent or pending or declined)
+    return `
+    <div id="profileFatherContactWrap">
+        <div class="section-label" style="display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-lock" style="color:var(--accent-deep);"></i>
+            <span>Father's Contact (Protected)</span>
+        </div>
+        <div class="contact-locked-box">
+            <div style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:#78350F;margin-bottom:6px;">
+                <i class="fa-solid fa-user-shield" style="font-size:16px;color:var(--accent-deep);"></i>
+                <span>Direct Family Contact Protected</span>
+            </div>
+            <p style="font-size:12.5px;color:#78350F;line-height:1.55;margin:0 0 10px 0;">
+                To safeguard family privacy and prevent unsolicited calls, direct WhatsApp &amp; Call buttons <b>unlock automatically only after ${escapeHtml(p.name)} accepts your Interest Request</b>.
+            </p>
+            <div style="background:#F8F5FD;border:1px dashed var(--primary);border-radius:10px;padding:10px 12px;font-size:12px;color:#3E384C;line-height:1.5;">
+                <i class="fa-solid fa-language" style="color:var(--primary);margin-right:4px;"></i> <b>સુરક્ષા સ્પષ્ટતા:</b> પરિવાર અને દીકરીઓની સુરક્ષા માટે પિતાનો નંબર ગુપ્ત રાખવામાં આવ્યો છે. સામેવાળી વ્યક્તિ તમારી <b>"I'm interested"</b> રિક્વેસ્ટ સ્વીકારશે (Accept કરશે) ત્યારે જ વોટ્સએપ અને કોલ બટન આપમેળે અનલોક થશે.
+            </div>
+        </div>
+    </div>`;
+}
+window.renderFatherContactSection = renderFatherContactSection;
+
 function openProfile(id) {
     if (!state.currentUser || !state.currentUser.email) {
         showToast('Please log in or register to view profiles');
@@ -873,12 +944,7 @@ function openProfile(id) {
             <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-map-location-dot"></i> District</div><div class="dval">${escapeHtml(p.district || '')}</div></div>
             <div class="detail-row" style="align-items:flex-start;"><div class="dlabel"><i class="fa-solid fa-house"></i> Full address</div><div class="dval" style="text-align:right;max-width:60%;">${escapeHtml(p.fullAddress || p.address || `${p.village || p.city}, Taluka ${p.taluka}, Dist. ${p.district}`)}</div></div>
 
-            <div class="section-label">Father's Contact</div>
-            <p class="p-muted" style="margin-top:-8px;margin-bottom:12px;font-size:12px;"><i class="fa-solid fa-shield-halved"></i> Connect directly with family for matrimonial inquiry via WhatsApp or Call.</p>
-            <div class="contact-btn-row">
-                <button class="contact-btn wa" onclick="quickWhatsApp('${p.fatherMobile || p.father_mobile || ''}','${escapeHtml(p.name)}')"><i class="fa-brands fa-whatsapp"></i> WhatsApp Father</button>
-                <button class="contact-btn call" onclick="quickCall('${p.fatherMobile || p.father_mobile || ''}')"><i class="fa-solid fa-phone"></i> Call Father</button>
-            </div>
+            ${renderFatherContactSection(p)}
 
             <div class="section-label">Interested?</div>
             <p class="p-muted" style="margin-top:-8px;margin-bottom:12px;">Send an interest request — if accepted, chat unlocks directly.</p>
@@ -892,9 +958,10 @@ function openProfile(id) {
     setInterestBtnState(interestBtn, p.id);
 
     // Authorized On-Demand Contact Reveal:
-    // If viewer is an authorized Girl or a Boy with verified active pass, fetch real unmasked contact
-    const isViewerAuthorized = isUserGirl || (isUserBoy && passCheck && passCheck.active);
-    if (isViewerAuthorized && typeof supabaseFetchAuthorizedContact === 'function') {
+    // Only fetch real unmasked contact if Interest is ACCEPTED, or viewer is self/admin!
+    const interestStatus = typeof interestStatusFor === 'function' ? interestStatusFor(p.id) : null;
+    const isContactUnlocked = isSelf || (interestStatus === 'accepted') || ((typeof isSessionValidSync === 'function' && isSessionValidSync()));
+    if (isContactUnlocked && typeof supabaseFetchAuthorizedContact === 'function') {
         supabaseFetchAuthorizedContact(p.id).then(contact => {
             if (contact && contact.fatherMobile && !contact.fatherMobile.includes('•••')) {
                 p.fatherMobile = contact.fatherMobile;
@@ -906,13 +973,9 @@ function openProfile(id) {
                     const addrEl = document.querySelector('#scr-profile .detail-row [style*="max-width:60%"]');
                     if (addrEl) addrEl.textContent = contact.fullAddress;
                 }
-                const waBtn = document.querySelector('#scr-profile .contact-btn.wa');
-                const callBtn = document.querySelector('#scr-profile .contact-btn.call');
-                if (waBtn) {
-                    waBtn.onclick = () => quickWhatsApp(contact.fatherMobile, p.name);
-                }
-                if (callBtn) {
-                    callBtn.onclick = () => quickCall(contact.fatherMobile);
+                const wrap = document.getElementById('profileFatherContactWrap');
+                if (wrap && typeof renderFatherContactSection === 'function') {
+                    wrap.outerHTML = renderFatherContactSection(p);
                 }
             }
         }).catch(err => console.warn('[Security Guard] Authorized contact note:', err));
@@ -1201,4 +1264,30 @@ if (typeof prevCarouselPhoto !== 'undefined') window.prevCarouselPhoto = prevCar
 if (typeof selectCarouselPhoto !== 'undefined') window.selectCarouselPhoto = selectCarouselPhoto;
 if (typeof setInterestBtnState !== 'undefined') window.setInterestBtnState = setInterestBtnState;
 if (typeof sendInterest !== 'undefined') window.sendInterest = sendInterest;
+
+function refreshProfileContactState(profileId) {
+    const pid = Number(profileId);
+    if (state.activeProfileId && Number(state.activeProfileId) === pid) {
+        const p = (typeof findProfile === 'function') ? findProfile(pid) : null;
+        if (p) {
+            const wrap = document.getElementById('profileFatherContactWrap');
+            if (wrap && typeof renderFatherContactSection === 'function') {
+                wrap.outerHTML = renderFatherContactSection(p);
+            }
+            if (typeof supabaseFetchAuthorizedContact === 'function') {
+                supabaseFetchAuthorizedContact(p.id).then(contact => {
+                    if (contact && contact.fatherMobile && !contact.fatherMobile.includes('•••')) {
+                        p.fatherMobile = contact.fatherMobile;
+                        p.father_mobile = contact.fatherMobile;
+                        const updatedWrap = document.getElementById('profileFatherContactWrap');
+                        if (updatedWrap && typeof renderFatherContactSection === 'function') {
+                            updatedWrap.outerHTML = renderFatherContactSection(p);
+                        }
+                    }
+                }).catch(() => {});
+            }
+        }
+    }
+}
+window.refreshProfileContactState = refreshProfileContactState;
 

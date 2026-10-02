@@ -1402,6 +1402,27 @@
             font-size: 17px;
         }
 
+        .contact-locked-box {
+            background: linear-gradient(135deg, #FFFDF7 0%, #FEF8EC 100%);
+            border: 1.5px solid #F6D884;
+            border-left: 4.5px solid #DDA200;
+            border-radius: 14px;
+            padding: 14px 16px;
+            margin: 8px 0 16px;
+            box-shadow: 0 4px 14px -6px rgba(217, 119, 6, 0.12);
+        }
+
+        .contact-unlocked-banner {
+            background: #E7F5EC;
+            border: 1.5px solid #A7F3D0;
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
         .faq-item {
             border-bottom: 1px solid var(--border);
             padding: 15px 0;

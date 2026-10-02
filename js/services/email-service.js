@@ -258,7 +258,7 @@ function getInterestReceivedEmailHtml(sender, receiver) {
  */
 function getInterestAcceptedEmailHtml(sender, receiver) {
     const title = `🎉 Good News! Your Interest was Accepted!`;
-    const preheader = `Congratulations! ${receiver.name} has accepted your interest request on Lagna Setu. Safe Chat is now unlocked!`;
+    const preheader = `Congratulations! ${receiver.name} has accepted your interest request on Lagna Setu. Safe Chat & Family WhatsApp/Call are now unlocked!`;
     const appLink = EMAIL_CONFIG.appUrl + (EMAIL_CONFIG.appUrl.includes('?') ? '&' : '?') + 'tab=chat';
 
     const avatarHtml = renderEmailAvatar(receiver.photo || receiver.img, receiver.name, 88, '#2E9D62');
@@ -269,7 +269,7 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
       </div>
       
       <p style="font-size:14.5px;line-height:1.6;color:#5F5B67;margin:0 0 22px 0;">
-        We are delighted to let you know that <b style="color:#7B2CBF;">${safeEmailText(receiver.name)}</b> has accepted your <b>"I'm Interested"</b> request!
+        We are delighted to let you know that <b style="color:#7B2CBF;">${safeEmailText(receiver.name)}</b> has accepted your <b>"I'm Interested"</b> request! Direct family WhatsApp/Call contact and safe chat are now unlocked.
       </p>
 
       <!-- Matched Profile Card (Centered, Balanced & Mobile-Optimized) -->
@@ -289,7 +289,7 @@ function getInterestAcceptedEmailHtml(sender, receiver) {
             <!-- 2. Accepted Badge -->
             <div style="margin-bottom:10px;text-align:center;">
               <span style="display:inline-block;background:#E7F5EC;color:#2E9D62;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:20px;letter-spacing:0.3px;">
-                ✓ Match Accepted · Chat Unlocked
+                ✓ Match Accepted · Chat &amp; Family Contact Unlocked
               </span>
             </div>
             

@@ -730,6 +730,62 @@ $$;
 GRANT EXECUTE ON FUNCTION delete_user_account_completely(TEXT, TEXT) TO anon, authenticated, service_role;
 
 -- ==============================================================================
+-- 9B. SECURE RPC: GET AUTHORIZED CONTACT
+-- Only reveals father_mobile & direct contact if interest is 'accepted', or self/admin
+-- ==============================================================================
+CREATE OR REPLACE FUNCTION public.get_authorized_contact(target_profile_id BIGINT, viewer_email TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    target_row RECORD;
+    is_matched BOOLEAN := FALSE;
+    is_self BOOLEAN := FALSE;
+    norm_viewer TEXT := LOWER(TRIM(COALESCE(viewer_email, '')));
+BEGIN
+    SELECT * INTO target_row FROM public.profiles WHERE id = target_profile_id;
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('authorized', false, 'error', 'Profile not found');
+    END IF;
+
+    IF norm_viewer <> '' AND LOWER(TRIM(COALESCE(target_row.email, ''))) = norm_viewer THEN
+        is_self := TRUE;
+    END IF;
+
+    IF norm_viewer <> '' THEN
+        SELECT EXISTS(
+            SELECT 1 FROM public.interests
+            WHERE status = 'accepted'
+              AND (
+                (LOWER(TRIM(sender_email)) = norm_viewer AND receiver_id = target_profile_id)
+                OR
+                (LOWER(TRIM(receiver_email)) = norm_viewer AND sender_id = target_profile_id)
+              )
+        ) INTO is_matched;
+    END IF;
+
+    IF is_matched OR is_self THEN
+        RETURN jsonb_build_object(
+            'authorized', true,
+            'father_mobile', target_row.father_mobile,
+            'own_mobile', target_row.own_mobile,
+            'email', target_row.email,
+            'full_address', target_row.full_address
+        );
+    ELSE
+        RETURN jsonb_build_object(
+            'authorized', false,
+            'father_mobile', NULL,
+            'message', 'Direct family contact details unlock only after Interest is accepted by member.'
+        );
+    END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_authorized_contact(BIGINT, TEXT) TO anon, authenticated, service_role;
+
+-- ==============================================================================
 -- 10. EXPLICIT DATA API PERMISSIONS (Supabase October 30+ Compatibility)
 -- Explicitly grants API access to public tables for anon, authenticated, and service_role
 -- Complies with Supabase breaking change starting October 30, 2026.
