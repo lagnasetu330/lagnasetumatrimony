@@ -161,11 +161,6 @@ function go(id, replace = false) {
         return;
     }
 
-    // Show Global Page Loader transition
-    if (id !== 'scr-splash') {
-        showGlobalLoader('Loading...', 240);
-    }
-
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const targetScreen = document.getElementById(id);
     if (targetScreen) {
@@ -194,7 +189,13 @@ function go(id, replace = false) {
         }
     }
 
-    if (id === 'scr-home') { renderHome(); updateHeaderUserDisplay(); }
+    if (id === 'scr-home') {
+        renderHome();
+        updateHeaderUserDisplay();
+        if (typeof triggerSilentProfilesSync === 'function') {
+            triggerSilentProfilesSync(6000);
+        }
+    }
     if (id === 'scr-browse') renderBrowse();
     if (id === 'scr-favorites') renderFavorites();
     if (id === 'scr-inbox') renderInbox();

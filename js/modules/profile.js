@@ -430,11 +430,33 @@ function processSuccessfulPayment(txnId, upiMethod) {
         }
 
         if (typeof supabaseUpsertProfile === 'function') {
-            supabaseUpsertProfile({
+            const curProfiles = (Array.isArray(window.PROFILES) ? window.PROFILES : (typeof PROFILES !== 'undefined' && Array.isArray(PROFILES) ? PROFILES : []));
+            const myExistingProf = curProfiles.find(p => p && (p.id == state.currentUser.id || (p.email && p.email.toLowerCase() === (state.currentUser.email || '').toLowerCase())));
+            const fullProfilePayload = {
+                ...(myExistingProf || {}),
                 id: state.currentUser.id,
                 user_id: String(state.currentUser.id),
                 email: state.currentUser.email,
-                paymentStatus: 'paid'
+                name: state.currentUser.name || (myExistingProf && myExistingProf.name) || '',
+                gender: state.currentUser.gender || (myExistingProf && myExistingProf.gender) || 'boys',
+                community: state.currentUser.caste || (myExistingProf && myExistingProf.community) || '',
+                mobile: state.currentUser.mobile || (myExistingProf && myExistingProf.mobile) || '',
+                img: state.currentUser.img || state.currentUser.photo || (myExistingProf && (myExistingProf.img || myExistingProf.photo)) || '',
+                paymentStatus: 'paid',
+                accountStatus: 'active',
+                verifyStatus: 'approved',
+                visible: true
+            };
+            if (myExistingProf) {
+                myExistingProf.paymentStatus = 'paid';
+                myExistingProf.accountStatus = 'active';
+                myExistingProf.visible = true;
+            }
+            if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
+            if (typeof updateHomeStats === 'function') updateHomeStats();
+
+            supabaseUpsertProfile(fullProfilePayload).then(() => {
+                if (typeof triggerSilentProfilesSync === 'function') triggerSilentProfilesSync(0);
             }).catch(err => console.warn('[Supabase] Payment profile status sync note:', err));
         }
     } catch (e) {

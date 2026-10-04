@@ -651,7 +651,15 @@ function syncGenderUI() {
 
     // Calculate live counts
     const allList = (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) ? window.PROFILES : [];
-    const activeList = allList.filter(p => p && p.accountStatus !== 'suspended' && p.visible !== false);
+    const activeList = allList.filter(p => p && 
+        p.accountStatus !== 'suspended' && 
+        p.accountStatus !== 'deleted' && 
+        p.account_status !== 'deleted' && 
+        p.name !== '[Deleted Account]' && 
+        p.visible !== false && 
+        p.visible !== 'false' && 
+        (typeof isUserPurged !== 'function' || !isUserPurged(p))
+    );
     const checkBoy = typeof isBoyGender === 'function' ? isBoyGender : g => (g === 'boys' || g === 'Boy' || g === 'boy');
     const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
 
@@ -930,7 +938,18 @@ function renderHome() {
             </div>
         `;
     } else {
-        feedProfiles.forEach(p => wrap.appendChild(profileCard(p)));
+        const displayFeed = feedProfiles.slice(0, 16);
+        displayFeed.forEach(p => wrap.appendChild(profileCard(p)));
+        if (feedProfiles.length > 16) {
+            const moreWrap = document.createElement('div');
+            moreWrap.style.cssText = 'grid-column: 1 / -1; text-align: center; margin: 16px 0 8px;';
+            moreWrap.innerHTML = `
+                <button class="btn btn-outline" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; max-width: 320px;" onclick="setTab('${targetGender}');go('scr-browse');">
+                    <i class="fa-solid fa-users-viewfinder"></i> Explore All ${feedProfiles.length} Profiles <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            `;
+            wrap.appendChild(moreWrap);
+        }
     }
     buildTabbar('tabbarHome', 'home');
     const favCountEl = document.getElementById('favCountHome');
@@ -1450,7 +1469,43 @@ function renderBrowse(query) {
             </div>
         </div>`;
     } else {
-        list.forEach(p => wrap.appendChild(profileCard(p)));
+        const BROWSE_PAGE_SIZE = 16;
+        let renderedCount = 0;
+
+        function appendBrowseBatch() {
+            const batch = list.slice(renderedCount, renderedCount + BROWSE_PAGE_SIZE);
+            batch.forEach(p => wrap.appendChild(profileCard(p)));
+            renderedCount += batch.length;
+
+            const existingBtn = document.getElementById('browseLoadMoreWrap');
+            if (existingBtn) existingBtn.remove();
+
+            if (renderedCount < list.length) {
+                const remaining = list.length - renderedCount;
+                const loadMoreBox = document.createElement('div');
+                loadMoreBox.id = 'browseLoadMoreWrap';
+                loadMoreBox.style.cssText = 'grid-column: 1 / -1; text-align: center; margin: 18px 0 32px;';
+                loadMoreBox.innerHTML = `
+                    <button class="btn btn-outline" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px; font-weight: 700; max-width: 320px;" onclick="window._loadMoreBrowseBatch()">
+                        <i class="fa-solid fa-angles-down"></i> Load More Profiles (${remaining} more)
+                    </button>
+                `;
+                wrap.appendChild(loadMoreBox);
+
+                // Auto-load next batch on scroll via IntersectionObserver
+                if ('IntersectionObserver' in window) {
+                    const observer = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting) {
+                            observer.disconnect();
+                            appendBrowseBatch();
+                        }
+                    }, { rootMargin: '250px' });
+                    observer.observe(loadMoreBox);
+                }
+            }
+        }
+        window._loadMoreBrowseBatch = appendBrowseBatch;
+        appendBrowseBatch();
     }
     buildTabbar('tabbarBrowse', 'browse');
 }
@@ -1465,9 +1520,14 @@ function profileCard(p) {
     const mainImg = photos[0] || p.img || p.photo || fallbackImg;
     const hasMultiple = photos.length > 1;
 
+    // Optimized Cloudinary CDN URL with auto-WebP, compression and face centering
+    const optimizedImg = (typeof getOptimizedImageUrl === 'function')
+        ? getOptimizedImageUrl(mainImg, { width: 420, height: 520, crop: 'fill', gravity: 'face', quality: 'auto', format: 'auto' })
+        : mainImg;
+
     card.innerHTML = `
             <div class="pimg-wrap" style="cursor:pointer;" onclick="openProfile(${p.id})">
-              <img src="${mainImg}" alt="${escapeHtml(p.name || '')}" onerror="this.onerror=null;this.src='${fallbackImg}';">
+              <img src="${optimizedImg}" loading="lazy" decoding="async" alt="${escapeHtml(p.name || '')}" onerror="this.onerror=null;this.src='${fallbackImg}';">
               <div class="verified-chip"><i class="fa-solid fa-shield-check"></i> Verified</div>
               ${hasMultiple ? `<span class="pcount-chip" title="Click to view all photos" style="cursor:pointer;" onclick="event.stopPropagation();openPhotoCarousel(${p.id}, event)"><i class="fa-solid fa-camera"></i> ${photos.length} Photos</span>` : ''}
               <button class="fav-btn ${isFav ? 'active' : ''}" onclick="event.stopPropagation();toggleFav(${p.id},this)"><i class="fa-regular fa-heart"></i></button>

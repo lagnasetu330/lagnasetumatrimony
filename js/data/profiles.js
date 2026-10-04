@@ -6,8 +6,20 @@ const LS_PROFILES_KEY = 'LS_COMMUNITY_PROFILES';
 
 function loadCommunityProfiles() {
     try {
-        localStorage.removeItem(LS_PROFILES_KEY);
-        localStorage.removeItem('lagnaSetu_profiles');
+        const cached = localStorage.getItem(LS_PROFILES_KEY);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed.filter(p => p && (typeof isUserPurged !== 'function' || !isUserPurged(p)));
+            }
+        }
+        const sessionCached = sessionStorage.getItem('lagnaSetu_profiles');
+        if (sessionCached) {
+            const parsed = JSON.parse(sessionCached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed.filter(p => p && (typeof isUserPurged !== 'function' || !isUserPurged(p)));
+            }
+        }
     } catch(e) {}
     return [];
 }
@@ -16,20 +28,24 @@ let PROFILES = loadCommunityProfiles();
 
 function saveCommunityProfiles() {
     try {
-        localStorage.removeItem(LS_PROFILES_KEY);
-        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
+        if (Array.isArray(PROFILES) && PROFILES.length > 0) {
+            localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(PROFILES));
+            sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
+        }
     } catch(e) {}
 }
 
 /**
- * Asynchronously sync profiles from Supabase PostgreSQL on startup
+ * Asynchronously sync profiles from Supabase PostgreSQL on startup or in background
+ * @param {boolean} force - Force sync
+ * @param {boolean} silent - Silent sync without showing any global spinner
  */
-async function syncProfilesFromSupabase(force = false) {
+async function syncProfilesFromSupabase(force = false, silent = false) {
     if (typeof supabaseFetchProfiles !== 'function') return;
-    const shouldShowLoader = !PROFILES || PROFILES.length === 0;
+    const shouldShowLoader = !silent && (!PROFILES || PROFILES.length === 0);
     try {
         if (shouldShowLoader && typeof showGlobalLoader === 'function') {
-            showGlobalLoader('Loading verified profiles from Supabase...', 1500);
+            showGlobalLoader('Loading verified profiles from Supabase...', 800);
         }
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
@@ -329,12 +345,42 @@ function handleRemoteAccountPurge(delId, delEmail, rawPayload = {}) {
 window.handleRemoteAccountPurge = handleRemoteAccountPurge;
 
 // Automatically trigger sync and realtime subscription on load
+let _lastSilentProfilesSync = 0;
+function triggerSilentProfilesSync(minIntervalMs = 8000) {
+    const now = Date.now();
+    if (now - _lastSilentProfilesSync < minIntervalMs) return;
+    _lastSilentProfilesSync = now;
+    if (typeof syncProfilesFromSupabase === 'function') {
+        syncProfilesFromSupabase(false, true);
+    }
+}
+window.triggerSilentProfilesSync = triggerSilentProfilesSync;
+
 if (typeof window !== 'undefined') {
     window.addEventListener('DOMContentLoaded', () => {
         if (typeof updateHomeStats === 'function') updateHomeStats();
-        syncProfilesFromSupabase();
+        // Initial sync silent if cached profiles already exist, else quick loader
+        const isSilentInitial = Array.isArray(PROFILES) && PROFILES.length > 0;
+        syncProfilesFromSupabase(false, isSilentInitial);
         setupProfilesRealtime();
     });
+
+    // Auto-sync when user returns to tab / unlocks phone
+    if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) triggerSilentProfilesSync(8000);
+        });
+        window.addEventListener('focus', () => {
+            triggerSilentProfilesSync(8000);
+        });
+    }
+
+    // Failsafe background periodic refresh every 40 seconds
+    setInterval(() => {
+        if (typeof document !== 'undefined' && !document.hidden) {
+            triggerSilentProfilesSync(25000);
+        }
+    }, 40000);
 }
 
 /**

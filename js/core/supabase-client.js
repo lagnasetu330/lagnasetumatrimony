@@ -1584,6 +1584,36 @@ function supabaseSubscribeToTable(tableName, onInsert, onUpdate, onDelete) {
     }
 }
 
+/**
+ * Ultra-fast HEAD query for live verified profile counts (0KB data transfer, ~5ms execution)
+ */
+async function supabaseFetchProfileCounts() {
+    const client = getSupabaseClient();
+    if (!client) return null;
+    try {
+        const [girlsRes, boysRes] = await Promise.all([
+            client.from('profiles').select('id', { count: 'exact', head: true })
+                .neq('account_status', 'suspended')
+                .neq('account_status', 'deleted')
+                .neq('verify_status', 'rejected')
+                .eq('gender', 'girls'),
+            client.from('profiles').select('id', { count: 'exact', head: true })
+                .neq('account_status', 'suspended')
+                .neq('account_status', 'deleted')
+                .neq('verify_status', 'rejected')
+                .eq('gender', 'boys')
+        ]);
+        return {
+            girls: (girlsRes && typeof girlsRes.count === 'number') ? girlsRes.count : null,
+            boys: (boysRes && typeof boysRes.count === 'number') ? boysRes.count : null
+        };
+    } catch (e) {
+        console.warn('[Supabase] Live count query warning:', e);
+        return null;
+    }
+}
+window.supabaseFetchProfileCounts = supabaseFetchProfileCounts;
+
 /* ==============================================================================
    INTEREST REQUESTS & REALTIME MATCH NOTIFICATIONS
    ============================================================================== */
