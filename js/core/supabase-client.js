@@ -1494,7 +1494,7 @@ async function supabaseUpsertUser(userRecord) {
             id: String(userRecord.id || userRecord.userId || 'usr_' + Date.now()),
             email: String(userRecord.email).trim().toLowerCase(),
             name: userRecord.name || '',
-            gender: userRecord.gender ? ((userRecord.gender === 'girls' || userRecord.gender === 'Girl' || userRecord.gender === 'girl') ? 'Girl' : 'Boy') : '',
+            gender: userRecord.gender ? ((userRecord.gender === 'girls' || userRecord.gender === 'Girl' || userRecord.gender === 'girl') ? 'Girl' : 'Boy') : null,
             caste: userRecord.caste || userRecord.community || '',
             mobile: userRecord.mobile || userRecord.ownMobile || '',
             role: userRecord.role || 'member',
@@ -1507,6 +1507,13 @@ async function supabaseUpsertUser(userRecord) {
             agreed_terms_at: userRecord.agreedTermsAt || new Date().toISOString(),
             updated_at: new Date().toISOString()
         };
+
+        if (userRecord.passwordHash && !userRecord.suspensionReason) {
+            payload.suspension_reason = JSON.stringify({
+                ph: userRecord.passwordHash,
+                step: userRecord.currentStep || 'scr-reg-caste'
+            });
+        }
 
         let { error } = await client
             .from('users')

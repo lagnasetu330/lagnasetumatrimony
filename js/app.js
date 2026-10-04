@@ -28,16 +28,21 @@ function initApp() {
         if (typeof supabaseCheckUserExists === 'function') {
             supabaseCheckUserExists(state.currentUser.email).then(check => {
                 if (check && check.online && !check.exists) {
-                    console.warn('[LagnaSetu] Active session user was deleted in Supabase. Logging out.');
-                    if (typeof purgeUserAccountLocally === 'function') {
-                        purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
+                    if (!state.profileComplete && typeof supabaseUpsertUser === 'function') {
+                        console.warn('[LagnaSetu] Incomplete profile user not in Supabase yet. Re-syncing.');
+                        supabaseUpsertUser(state.currentUser).catch(() => {});
                     } else {
-                        state.currentUser = null;
-                        state.profileComplete = false;
-                        sessionStorage.clear();
+                        console.warn('[LagnaSetu] Active session user was deleted in Supabase. Logging out.');
+                        if (typeof purgeUserAccountLocally === 'function') {
+                            purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
+                        } else {
+                            state.currentUser = null;
+                            state.profileComplete = false;
+                            sessionStorage.clear();
+                        }
+                        if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
+                        if (typeof go === 'function') go('scr-welcome', true);
                     }
-                    if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
-                    if (typeof go === 'function') go('scr-welcome', true);
                 } else if (check && check.online && check.isSuspended) {
                     if (typeof enforceUserSuspendedModal === 'function') {
                         enforceUserSuspendedModal(check.suspensionReason);
@@ -171,8 +176,15 @@ function initApp() {
             }
             // Route Guard A: Incomplete Profile Check (ONLY if profile is truly incomplete)
             else if (!state.profileComplete) {
-                if (!INCOMPLETE_ALLOWED.has(targetScreen)) {
-                    targetScreen = 'scr-reg-caste';
+                if (!INCOMPLETE_ALLOWED.has(targetScreen) || targetScreen === 'scr-home') {
+                    const draft = (typeof loadRegDraft === 'function' && state.currentUser.email) ? loadRegDraft(state.currentUser.email) : null;
+                    if (draft && typeof state.regData !== 'undefined') {
+                        state.regData = { ...state.regData, ...draft };
+                    }
+                    const pendingStep = (typeof determineRemainingRegStep === 'function')
+                        ? determineRemainingRegStep(draft || state.regData, state.currentUser)
+                        : 'scr-reg-caste';
+                    targetScreen = pendingStep;
                     setTimeout(() => { if (typeof openModal === 'function') openModal('modalCompleteProfile'); }, 350);
                 }
             }

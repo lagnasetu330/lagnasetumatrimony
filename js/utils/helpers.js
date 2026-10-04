@@ -617,6 +617,9 @@ function goToRegStep3() {
 
     // 19. Save remaining details & proceed
     state.regData.name = nameVal;
+    if (typeof saveRegDraft === 'function') {
+        saveRegDraft('scr-reg3');
+    }
 
     go('scr-reg3');
 }

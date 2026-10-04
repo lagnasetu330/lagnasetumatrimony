@@ -317,6 +317,18 @@ function loadSessionState() {
         state.profileComplete = profileDone;
         if (state.currentUser) state.currentUser.profileComplete = profileDone;
 
+        // Restore in-progress registration draft if profile is incomplete
+        if (state.currentUser && !profileDone && state.currentUser.email) {
+            try {
+                if (typeof loadRegDraft === 'function') {
+                    const draft = loadRegDraft(state.currentUser.email);
+                    if (draft && typeof state.regData !== 'undefined') {
+                        state.regData = { ...state.regData, ...draft };
+                    }
+                }
+            } catch (_) {}
+        }
+
         // Payment status derivation
         if (state.currentUser && profileDone) {
             const isGirl = (typeof isGirlGender === 'function') 

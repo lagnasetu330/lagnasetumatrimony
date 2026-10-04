@@ -55,6 +55,9 @@ function filterRegCaste(query) {
 
 function selectRegCaste(casteName, gujName) {
     state.regData.caste = casteName;
+    if (typeof saveRegDraft === 'function') {
+        saveRegDraft('scr-reg2');
+    }
     const input = document.getElementById('regCasteInput');
     const chip = document.getElementById('regCasteChip');
     const chipTxt = document.getElementById('regCasteChipText');
@@ -92,6 +95,9 @@ function removeRegCaste() {
         input.focus();
         filterRegCaste('');
     }
+    if (typeof saveRegDraft === 'function') {
+        saveRegDraft('scr-reg-caste');
+    }
     showToast('Community cleared. Search and select another.');
 }
 
@@ -100,6 +106,9 @@ function goToRegStep2() {
         const input = document.getElementById('regCasteInput');
         highlightFieldError(input, 'Please search and select your caste/community to continue');
         return;
+    }
+    if (typeof saveRegDraft === 'function') {
+        saveRegDraft('scr-reg2');
     }
     go('scr-reg2');
 }

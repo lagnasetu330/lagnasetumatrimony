@@ -29,7 +29,10 @@ const INCOMPLETE_ALLOWED = new Set([
 
 function goToCompleteProfile() {
     closeModal('modalCompleteProfile');
-    go('scr-reg-caste');
+    const target = (typeof determineRemainingRegStep === 'function')
+        ? determineRemainingRegStep(state.regData, state.currentUser)
+        : 'scr-reg-caste';
+    go(target);
 }
 
 function go(id, replace = false) {
@@ -44,6 +47,13 @@ function go(id, replace = false) {
     if (id === 'scr-login') {
         if (typeof restoreRememberedLogin === 'function') {
             restoreRememberedLogin();
+        }
+    }
+
+    // If entering registration step screens, restore populated form fields
+    if (id === 'scr-reg-caste' || id === 'scr-reg2' || id === 'scr-reg3') {
+        if (typeof restoreRegFormFields === 'function') {
+            restoreRegFormFields(id, state.regData);
         }
     }
 
@@ -83,8 +93,11 @@ function go(id, replace = false) {
     // If user has NOT completed their profile, they MUST NOT access member screens (home, browse, inbox, etc.)
     if (state.currentUser && !state.profileComplete) {
         if (!INCOMPLETE_ALLOWED.has(id)) {
-            console.warn(`[Router] Profile incomplete. Blocking access to ${id}, strictly routing to scr-reg-caste.`);
-            id = 'scr-reg-caste';
+            const targetStep = (typeof determineRemainingRegStep === 'function')
+                ? determineRemainingRegStep(state.regData, state.currentUser)
+                : 'scr-reg-caste';
+            console.warn(`[Router] Profile incomplete. Blocking access to ${id}, strictly routing to ${targetStep}.`);
+            id = targetStep;
             replace = true;
             setTimeout(() => {
                 if (typeof openModal === 'function') openModal('modalCompleteProfile');

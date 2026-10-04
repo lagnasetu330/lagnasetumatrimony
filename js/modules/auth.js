@@ -669,6 +669,231 @@ function checkBoyPassStatus(user) {
 }
 window.checkBoyPassStatus = checkBoyPassStatus;
 
+/* ============================================================ REGISTRATION PROGRESS & DRAFT RECOVERY ============================================================ */
+function saveRegDraft(step = null) {
+    if (!state.regData || !state.regData.email) return;
+    const email = state.regData.email.toLowerCase().trim();
+    const draft = {
+        email: email,
+        currentStep: step || state.regData.currentStep || 'scr-reg-caste',
+        caste: state.regData.caste || '',
+        name: state.regData.name || '',
+        gender: state.regData.gender || '',
+        dob: state.regData.dob || '',
+        age: state.regData.age || '',
+        ownMobile: state.regData.ownMobile || '',
+        height: state.regData.height || '',
+        weight: state.regData.weight || '',
+        education: state.regData.education || '',
+        marital: state.regData.marital || '',
+        physical: state.regData.physical || '',
+        occupation: state.regData.occupation || '',
+        income: state.regData.income || '',
+        hobbies: state.regData.hobbies || [],
+        fatherName: state.regData.fatherName || '',
+        fatherOcc: state.regData.fatherOcc || '',
+        fatherMobile: state.regData.fatherMobile || '',
+        fatherWhatsapp: state.regData.fatherWhatsapp !== undefined ? state.regData.fatherWhatsapp : true,
+        motherName: state.regData.motherName || '',
+        motherOcc: state.regData.motherOcc || '',
+        sister: state.regData.sister || '',
+        brother: state.regData.brother || '',
+        photo: state.regData.photo || '',
+        photos: state.regData.photos || [],
+        city: state.regData.city || '',
+        taluka: state.regData.taluka || '',
+        district: state.regData.district || '',
+        address: state.regData.address || '',
+        updatedAt: Date.now()
+    };
+    try {
+        localStorage.setItem('lagnaSetu_regDraft_' + email, JSON.stringify(draft));
+        sessionStorage.setItem('lagnaSetu_regDraft', JSON.stringify(draft));
+    } catch (_) {}
+}
+window.saveRegDraft = saveRegDraft;
+
+function loadRegDraft(email) {
+    if (!email) return null;
+    try {
+        const raw = localStorage.getItem('lagnaSetu_regDraft_' + String(email).toLowerCase().trim()) || sessionStorage.getItem('lagnaSetu_regDraft');
+        if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return null;
+}
+window.loadRegDraft = loadRegDraft;
+
+function clearRegDraft(email) {
+    try {
+        if (email) localStorage.removeItem('lagnaSetu_regDraft_' + String(email).toLowerCase().trim());
+        sessionStorage.removeItem('lagnaSetu_regDraft');
+    } catch (_) {}
+}
+window.clearRegDraft = clearRegDraft;
+
+function determineRemainingRegStep(regData, user) {
+    const caste = (regData && regData.caste) || (user && user.caste);
+    const gender = (regData && regData.gender) || (user && user.gender);
+    const name = (regData && regData.name) || (user && user.name);
+    const hasPhoto = (regData && (regData.photo || (Array.isArray(regData.photos) && regData.photos.filter(Boolean).length > 0))) || (user && (user.img || (Array.isArray(user.photos) && user.photos.length > 0)));
+    const city = (regData && regData.city) || (user && user.city);
+    const address = (regData && regData.address) || (user && user.address);
+    const currentStep = (regData && regData.currentStep) || null;
+
+    // 1. If caste not selected yet -> Step 1: Caste
+    if (!caste) {
+        return 'scr-reg-caste';
+    }
+    // 2. If caste selected, but step 2 details (name, gender, photo) incomplete -> Step 2
+    if (!name || !gender || !hasPhoto) {
+        return 'scr-reg2';
+    }
+    // 3. If step 2 done, but address incomplete -> Step 3
+    if (!city || !address) {
+        return 'scr-reg3';
+    }
+
+    if (currentStep && (currentStep === 'scr-reg2' || currentStep === 'scr-reg3' || currentStep === 'scr-reg-caste')) {
+        return currentStep;
+    }
+
+    return 'scr-reg-caste';
+}
+window.determineRemainingRegStep = determineRemainingRegStep;
+
+function restoreRegFormFields(step, regData) {
+    if (!regData) return;
+
+    // Step 1: Caste
+    if (regData.caste) {
+        const input = document.getElementById('regCasteInput');
+        const chip = document.getElementById('regCasteChip');
+        const chipTxt = document.getElementById('regCasteChipText');
+        const searchWrap = document.getElementById('regCasteSearchWrap');
+        if (input) input.value = regData.caste;
+        if (chip && chipTxt) {
+            chipTxt.innerHTML = `<i class="fa-solid fa-users" style="margin-right:8px;color:var(--primary);"></i><b>${regData.caste}</b>`;
+            chip.style.display = 'flex';
+            chip.classList.add('active');
+        }
+        if (searchWrap) searchWrap.style.display = 'block';
+    }
+
+    // Step 2: Personal details
+    if (regData.name) {
+        const nameEl = document.getElementById('regFullName');
+        if (nameEl) nameEl.value = regData.name;
+    }
+    if (regData.gender) {
+        if (typeof pickGender === 'function') pickGender(regData.gender);
+    }
+    if (regData.dob) {
+        const dobEl = document.getElementById('regDobInput');
+        if (dobEl) dobEl.value = regData.dob;
+    }
+    if (regData.ownMobile) {
+        const mEl = document.getElementById('regOwnMobile');
+        if (mEl) mEl.value = regData.ownMobile;
+    }
+    if (regData.height) {
+        const hEl = document.getElementById('regHeight');
+        if (hEl) hEl.value = regData.height;
+    }
+    if (regData.weight) {
+        const wEl = document.getElementById('regWeight');
+        if (wEl) wEl.value = regData.weight;
+    }
+    if (regData.education) {
+        const eduEl = document.getElementById('regEducation');
+        if (eduEl) eduEl.value = regData.education;
+    }
+    if (regData.occupation) {
+        const occEl = document.getElementById('regOccupation');
+        if (occEl) occEl.value = regData.occupation;
+    }
+    if (regData.marital) {
+        const ddMarital = document.getElementById('ddMarital');
+        if (ddMarital) {
+            const span = ddMarital.querySelector('.dd-trigger span');
+            if (span) span.textContent = regData.marital;
+        }
+    }
+    if (regData.physical) {
+        const ddPhysical = document.getElementById('ddPhysical');
+        if (ddPhysical) {
+            const span = ddPhysical.querySelector('.dd-trigger span');
+            if (span) span.textContent = regData.physical;
+        }
+    }
+    if (regData.income) {
+        const ddIncome = document.getElementById('ddIncome');
+        if (ddIncome) {
+            const span = ddIncome.querySelector('.dd-trigger span');
+            if (span) span.textContent = regData.income;
+        }
+    }
+    if (regData.fatherName) {
+        const fnEl = document.getElementById('regFatherName');
+        if (fnEl) fnEl.value = regData.fatherName;
+    }
+    if (regData.fatherOcc) {
+        const foEl = document.getElementById('regFatherOcc');
+        if (foEl) foEl.value = regData.fatherOcc;
+    }
+    if (regData.fatherMobile) {
+        const fmEl = document.getElementById('regFatherMobile');
+        if (fmEl) fmEl.value = regData.fatherMobile;
+    }
+    if (regData.motherName) {
+        const mnEl = document.getElementById('regMotherName');
+        if (mnEl) mnEl.value = regData.motherName;
+    }
+    if (regData.motherOcc) {
+        const moEl = document.getElementById('regMotherOcc');
+        if (moEl) moEl.value = regData.motherOcc;
+    }
+    // Photos
+    if (Array.isArray(regData.photos) && regData.photos.length > 0) {
+        for (let slot = 1; slot <= 3; slot++) {
+            const pUrl = regData.photos[slot - 1];
+            const imgEl = document.getElementById(`regSlotImg${slot}`);
+            const emptyEl = document.getElementById(`regSlotEmpty${slot}`);
+            if (pUrl && imgEl) {
+                imgEl.src = pUrl;
+                imgEl.style.display = 'block';
+                if (emptyEl) emptyEl.style.display = 'none';
+            }
+        }
+    } else if (regData.photo) {
+        const imgEl = document.getElementById('regSlotImg1');
+        const emptyEl = document.getElementById('regSlotEmpty1');
+        if (imgEl) {
+            imgEl.src = regData.photo;
+            imgEl.style.display = 'block';
+            if (emptyEl) emptyEl.style.display = 'none';
+        }
+    }
+
+    // Step 3: Address
+    if (regData.city) {
+        const cityEl = document.getElementById('regCity');
+        if (cityEl) cityEl.value = regData.city;
+    }
+    if (regData.taluka) {
+        const talukaEl = document.getElementById('regTaluka');
+        if (talukaEl) talukaEl.value = regData.taluka;
+    }
+    if (regData.district) {
+        const distEl = document.getElementById('regDistrict');
+        if (distEl) distEl.value = regData.district;
+    }
+    if (regData.address) {
+        const addrEl = document.getElementById('regAddress');
+        if (addrEl) addrEl.value = regData.address;
+    }
+}
+window.restoreRegFormFields = restoreRegFormFields;
+
 async function signupOtpVerified() {
     let entered = '';
     for (let i = 1; i <= 6; i++) {
@@ -771,7 +996,7 @@ async function signupOtpVerified() {
         state.regData.photos = ['', '', ''];
     }
 
-    // Also register in Supabase Auth & public.users table asynchronously
+    // Also register in Supabase Auth & public.users table
     if (typeof supabaseAuthSignUp === 'function') {
         supabaseAuthSignUp(newUser.email, rawPass, { name: '', gender: '' })
             .then(res => {
@@ -780,7 +1005,17 @@ async function signupOtpVerified() {
             .catch(err => console.warn('[Supabase] Auth note:', err?.message || 'Registered'));
     }
     if (typeof supabaseUpsertUser === 'function') {
-        supabaseUpsertUser(newUser).catch(err => console.warn('[Supabase] Upsert user note:', err));
+        try {
+            await supabaseUpsertUser(newUser);
+        } catch (err) {
+            console.warn('[Supabase] Upsert user note:', err);
+        }
+    }
+
+    // Persist registration progress draft
+    newUser.currentStep = 'scr-reg-caste';
+    if (typeof saveRegDraft === 'function') {
+        saveRegDraft('scr-reg-caste');
     }
     
     // Wipe in-flight password and OTP from memory immediately
@@ -838,20 +1073,45 @@ async function doLogin() {
     const legacyHash = await hashPassLegacy(pass);
 
     // 2. CHECK SUPABASE LIVE (PostgreSQL Database is Single Source of Truth)
+    let registeredUsers = getStoredAccounts();
+    let matchedUser = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+
     let supabaseUserCheck = null;
     if (typeof supabaseCheckUserExists === 'function') {
         try {
             supabaseUserCheck = await supabaseCheckUserExists(email);
             if (supabaseUserCheck && supabaseUserCheck.online) {
                 if (!supabaseUserCheck.exists) {
-                    // ACCOUNT WAS DELETED IN SUPABASE OR NEVER EXISTED!
-                    // Immediately wipe all local cached credentials for this email
-                    purgeUserAccountLocally(email);
-                    if (passInput) passInput.value = '';
-                    showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
-                    return;
+                    // Check if local account exists
+                    if (matchedUser) {
+                        const isLocalPassValid = (matchedUser.passwordHash === passHash) || (matchedUser.passwordHash === legacyHash);
+                        // If password matches and profile is incomplete (in-progress registration)
+                        if (isLocalPassValid && !matchedUser.profileComplete) {
+                            console.warn('[Login] User registered locally but not yet synced to Supabase. Auto-healing to Supabase.');
+                            if (typeof supabaseUpsertUser === 'function') {
+                                try { await supabaseUpsertUser(matchedUser); } catch (_) {}
+                            }
+                            supabaseUserCheck = { online: true, exists: true, user: matchedUser, profile: null, isSuspended: false };
+                        } else if (matchedUser.profileComplete) {
+                            // Completed profile was deleted in Supabase by Admin!
+                            purgeUserAccountLocally(email);
+                            if (passInput) passInput.value = '';
+                            showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
+                            return;
+                        } else {
+                            // Incorrect password
+                            LOGIN_SECURITY.failedAttempts++;
+                            highlightFieldError(passInput, 'Incorrect password');
+                            return;
+                        }
+                    } else {
+                        // User does not exist locally or in Supabase
+                        if (passInput) passInput.value = '';
+                        showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
+                        return;
+                    }
                 }
-                if (supabaseUserCheck.isSuspended) {
+                if (supabaseUserCheck && supabaseUserCheck.isSuspended) {
                     if (passInput) passInput.value = '';
                     showToast('Your account has been suspended by the administrator.');
                     return;
@@ -861,10 +1121,6 @@ async function doLogin() {
             console.warn('[Login] Supabase pre-check note:', e);
         }
     }
-
-    // Check Registered Accounts
-    let registeredUsers = getStoredAccounts();
-    let matchedUser = registeredUsers.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
 
     // If not in local storage or needs live sync from Supabase Single Source of Truth
     if (supabaseUserCheck && supabaseUserCheck.exists) {
@@ -878,7 +1134,23 @@ async function doLogin() {
             ? (isGirlGender(prof?.gender) || isGirlGender(usr?.gender))
             : (String(prof?.gender || usr?.gender || '').toLowerCase().includes('girl') || String(prof?.gender || usr?.gender || '').toLowerCase() === 'female');
 
+        let cloudPassHash = null;
+        let cloudStep = null;
+        if (usr && usr.suspension_reason) {
+            try {
+                const meta = JSON.parse(usr.suspension_reason);
+                if (meta && meta.ph) cloudPassHash = meta.ph;
+                if (meta && meta.step) cloudStep = meta.step;
+            } catch (_) {}
+        }
+
         if (!matchedUser) {
+            if (cloudPassHash && cloudPassHash !== passHash && cloudPassHash !== legacyHash) {
+                if (passInput) passInput.value = '';
+                LOGIN_SECURITY.failedAttempts++;
+                highlightFieldError(passInput, 'Incorrect password');
+                return;
+            }
             // profiles.account_status is the primary source of truth for suspension status
             // Only use users.status as fallback if profiles table has no explicit 'active' status
             const isSuspendedAtLogin = (prof && prof.account_status === 'suspended')
@@ -902,7 +1174,8 @@ async function doLogin() {
                 status: isSuspendedAtLogin ? 'Suspended' : 'Active',
                 profileComplete: isProfileDone,
                 paymentStatus: isGirlUser ? 'Free' : ((prof && (prof.payment_status === 'paid' || prof.payment_status === 'active')) ? 'Active' : (usr.payment_status || 'Unpaid')),
-                passwordHash: passHash
+                passwordHash: cloudPassHash || passHash,
+                currentStep: cloudStep || 'scr-reg-caste'
             };
             registeredUsers.push(matchedUser);
             saveStoredAccounts(registeredUsers);
@@ -1104,15 +1377,37 @@ async function doLogin() {
             state.profileComplete = false;
             state.membershipPaid = false;
             if (state.currentUser) state.currentUser.profileComplete = false;
+
+            // Load any saved draft from localStorage
+            const draft = typeof loadRegDraft === 'function' ? loadRegDraft(matchedUser.email || email) : null;
+            if (draft && typeof state.regData !== 'undefined') {
+                state.regData = { ...state.regData, ...draft };
+            }
             if (typeof state.regData !== 'undefined') {
                 state.regData.email = matchedUser.email || email;
-                state.regData.name = matchedUser.name || '';
-                state.regData.gender = matchedUser.gender || '';
-                state.regData.caste = matchedUser.caste || '';
+                if (matchedUser.name && !state.regData.name) state.regData.name = matchedUser.name;
+                if (matchedUser.gender && !state.regData.gender) state.regData.gender = matchedUser.gender;
+                if (matchedUser.caste && !state.regData.caste) state.regData.caste = matchedUser.caste;
+                if (matchedUser.mobile && !state.regData.ownMobile) state.regData.ownMobile = matchedUser.mobile;
+                if (matchedUser.city && !state.regData.city) state.regData.city = matchedUser.city;
+                if (matchedUser.district && !state.regData.district) state.regData.district = matchedUser.district;
+                if (matchedUser.address && !state.regData.address) state.regData.address = matchedUser.address;
+                if (matchedUser.photo && !state.regData.photo) state.regData.photo = matchedUser.photo;
             }
+
+            // Determine exact remaining step
+            const targetRegStep = (typeof determineRemainingRegStep === 'function')
+                ? determineRemainingRegStep(state.regData, matchedUser)
+                : 'scr-reg-caste';
+
+            // Populate form fields on the target screen
+            if (typeof restoreRegFormFields === 'function') {
+                restoreRegFormFields(targetRegStep, state.regData);
+            }
+
             saveSessionState();
-            showToast('Please complete your profile to continue');
-            go('scr-reg-caste');
+            showToast('Welcome back! Please complete your profile to continue.');
+            go(targetRegStep);
             return;
         }
 
@@ -1208,7 +1503,10 @@ function enterHome() {
         state.profileComplete = false;
         openModal('modalCompleteProfile');
         showToast('Please complete your profile first');
-        go('scr-reg-caste');
+        const targetStep = (typeof determineRemainingRegStep === 'function')
+            ? determineRemainingRegStep(state.regData, state.currentUser)
+            : 'scr-reg-caste';
+        go(targetStep);
         return;
     }
     

@@ -230,6 +230,9 @@ async function submitProfileCompletion() {
         sessionStorage.setItem('lagnaSetu_profileComplete', 'true');
         sessionStorage.setItem('lagnaSetu_just_registered', 'true');
     } catch (_) {}
+    if (typeof clearRegDraft === 'function') {
+        clearRegDraft(newProfile.email);
+    }
     saveSessionState();
     renderFilterCasteOptions();
     updateHeaderUserDisplay();
