@@ -10,7 +10,7 @@ window.escapeHtml = escapeHtmlAdmin;
         /* ============================================================ USERS ============================================================ */
                 function setUserTab(t) {
             state.userTab = t;
-            ['userTabAll', 'userTabBoys', 'userTabGirls', 'userTabSuspended'].forEach(id => {
+            ['userTabAll', 'userTabBoys', 'userTabGirls', 'userTabPending', 'userTabSuspended'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.toggle('active', id.toLowerCase().includes(t));
             });
@@ -23,9 +23,12 @@ window.escapeHtml = escapeHtmlAdmin;
             let list = USERS.slice();
             const checkBoy = typeof isBoyGender === 'function' ? isBoyGender : g => (g === 'boys' || g === 'Boy' || g === 'boy');
             const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
+            const isUserPending = u => (u.verifyStatus === 'pending' || u.accountStatus === 'pending' || (u.visible === false && u.accountStatus !== 'suspended'));
 
             if (state.userTab === 'suspended') {
                 list = list.filter(u => u.accountStatus === 'suspended');
+            } else if (state.userTab === 'pending') {
+                list = list.filter(u => isUserPending(u) && u.accountStatus !== 'suspended');
             } else if (state.userTab === 'boys') {
                 list = list.filter(u => checkBoy(u.gender) && u.accountStatus !== 'suspended');
             } else if (state.userTab === 'girls') {
@@ -37,12 +40,14 @@ window.escapeHtml = escapeHtmlAdmin;
             }
             const boysCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkBoy(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
             const girlsCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkGirl(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const pendingCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && isUserPending(u) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
             const suspendedCount = USERS.filter(u => u && u.accountStatus === 'suspended').length;
             const allActiveCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
 
             if (document.getElementById('uCountAll')) document.getElementById('uCountAll').textContent = allActiveCount;
             if (document.getElementById('uCountBoys')) document.getElementById('uCountBoys').textContent = boysCount;
             if (document.getElementById('uCountGirls')) document.getElementById('uCountGirls').textContent = girlsCount;
+            if (document.getElementById('uCountPending')) document.getElementById('uCountPending').textContent = pendingCount;
             if (document.getElementById('uCountSuspended')) document.getElementById('uCountSuspended').textContent = suspendedCount;
 
             wrap.innerHTML = '';
@@ -90,7 +95,12 @@ window.escapeHtml = escapeHtmlAdmin;
             const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
             const isGirl = checkGirl(u.gender);
             const payBadge = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> Free</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99</span>' : '<span class="status-badge pending">Unpaid</span>');
-            const statusBadge = u.accountStatus === 'active' ? '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active</span>' : '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended</span>';
+            const isPending = (u.verifyStatus === 'pending' || u.accountStatus === 'pending' || (u.visible === false && u.accountStatus !== 'suspended'));
+            const statusBadge = u.accountStatus === 'suspended'
+                ? '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended</span>'
+                : (isPending
+                    ? '<span class="status-badge pending" style="background:rgba(234,179,8,0.14);color:#b45309;border:1px solid rgba(234,179,8,0.3);"><i class="fa-solid fa-hourglass-half"></i> Pending Review</span>'
+                    : '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active</span>');
             const termsBadge = '<span class="status-badge" style="background:rgba(46,196,182,0.12);color:#2EC4B6;border:1px solid rgba(46,196,182,0.3);font-size:10px;padding:2px 7px;font-weight:700;" title="Terms & Privacy Policy Agreed"><i class="fa-solid fa-shield-halved"></i> Terms Agreed</span>';
             const photoCount = (Array.isArray(u.photos) && u.photos.length > 0) ? u.photos.length : 1;
             const photoBadge = photoCount > 1 ? `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10.5px;color:var(--primary);font-weight:700;"><i class="fa-solid fa-camera"></i> ${photoCount}</span> • ` : '';
@@ -181,7 +191,12 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!el) return;
             const isGirl = u.gender === 'girls' || u.gender === 'Girl';
             const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
-            const statusBadge = u.accountStatus === 'active' ? '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active Account</span>' : '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>';
+            const isPending = (u.verifyStatus === 'pending') || (u.accountStatus === 'pending') || (u.visible === false && u.accountStatus !== 'suspended');
+            const statusBadge = u.accountStatus === 'suspended'
+                ? '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>'
+                : (isPending
+                    ? '<span class="status-badge pending" style="background:rgba(234,179,8,0.14);color:#b45309;border:1px solid rgba(234,179,8,0.3);"><i class="fa-solid fa-hourglass-half"></i> Pending Review</span>'
+                    : '<span class="status-badge active"><i class="fa-solid fa-check"></i> Active Account</span>');
             const termsBadgeDetail = '<span class="status-badge" style="background:rgba(46,196,182,0.12);color:#2EC4B6;border:1px solid rgba(46,196,182,0.35);font-weight:700;"><i class="fa-solid fa-shield-halved"></i> Terms Agreed</span>';
 
             // Photos: 1, 2, or 3 photos
@@ -205,6 +220,15 @@ window.escapeHtml = escapeHtmlAdmin;
         ${termsBadgeDetail}
       </div>
     </div>
+
+    ${isPending && u.accountStatus !== 'suspended' ? `
+    <div class="card" style="margin-top:14px;background:#fefce8;border:1.5px solid #fde047;padding:14px 16px;border-radius:14px;box-shadow:0 2px 8px rgba(202,138,4,0.08);">
+      <div style="color:#a16207;font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-hourglass-half"></i> This profile is Pending Admin Review</div>
+      <p style="font-size:12px;color:var(--text);margin:6px 0 12px;line-height:1.5;">Auto-approve is currently turned OFF or this profile was submitted for manual review. It is hidden from public searches until you approve it.</p>
+      <button class="btn btn-primary" id="btnApproveMember" style="background:#16a34a;border-color:#16a34a;font-weight:700;display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-size:13px;border-radius:8px;" onclick="approveMemberProfile('${u.id}')">
+        <i class="fa-solid fa-circle-check"></i> Approve &amp; Activate Profile Now
+      </button>
+    </div>` : ''}
 
     ${u.accountStatus === 'suspended' ? `
     <div class="card" style="margin-top:14px;background:var(--error-bg);border:1px solid rgba(217,4,41,0.2);padding:12px 14px;">
@@ -323,6 +347,68 @@ window.escapeHtml = escapeHtmlAdmin;
             }
             renderUserInterestsMini(u.id);
         }
+
+        async function approveMemberProfile(id) {
+            const u = (typeof findUser === 'function') ? findUser(id) : USERS.find(x => String(x.id) === String(id));
+            if (!u) return;
+
+            u.visible = true;
+            u.accountStatus = 'active';
+            u.verifyStatus = 'approved';
+            u.approvedDate = new Date().toISOString();
+
+            if (typeof saveAdminData === 'function') saveAdminData();
+
+            // Synchronize local caches for any active tab or storage
+            try {
+                if (Array.isArray(window.PROFILES)) {
+                    const pIdx = window.PROFILES.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
+                    if (pIdx !== -1) {
+                        window.PROFILES[pIdx].visible = true;
+                        window.PROFILES[pIdx].accountStatus = 'active';
+                        window.PROFILES[pIdx].verifyStatus = 'approved';
+                    }
+                }
+                const cachedProfiles = JSON.parse(sessionStorage.getItem('lagnaSetu_profiles') || '[]');
+                if (Array.isArray(cachedProfiles) && cachedProfiles.length > 0) {
+                    const cpIdx = cachedProfiles.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
+                    if (cpIdx !== -1) {
+                        cachedProfiles[cpIdx].visible = true;
+                        cachedProfiles[cpIdx].accountStatus = 'active';
+                        cachedProfiles[cpIdx].verifyStatus = 'approved';
+                        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(cachedProfiles));
+                    }
+                }
+            } catch (_) {}
+
+            // Sync to live Supabase PostgreSQL
+            if (typeof supabaseUpdateProfileStatus === 'function') {
+                try {
+                    await supabaseUpdateProfileStatus(u.id, {
+                        visible: true,
+                        accountStatus: 'active',
+                        verifyStatus: 'approved',
+                        email: u.email
+                    });
+                    console.info('[Admin] Member profile approved & activated in Supabase:', u.id);
+                } catch (err) {
+                    console.warn('[Admin] Approve sync note:', err);
+                }
+            }
+
+            if (typeof showToast === 'function') {
+                showToast(`✅ ${u.name}'s profile approved & published live! ✨`);
+            }
+
+            // Refresh UI
+            if (typeof openUserDetail === 'function') {
+                openUserDetail(u.id);
+            }
+            if (typeof renderUsers === 'function') {
+                renderUsers();
+            }
+        }
+        window.approveMemberProfile = approveMemberProfile;
 
 
         /* ============================================================ INTERESTS & MATCHES ============================================================ */
@@ -1377,6 +1463,7 @@ async function savePlatformSettings() {
                 supabaseSetAppSetting('membership_pricing', membershipPricing),
                 supabaseSetAppSetting('auto_approve', { enabled: autoApproveOn })
             ]);
+            try { localStorage.setItem('LS_COMMUNITY_AUTO_APPROVE', JSON.stringify({ enabled: autoApproveOn })); } catch (_) {}
             console.info('[Admin] Platform settings & pricing saved to Supabase app_settings');
         } catch(e) {
             console.warn('[Admin] Failed saving platform settings to Supabase:', e);
@@ -1391,6 +1478,9 @@ function toggleAutoApprove(btn) {
     const isCurrentlyOn = btn.classList.contains('on');
     const newState = !isCurrentlyOn;
     btn.classList.toggle('on', newState);
+    try {
+        localStorage.setItem('LS_COMMUNITY_AUTO_APPROVE', JSON.stringify({ enabled: newState }));
+    } catch (_) {}
     if (typeof supabaseSetAppSetting === 'function') {
         supabaseSetAppSetting('auto_approve', { enabled: newState }).catch(() => {});
     }
@@ -1431,4 +1521,6 @@ if (typeof renderNotifs !== 'undefined') window.renderNotifs = renderNotifs;
 if (typeof renderHelp !== 'undefined') window.renderHelp = renderHelp;
 if (typeof syncSettingsUI !== 'undefined') window.syncSettingsUI = syncSettingsUI;
 if (typeof savePlatformSettings !== 'undefined') window.savePlatformSettings = savePlatformSettings;
+if (typeof toggleAutoApprove !== 'undefined') window.toggleAutoApprove = toggleAutoApprove;
+if (typeof approveMemberProfile !== 'undefined') window.approveMemberProfile = approveMemberProfile;
 if (typeof setUserTab !== 'undefined') window.setUserTab = setUserTab;

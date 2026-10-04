@@ -972,6 +972,10 @@
             if (!u) return;
             const currentVis = (u.visible !== false && u.visible !== 'false' && u.visible !== 0);
             u.visible = !currentVis;
+            if (u.visible) {
+                if (u.accountStatus === 'pending') u.accountStatus = 'active';
+                if (u.verifyStatus === 'pending') u.verifyStatus = 'approved';
+            }
             if (btn) {
                 if (u.visible) {
                     btn.classList.add('on');
@@ -987,6 +991,10 @@
                     const pIdx = window.PROFILES.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
                     if (pIdx !== -1) {
                         window.PROFILES[pIdx].visible = u.visible;
+                        if (u.visible) {
+                            window.PROFILES[pIdx].accountStatus = u.accountStatus;
+                            window.PROFILES[pIdx].verifyStatus = u.verifyStatus;
+                        }
                     }
                 }
                 const cachedProfiles = JSON.parse(sessionStorage.getItem('lagnaSetu_profiles') || '[]');
@@ -994,6 +1002,10 @@
                     const cpIdx = cachedProfiles.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
                     if (cpIdx !== -1) {
                         cachedProfiles[cpIdx].visible = u.visible;
+                        if (u.visible) {
+                            cachedProfiles[cpIdx].accountStatus = u.accountStatus;
+                            cachedProfiles[cpIdx].verifyStatus = u.verifyStatus;
+                        }
                         sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(cachedProfiles));
                     }
                 }
@@ -1003,11 +1015,13 @@
             if (typeof supabaseUpdateProfileStatus === 'function') {
                 supabaseUpdateProfileStatus(u.id, {
                     visible: u.visible,
+                    accountStatus: u.accountStatus,
+                    verifyStatus: u.verifyStatus,
                     email: u.email
                 }).catch(err => console.warn('[Supabase] Visibility sync notice:', err));
             }
 
-            showToast(u.visible ? 'Profile is now visible in search' : 'Profile hidden from search');
+            showToast(u.visible ? 'Profile is now approved & visible in search' : 'Profile hidden from search');
         }
 
         function refreshCurrentScreen() {

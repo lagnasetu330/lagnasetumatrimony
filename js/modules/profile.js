@@ -1,6 +1,6 @@
 /* ============================================================ MEMBER PROFILE & ACTIONS ============================================================ */
 /* ============================================================ STEP 3: SUBMIT PROFILE & GENDER PAYWALL ============================================================ */
-function submitProfileCompletion() {
+async function submitProfileCompletion() {
     const cityInput = document.getElementById('regCity');
     const talukaInput = document.getElementById('regTaluka');
     const districtInput = document.getElementById('regDistrict');
@@ -86,10 +86,45 @@ function submitProfileCompletion() {
         img: (state.regData.photos && state.regData.photos.filter(Boolean)[0]) || state.regData.photo || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop'),
         photos: (state.regData.photos && state.regData.photos.filter(Boolean).length > 0) ? state.regData.photos.filter(Boolean) : [state.regData.photo || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop')]
     };
-    newProfile.accountStatus = 'active';
-    newProfile.verifyStatus = 'approved';
+    // Check Auto-Approve setting (configured from Admin Control Center)
+    let isAutoApproved = true;
+    try {
+        if (typeof supabaseGetAppSetting === 'function') {
+            const remoteAuto = await Promise.race([
+                supabaseGetAppSetting('auto_approve'),
+                new Promise(resolve => setTimeout(() => resolve(null), 1200))
+            ]);
+            if (remoteAuto && typeof remoteAuto.enabled === 'boolean') {
+                isAutoApproved = remoteAuto.enabled;
+                try { localStorage.setItem('LS_COMMUNITY_AUTO_APPROVE', JSON.stringify(remoteAuto)); } catch (_) {}
+            } else {
+                const cachedAuto = localStorage.getItem('LS_COMMUNITY_AUTO_APPROVE');
+                if (cachedAuto) {
+                    const p = JSON.parse(cachedAuto);
+                    if (p && typeof p.enabled === 'boolean') isAutoApproved = p.enabled;
+                }
+            }
+        } else {
+            const cachedAuto = localStorage.getItem('LS_COMMUNITY_AUTO_APPROVE');
+            if (cachedAuto) {
+                const p = JSON.parse(cachedAuto);
+                if (p && typeof p.enabled === 'boolean') isAutoApproved = p.enabled;
+            }
+        }
+    } catch (_) {
+        try {
+            const cachedAuto = localStorage.getItem('LS_COMMUNITY_AUTO_APPROVE');
+            if (cachedAuto) {
+                const p = JSON.parse(cachedAuto);
+                if (p && typeof p.enabled === 'boolean') isAutoApproved = p.enabled;
+            }
+        } catch (_) {}
+    }
+
+    newProfile.accountStatus = isAutoApproved ? 'active' : 'pending';
+    newProfile.verifyStatus = isAutoApproved ? 'approved' : 'pending';
     newProfile.paymentStatus = isGirl ? 'free' : 'unpaid';
-    newProfile.visible = true;
+    newProfile.visible = isAutoApproved ? true : false;
     newProfile.registered = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     newProfile.agreedTerms = true;
     newProfile.agreedTermsAt = (state.currentUser && state.currentUser.agreedTermsAt) || new Date().toISOString();
@@ -112,6 +147,9 @@ function submitProfileCompletion() {
     state.currentUser.userId = String(newProfile.id);
     state.currentUser.profileId = newProfile.id;
     state.currentUser.profileComplete = true;
+    state.currentUser.accountStatus = newProfile.accountStatus;
+    state.currentUser.verifyStatus = newProfile.verifyStatus;
+    state.currentUser.visible = newProfile.visible;
     state.currentUser.email = newProfile.email;
     state.currentUser.name = newProfile.name;
     state.currentUser.gender = isGirl ? 'Girl' : 'Boy';
@@ -150,7 +188,7 @@ function submitProfileCompletion() {
             caste: newProfile.community,
             mobile: newProfile.mobile,
             profileComplete: true,
-            status: 'Active',
+            status: isAutoApproved ? 'Active' : 'Pending',
             paymentStatus: isGirl ? 'Free' : (state.currentUser.paymentStatus || 'Unpaid')
         }).catch(err => console.warn('[Supabase] User profile completion sync notice:', err));
     }
@@ -199,11 +237,17 @@ function submitProfileCompletion() {
     if (isGirl) {
         state.history = ['scr-home'];
         renderHome();
+        if (!isAutoApproved) {
+            showToast('Profile registered! Admin review pending before public search activation.');
+        }
         openModal('modalGirlComplete');
     } else {
         // Boy MUST pay ₹99 to see any girl profiles — redirect directly to scr-membership
         state.history = ['scr-membership'];
         go('scr-membership', true);
+        if (!isAutoApproved) {
+            showToast('Profile submitted! Admin review pending before public search activation.');
+        }
         openModal('modalBoyComplete');
     }
 }
