@@ -189,14 +189,117 @@ function interestStatusFor(profileId) {
     return null;
 }
 
+/* ============================================================ DAILY INTEREST LIMIT (5 / DAY) ============================================================ */
+const DAILY_INTEREST_LIMIT = 5;
+
+/**
+ * Get daily interest usage for the current user (female or male)
+ * Enforces a maximum limit of 5 requests per 24 hours
+ */
+function getDailyInterestUsage() {
+    const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
+    if (!curUser) return { count: 0, remaining: DAILY_INTEREST_LIMIT, isLimitReached: false, resetInHours: 0, resetInMinutes: 0, timestamps: [] };
+
+    const normId = String(curUser.id || curUser.userId || '');
+    const normEmail = (curUser.email || '').toLowerCase().trim();
+    const userKey = 'LS_DAILY_INTERESTS_' + (normId || normEmail || 'guest');
+
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+    let localTimestamps = [];
+    try {
+        const raw = localStorage.getItem(userKey);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                localTimestamps = parsed.filter(t => typeof t === 'number' && !isNaN(t));
+            }
+        }
+    } catch (_) {
+        localTimestamps = [];
+    }
+
+    // Merge with any timestamps stored in OUTGOING_REQUESTS
+    const memTimestamps = (typeof OUTGOING_REQUESTS !== 'undefined' && Array.isArray(OUTGOING_REQUESTS))
+        ? OUTGOING_REQUESTS
+            .map(r => r.timestamp || (r.createdAt ? new Date(r.createdAt).getTime() : 0))
+            .filter(t => t > 0 && typeof t === 'number' && !isNaN(t))
+        : [];
+
+    const all = [...localTimestamps, ...memTimestamps];
+    const valid = all.filter(t => (now - t) < TWENTY_FOUR_HOURS);
+    valid.sort((a, b) => a - b);
+
+    // Deduplicate timestamps that were logged within 5 seconds of each other
+    const deduped = [];
+    for (const t of valid) {
+        if (!deduped.some(existing => Math.abs(existing - t) < 5000)) {
+            deduped.push(t);
+        }
+    }
+
+    try {
+        localStorage.setItem(userKey, JSON.stringify(deduped));
+    } catch (_) {}
+
+    const count = deduped.length;
+    const remaining = Math.max(0, DAILY_INTEREST_LIMIT - count);
+    const isLimitReached = count >= DAILY_INTEREST_LIMIT;
+
+    let resetInHours = 0;
+    let resetInMinutes = 0;
+    if (deduped.length > 0) {
+        const oldest = deduped[0];
+        const diffMs = Math.max(0, (oldest + TWENTY_FOUR_HOURS) - now);
+        resetInHours = Math.ceil(diffMs / (60 * 60 * 1000));
+        resetInMinutes = Math.ceil(diffMs / (60 * 1000));
+    }
+
+    return {
+        count,
+        remaining,
+        isLimitReached,
+        resetInHours,
+        resetInMinutes,
+        timestamps: deduped
+    };
+}
+window.getDailyInterestUsage = getDailyInterestUsage;
+
+function recordDailyInterestSent(timestamp = Date.now()) {
+    const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
+    if (!curUser) return;
+    const normId = String(curUser.id || curUser.userId || '');
+    const normEmail = (curUser.email || '').toLowerCase().trim();
+    const userKey = 'LS_DAILY_INTERESTS_' + (normId || normEmail || 'guest');
+
+    const usage = getDailyInterestUsage();
+    usage.timestamps.push(timestamp);
+    try {
+        localStorage.setItem(userKey, JSON.stringify(usage.timestamps));
+    } catch (_) {}
+}
+window.recordDailyInterestSent = recordDailyInterestSent;
+
 function openInterestModal(id) {
     const p = findProfile(id);
     if (!p) return;
+
+    // Strict Anti-Spam: Daily Limit of 5 Requests (for both girls and boys)
+    const usage = getDailyInterestUsage();
+    if (usage.isLimitReached) {
+        showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+        return;
+    }
+
     state.activeInterestId = id;
     const txtEl = document.getElementById('interestText');
     if (txtEl) {
-        txtEl.textContent =
-            `You're about to send an interest request to ${p.name}. They will receive an instant email notification on their registered email with your profile details. If they accept, safe text chat will unlock immediately.`;
+        txtEl.innerHTML =
+            `You're about to send an interest request to <b>${escapeHtml(p.name || 'this member')}</b>. They will receive an instant email notification on their registered email with your profile details. If they accept, safe text chat and family contact details will unlock immediately.<br><br>` +
+            `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(123,44,191,0.08);color:var(--primary,#7B2CBF);border:1px solid rgba(123,44,191,0.2);border-radius:20px;font-size:12px;font-weight:700;">` +
+            `<i class="fa-solid fa-clock-rotate-left"></i> Daily Limit: ${usage.remaining} of 5 interest requests left today</div>`;
     }
     openModal('modalInterest');
 }
@@ -221,11 +324,21 @@ async function confirmSendInterest() {
         return;
     }
 
+    // Strict Anti-Spam: Check 5 daily interest requests limit
+    const usage = getDailyInterestUsage();
+    if (usage.isLimitReached) {
+        closeModal('modalInterest');
+        showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+        return;
+    }
+
     const pid = Number(id);
+    const nowTs = Date.now();
     const existing = OUTGOING_REQUESTS.find(r => Number(r.profileId) === pid);
     if (existing) {
         existing.status = 'pending';
         existing.date = 'Just now';
+        existing.timestamp = nowTs;
     } else {
         OUTGOING_REQUESTS.push({
             id: `int_${currentUsr.id}_${pid}`,
@@ -233,12 +346,17 @@ async function confirmSendInterest() {
             receiverEmail: p.email || '',
             receiverName: p.name || 'Member',
             status: 'pending',
-            date: 'Just now'
+            date: 'Just now',
+            timestamp: nowTs
         });
     }
 
+    // Record the sent request to update daily count
+    recordDailyInterestSent(nowTs);
+    const remainingCount = Math.max(0, DAILY_INTEREST_LIMIT - (usage.count + 1));
+
     closeModal('modalInterest');
-    showToast(`Interest request sent to ${p.name}! Email notification dispatched 💍`);
+    showToast(`Interest request sent to ${p.name}! (${remainingCount} of 5 daily requests remaining) 💍`);
     refreshProfileButtons();
     updateInboxBadge();
     saveSessionState();
@@ -250,7 +368,11 @@ async function confirmSendInterest() {
             await supabaseSendInterest(senderObj, p);
             console.info('[Interest] Successfully persisted to Supabase for:', p.name);
         } catch (err) {
-            console.warn('[Interest] Supabase error:', err);
+            if (err && err.message === 'DAILY_LIMIT_EXCEEDED') {
+                showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+            } else {
+                console.warn('[Interest] Supabase note:', err);
+            }
         }
     }
 }

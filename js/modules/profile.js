@@ -744,6 +744,15 @@ function sendInterest(id) {
         if (typeof showToast === 'function') showToast('You cannot send interest to your own profile');
         return;
     }
+    if (typeof getDailyInterestUsage === 'function') {
+        const usage = getDailyInterestUsage();
+        if (usage && usage.isLimitReached) {
+            if (typeof showToast === 'function') {
+                showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+            }
+            return;
+        }
+    }
     if (typeof openInterestModal === 'function') {
         openInterestModal(id);
     }

@@ -1711,15 +1711,31 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
         updated_at: new Date().toISOString()
     };
 
-    // 1. Supabase Persistence
+    // 1. Supabase Persistence & Strict Daily Limit Guard
     if (client) {
         try {
+            // Anti-Spam Check: Ensure user has not sent >= 5 requests in last 24 hours
+            const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { count: recentSentCount, error: countErr } = await client
+                .from('interests')
+                .select('id', { count: 'exact', head: true })
+                .or(`sender_id.eq.${senderId},sender_email.eq.${senderEmail}`)
+                .gte('created_at', twentyFourHoursAgo);
+
+            if (!countErr && typeof recentSentCount === 'number' && recentSentCount >= 5) {
+                console.warn('[Supabase] Daily limit exceeded on database:', recentSentCount);
+                throw new Error('DAILY_LIMIT_EXCEEDED');
+            }
+
             const { data, error } = await client
                 .from('interests')
                 .upsert(interestRow, { onConflict: 'id' });
             if (error) console.warn('[Supabase] Interest upsert note:', error.message);
             else console.info('[Supabase] Interest saved to database:', interestId);
         } catch (e) {
+            if (e && e.message === 'DAILY_LIMIT_EXCEEDED') {
+                throw e;
+            }
             console.warn('[Supabase] Interest upsert error:', e);
         }
     }
@@ -1807,6 +1823,8 @@ async function supabaseFetchUserInterests(userEmail, userId) {
             receiverEmail: r.receiver_email,
             receiverName: r.receiver_name,
             status: r.status,
+            createdAt: r.created_at,
+            timestamp: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
             date: new Date(r.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
         }));
 
