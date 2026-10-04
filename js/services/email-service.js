@@ -610,9 +610,24 @@ async function sendAccountDeletionEmail(toEmail, toName, reason, extraUserId) {
  */
 async function sendMatrimonialEmailNotification(params) {
     const { type, toEmail, toName, senderData, receiverData } = params;
-    if (!toEmail || String(toEmail).includes('•') || !String(toEmail).includes('@')) {
-        console.warn(`[EmailService] Recipient email is missing, invalid or masked: "${toEmail}". Notification skipped.`);
-        return { success: false, reason: 'missing_or_masked_recipient_email' };
+
+    // STRICT EMAIL GUARD — Must pass before ANY dispatch or logging
+    // Blocks masked emails (•, *, Ã, â, ..), malformed addresses, and empty values
+    const _guardEmail = (em) => {
+        if (!em || typeof em !== 'string') return false;
+        const c = em.trim().toLowerCase();
+        if (
+            c.includes('•') || c.includes('*') ||
+            c.includes('ã') || c.includes('â') ||
+            c.includes('..') || c.includes(' ') ||
+            !c.includes('@') || c.startsWith('@') || c.endsWith('@')
+        ) return false;
+        return /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(c);
+    };
+
+    if (!_guardEmail(toEmail)) {
+        console.warn(`[EmailService] ⛔ Blocked invalid/masked recipient email: "${toEmail}". Notification type="${type}" skipped.`);
+        return { success: false, reason: 'invalid_or_masked_recipient_email' };
     }
 
     let emailData = null;

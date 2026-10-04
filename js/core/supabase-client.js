@@ -1835,46 +1835,77 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
         receiverId = Math.abs(hash) || 20002;
     }
 
-    let senderEmail = (senderProfile.rawEmail || senderProfile.email || '').trim().toLowerCase();
-    if (senderEmail.includes('•')) senderEmail = '';
-    if (!senderEmail && window.state?.currentUser?.email && !window.state.currentUser.email.includes('•')) {
+    function isCleanRealEmail(em) {
+        if (!em || typeof em !== 'string') return false;
+        const c = em.trim().toLowerCase();
+        if (c.includes('•') || c.includes('Ã') || c.includes('â') || c.includes('*') || c.includes('..')) return false;
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c);
+    }
+
+    let senderEmail = '';
+    if (isCleanRealEmail(senderProfile?.rawEmail)) senderEmail = senderProfile.rawEmail.trim().toLowerCase();
+    else if (isCleanRealEmail(senderProfile?.email)) senderEmail = senderProfile.email.trim().toLowerCase();
+    else if (window.state?.currentUser?.email && isCleanRealEmail(window.state.currentUser.email)) {
         senderEmail = window.state.currentUser.email.trim().toLowerCase();
     }
 
-    let receiverEmail = (receiverProfile.rawEmail || receiverProfile.email || '').trim().toLowerCase();
-    if (receiverEmail.includes('•')) receiverEmail = '';
+    let receiverEmail = '';
+    if (isCleanRealEmail(receiverProfile?.rawEmail)) receiverEmail = receiverProfile.rawEmail.trim().toLowerCase();
+    else if (isCleanRealEmail(receiverProfile?.email)) receiverEmail = receiverProfile.email.trim().toLowerCase();
 
     const interestId = `int_${senderId}_${receiverId}`;
 
     // Production Fallback: Ensure receiver email is fetched from Supabase if absent or masked in current profile object
-    if (!receiverEmail && client && receiverId) {
+    if (!isCleanRealEmail(receiverEmail) && client && receiverId) {
         try {
-            const q = client.from('profiles').select('email').eq('id', receiverId);
-            const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-            const recRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
-            if (recRow && recRow.email && !recRow.email.includes('•')) {
-                receiverEmail = recRow.email.trim().toLowerCase();
+            const { data } = await client.from('profiles').select('email, raw_data').eq('id', receiverId).limit(1);
+            const row = Array.isArray(data) ? data[0] : data;
+            if (row) {
+                if (isCleanRealEmail(row.email)) receiverEmail = row.email.trim().toLowerCase();
+                else if (row.raw_data && isCleanRealEmail(row.raw_data.email)) receiverEmail = row.raw_data.email.trim().toLowerCase();
+                else if (row.raw_data && isCleanRealEmail(row.raw_data.rawEmail)) receiverEmail = row.raw_data.rawEmail.trim().toLowerCase();
             }
         } catch (e) {
             console.warn('[Supabase] Receiver email fallback fetch from profiles note:', e);
         }
     }
-    if (!receiverEmail && client && receiverId) {
+    if (!isCleanRealEmail(receiverEmail) && client && receiverId) {
         try {
-            const q = client.from('users').select('email').eq('id', receiverId);
-            const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-            const userRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
-            if (userRow && userRow.email && !userRow.email.includes('•')) {
-                receiverEmail = userRow.email.trim().toLowerCase();
+            const { data } = await client.from('users').select('email').eq('id', receiverId).limit(1);
+            const row = Array.isArray(data) ? data[0] : data;
+            if (row && isCleanRealEmail(row.email)) {
+                receiverEmail = row.email.trim().toLowerCase();
             }
         } catch (_) {}
     }
-    if (!receiverEmail && typeof getStoredAccounts === 'function') {
+    if (!isCleanRealEmail(receiverEmail) && typeof getStoredAccounts === 'function') {
         try {
             const accs = getStoredAccounts();
-            const recAcc = (accs || []).find(a => (receiverId && Number(a.id) === receiverId) || (receiverProfile.name && a.name === receiverProfile.name));
-            if (recAcc && recAcc.email && !recAcc.email.includes('•')) {
+            const recAcc = (accs || []).find(a => (receiverId && Number(a.id) === receiverId) || (receiverProfile?.name && a.name === receiverProfile.name));
+            if (recAcc && isCleanRealEmail(recAcc.email)) {
                 receiverEmail = recAcc.email.trim().toLowerCase();
+            }
+        } catch (_) {}
+    }
+    // Final fallback: direct localStorage read (in case auth.js not yet loaded)
+    if (!isCleanRealEmail(receiverEmail)) {
+        try {
+            const lsKeys = ['LS_STORED_ACCOUNTS', 'LS_COMMUNITY_USERS'];
+            for (const key of lsKeys) {
+                if (isCleanRealEmail(receiverEmail)) break;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                const accs = JSON.parse(raw);
+                if (!Array.isArray(accs)) continue;
+                const match = accs.find(a =>
+                    (receiverId && Number(a.id) === receiverId) ||
+                    (receiverProfile?.name && a.name && a.name === receiverProfile.name) ||
+                    (receiverProfile?.email && a.email && a.email.trim().toLowerCase() === receiverProfile.email.trim().toLowerCase())
+                );
+                if (match && isCleanRealEmail(match.email)) {
+                    receiverEmail = match.email.trim().toLowerCase();
+                    console.info('[Supabase] Receiver email resolved from localStorage:', key, receiverEmail);
+                }
             }
         } catch (_) {}
     }
@@ -1934,7 +1965,7 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
         ? sendMatrimonialEmailNotification
         : ((typeof window !== 'undefined' && typeof window.sendMatrimonialEmailNotification === 'function') ? window.sendMatrimonialEmailNotification : null);
 
-    if (receiverEmail && !receiverEmail.includes('•') && dispatchEmailFn) {
+    if (isCleanRealEmail(receiverEmail) && dispatchEmailFn) {
         dispatchEmailFn({
             type: 'INTEREST_RECEIVED',
             toEmail: receiverEmail,
@@ -2062,31 +2093,36 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
         }
     }
 
-    // Send email notification to sender regarding accept / decline
-    let senderEmail = (senderProfile?.rawEmail || senderProfile?.email || '').trim().toLowerCase();
-    if (senderEmail.includes('•')) {
-        senderEmail = '';
+    function isCleanRealEmail(em) {
+        if (!em || typeof em !== 'string') return false;
+        const c = em.trim().toLowerCase();
+        if (c.includes('•') || c.includes('Ã') || c.includes('â') || c.includes('*') || c.includes('..')) return false;
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c);
     }
+
+    // Send email notification to sender regarding accept / decline
+    let senderEmail = '';
+    if (isCleanRealEmail(senderProfile?.rawEmail)) senderEmail = senderProfile.rawEmail.trim().toLowerCase();
+    else if (isCleanRealEmail(senderProfile?.email)) senderEmail = senderProfile.email.trim().toLowerCase();
     let senderName = senderProfile?.name || 'Member';
 
     // Tier 1 Fallback: Fetch real unmasked sender email from stored interest row in Supabase
-    if (!senderEmail && client) {
+    if (!isCleanRealEmail(senderEmail) && client) {
         try {
             let intRow = null;
             if (interestId) {
-                const q = client.from('interests').select('sender_email, sender_name, sender_id').eq('id', interestId);
-                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-                intRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+                const { data } = await client.from('interests').select('sender_email, sender_name, sender_id').eq('id', interestId).limit(1);
+                intRow = Array.isArray(data) ? data[0] : data;
             }
             if (!intRow && senderProfile?.id && receiverProfile?.id) {
-                const q = client.from('interests')
+                const { data } = await client.from('interests')
                     .select('sender_email, sender_name, sender_id')
                     .eq('sender_id', Number(senderProfile.id))
-                    .eq('receiver_id', Number(receiverProfile.id));
-                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-                intRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+                    .eq('receiver_id', Number(receiverProfile.id))
+                    .limit(1);
+                intRow = Array.isArray(data) ? data[0] : data;
             }
-            if (intRow && intRow.sender_email && !intRow.sender_email.includes('•')) {
+            if (intRow && isCleanRealEmail(intRow.sender_email)) {
                 senderEmail = intRow.sender_email.trim().toLowerCase();
                 if ((!senderName || senderName === 'Member') && intRow.sender_name) {
                     senderName = intRow.sender_name;
@@ -2098,16 +2134,17 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
     }
 
     // Tier 2 Fallback: Fetch real unmasked sender email from public.profiles in Supabase
-    if (!senderEmail && client && senderProfile?.id) {
+    if (!isCleanRealEmail(senderEmail) && client && senderProfile?.id) {
         try {
             const numSenderId = Number(senderProfile.id);
             if (!isNaN(numSenderId) && numSenderId > 0) {
-                const q = client.from('profiles').select('email, name').eq('id', numSenderId);
-                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-                const profRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
-                if (profRow && profRow.email && !profRow.email.includes('•')) {
-                    senderEmail = profRow.email.trim().toLowerCase();
-                    if (!senderName || senderName === 'Member') {
+                const { data } = await client.from('profiles').select('email, raw_data, name').eq('id', numSenderId).limit(1);
+                const profRow = Array.isArray(data) ? data[0] : data;
+                if (profRow) {
+                    if (isCleanRealEmail(profRow.email)) senderEmail = profRow.email.trim().toLowerCase();
+                    else if (profRow.raw_data && isCleanRealEmail(profRow.raw_data.email)) senderEmail = profRow.raw_data.email.trim().toLowerCase();
+                    else if (profRow.raw_data && isCleanRealEmail(profRow.raw_data.rawEmail)) senderEmail = profRow.raw_data.rawEmail.trim().toLowerCase();
+                    if ((!senderName || senderName === 'Member') && profRow.name) {
                         senderName = profRow.name || senderName;
                     }
                 }
@@ -2118,14 +2155,13 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
     }
 
     // Tier 3 Fallback: Fetch real unmasked sender email from public.users in Supabase
-    if (!senderEmail && client && senderProfile?.id) {
+    if (!isCleanRealEmail(senderEmail) && client && senderProfile?.id) {
         try {
             const numSenderId = Number(senderProfile.id);
             if (!isNaN(numSenderId) && numSenderId > 0) {
-                const q = client.from('users').select('email, name').eq('id', numSenderId);
-                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
-                const userRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
-                if (userRow && userRow.email && !userRow.email.includes('•')) {
+                const { data } = await client.from('users').select('email, name').eq('id', numSenderId).limit(1);
+                const userRow = Array.isArray(data) ? data[0] : data;
+                if (userRow && isCleanRealEmail(userRow.email)) {
                     senderEmail = userRow.email.trim().toLowerCase();
                     if (!senderName || senderName === 'Member') {
                         senderName = userRow.name || senderName;
@@ -2138,13 +2174,36 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
     }
 
     // Tier 4 Fallback: Lookup in LocalStorage stored accounts
-    if (!senderEmail && typeof getStoredAccounts === 'function') {
+    if (!isCleanRealEmail(senderEmail) && typeof getStoredAccounts === 'function') {
         try {
             const accs = getStoredAccounts();
             const sid = Number(senderProfile?.id);
             const foundAcc = (accs || []).find(a => (sid && Number(a.id) === sid) || (senderName && a.name === senderName));
-            if (foundAcc && foundAcc.email && !foundAcc.email.includes('•')) {
+            if (foundAcc && isCleanRealEmail(foundAcc.email)) {
                 senderEmail = foundAcc.email.trim().toLowerCase();
+            }
+        } catch (_) {}
+    }
+    // Tier 5 Fallback: Direct localStorage read (in case auth.js not yet loaded)
+    if (!isCleanRealEmail(senderEmail)) {
+        try {
+            const lsKeys = ['LS_STORED_ACCOUNTS', 'LS_COMMUNITY_USERS'];
+            const sid = Number(senderProfile?.id);
+            for (const key of lsKeys) {
+                if (isCleanRealEmail(senderEmail)) break;
+                const raw = localStorage.getItem(key);
+                if (!raw) continue;
+                const accs = JSON.parse(raw);
+                if (!Array.isArray(accs)) continue;
+                const match = accs.find(a =>
+                    (sid && Number(a.id) === sid) ||
+                    (senderName && a.name && a.name === senderName) ||
+                    (senderProfile?.email && a.email && a.email.trim().toLowerCase() === senderProfile.email.trim().toLowerCase())
+                );
+                if (match && isCleanRealEmail(match.email)) {
+                    senderEmail = match.email.trim().toLowerCase();
+                    console.info('[Supabase] Sender email resolved from localStorage:', key, senderEmail);
+                }
             }
         } catch (_) {}
     }
@@ -2153,7 +2212,7 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
         ? sendMatrimonialEmailNotification
         : ((typeof window !== 'undefined' && typeof window.sendMatrimonialEmailNotification === 'function') ? window.sendMatrimonialEmailNotification : null);
 
-    if (senderEmail && !senderEmail.includes('•') && dispatchEmailFn) {
+    if (isCleanRealEmail(senderEmail) && dispatchEmailFn) {
         const notifType = newStatus === 'accepted' ? 'INTEREST_ACCEPTED' : 'INTEREST_DECLINED';
         const realReceiverPhoto = getSafeProfilePhoto(receiverProfile);
         const realSenderPhoto = getSafeProfilePhoto(senderProfile);

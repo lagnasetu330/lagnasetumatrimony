@@ -334,16 +334,29 @@ async function confirmSendInterest() {
 
     const pid = Number(id);
     const nowTs = Date.now();
+
+    const cleanEmailCheck = (em) => {
+        if (!em || typeof em !== 'string') return '';
+        const c = em.trim().toLowerCase();
+        if (c.includes('•') || c.includes('Ã') || c.includes('â') || c.includes('*') || c.includes('..')) return '';
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(c) ? c : '';
+    };
+
+    const realReceiverEmail = cleanEmailCheck(p.rawEmail) || cleanEmailCheck(p.email) || '';
+
     const existing = OUTGOING_REQUESTS.find(r => Number(r.profileId) === pid);
     if (existing) {
         existing.status = 'pending';
         existing.date = 'Just now';
         existing.timestamp = nowTs;
+        if (realReceiverEmail && (!existing.receiverEmail || !cleanEmailCheck(existing.receiverEmail))) {
+            existing.receiverEmail = realReceiverEmail;
+        }
     } else {
         OUTGOING_REQUESTS.push({
             id: `int_${currentUsr.id}_${pid}`,
             profileId: pid,
-            receiverEmail: p.email || '',
+            receiverEmail: realReceiverEmail,
             receiverName: p.name || 'Member',
             status: 'pending',
             date: 'Just now',
@@ -362,10 +375,21 @@ async function confirmSendInterest() {
     saveSessionState();
 
     // Persist to Supabase PostgreSQL & Send Notification Email with real sender photo
-    if (typeof supabaseSendInterest === 'function') {
+    const sendInterestFn = (typeof supabaseSendInterest === 'function')
+        ? supabaseSendInterest
+        : ((typeof window !== 'undefined' && typeof window.supabaseSendInterest === 'function') ? window.supabaseSendInterest : null);
+
+    if (sendInterestFn) {
         try {
             const senderObj = resolveFullUserProfile(currentUsr);
-            await supabaseSendInterest(senderObj, p);
+            const receiverObj = {
+                ...(p || {}),
+                id: pid,
+                name: p.name || 'Member',
+                email: realReceiverEmail,
+                rawEmail: realReceiverEmail || cleanEmailCheck(p.rawEmail)
+            };
+            await sendInterestFn(senderObj, receiverObj);
             console.info('[Interest] Successfully persisted to Supabase for:', p.name);
         } catch (err) {
             if (err && err.message === 'DAILY_LIMIT_EXCEEDED') {

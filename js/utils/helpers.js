@@ -279,6 +279,14 @@ function validateGmail(value) {
     return { ok: true, msg: '' };
 }
 
+function isValidRealEmail(email) {
+    if (!email || typeof email !== 'string') return false;
+    const clean = email.trim().toLowerCase();
+    if (clean.includes('•') || clean.includes('Ã') || clean.includes('â') || clean.includes('*') || clean.includes('..')) return false;
+    return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(clean);
+}
+window.isValidRealEmail = isValidRealEmail;
+
 function liveGmailValidate(inputEl) {
     if (!inputEl) return;
     const val = inputEl.value.trim();
