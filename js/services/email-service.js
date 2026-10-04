@@ -610,9 +610,9 @@ async function sendAccountDeletionEmail(toEmail, toName, reason, extraUserId) {
  */
 async function sendMatrimonialEmailNotification(params) {
     const { type, toEmail, toName, senderData, receiverData } = params;
-    if (!toEmail) {
-        console.warn('[EmailService] Recipient email is missing. Notification skipped.');
-        return { success: false, reason: 'missing_recipient_email' };
+    if (!toEmail || String(toEmail).includes('•') || !String(toEmail).includes('@')) {
+        console.warn(`[EmailService] Recipient email is missing, invalid or masked: "${toEmail}". Notification skipped.`);
+        return { success: false, reason: 'missing_or_masked_recipient_email' };
     }
 
     let emailData = null;
@@ -627,78 +627,129 @@ async function sendMatrimonialEmailNotification(params) {
         return { success: false, reason: 'unknown_type' };
     }
 
+    const cleanEmail = String(toEmail).trim().toLowerCase();
+    const safeName = safeEmailText(toName, 'Member');
     const { subject, html } = emailData;
     const logId = 'eml_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
 
-    console.info(`[EmailService] 📧 Dispatching notification: "${type}" to: ${toEmail} | Subject: "${subject}"`);
+    console.info(`[EmailService] 📧 Dispatching notification: "${type}" to: ${cleanEmail} | Subject: "${subject}"`);
 
-    // 1. Permanent Audit Log in Supabase PostgreSQL
-    try {
-        const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
-        if (client) {
-            await client.from('email_logs').insert({
-                id: logId,
-                recipient_email: String(toEmail).trim().toLowerCase(),
-                recipient_name: toName || '',
-                subject: subject,
-                notification_type: type,
-                payload: {
-                    sender: senderData,
-                    receiver: receiverData,
-                    sent_at: new Date().toISOString()
-                },
-                status: 'sent'
-            });
-            console.info(`[EmailService] Logged email notification to Supabase (id: ${logId})`);
-        }
-    } catch (err) {
-        console.warn('[EmailService] Supabase email_logs note:', err?.message || err);
-    }
+    const templateParams = {
+        to_email: cleanEmail,
+        recipient_email: cleanEmail,
+        user_email: cleanEmail,
+        email: cleanEmail,
+        to: cleanEmail,
+        reply_to: EMAIL_CONFIG.fromEmail || 'lagnasetu330@gmail.com',
+        to_name: safeName,
+        recipient_name: safeName,
+        user_name: safeName,
+        name: safeName,
+        from_name: EMAIL_CONFIG.fromName,
+        subject: subject,
+        message: html,
+        message_html: html,
+        html: html,
+        body: html,
+        content: html,
+        sender_name: senderData?.name || '',
+        sender_caste: senderData?.caste || '',
+        sender_city: senderData?.city || '',
+        sender_photo: senderData?.photo || '',
+        receiver_name: receiverData?.name || '',
+        receiver_caste: receiverData?.caste || '',
+        receiver_city: receiverData?.city || '',
+        receiver_photo: receiverData?.photo || ''
+    };
 
-    // 2. Dispatch via EmailJS
+    let dispatchSuccess = false;
+    let dispatchError = null;
+
+    // 1. Dispatch via EmailJS SDK
     if (window.emailjs && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey) {
         try {
             await window.emailjs.send(
                 EMAIL_CONFIG.emailjs.serviceId,
                 EMAIL_CONFIG.emailjs.templateId,
-                {
-                    to_email: toEmail,
-                    to_name: toName,
-                    recipient_email: toEmail,
-                    recipient_name: toName,
-                    from_name: EMAIL_CONFIG.fromName,
-                    subject: subject,
-                    message: html,
-                    message_html: html,
-                    sender_name: senderData?.name || '',
-                    sender_caste: senderData?.caste || '',
-                    sender_city: senderData?.city || '',
-                    sender_photo: senderData?.photo || ''
-                },
+                templateParams,
                 EMAIL_CONFIG.emailjs.publicKey
             );
-            console.info(`[EmailService] Dispatched via EmailJS to ${toEmail}`);
+            dispatchSuccess = true;
+            console.info(`[EmailService] ✅ Email dispatched via EmailJS SDK to ${cleanEmail}`);
         } catch (ejsErr) {
-            console.warn('[EmailService] EmailJS dispatch note:', ejsErr);
+            console.warn('[EmailService] EmailJS SDK note, attempting REST API fallback:', ejsErr);
+            dispatchError = ejsErr;
         }
     }
 
-    // 3. User feedback via Toast
+    // 2. Direct REST API Fallback
+    if (!dispatchSuccess && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey && typeof fetch === 'function') {
+        try {
+            const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: EMAIL_CONFIG.emailjs.serviceId,
+                    template_id: EMAIL_CONFIG.emailjs.templateId,
+                    user_id: EMAIL_CONFIG.emailjs.publicKey,
+                    template_params: templateParams
+                })
+            });
+            if (resp.ok) {
+                dispatchSuccess = true;
+                console.info(`[EmailService] ✅ Email dispatched via EmailJS REST API to ${cleanEmail}`);
+            } else {
+                const respText = await resp.text();
+                dispatchError = new Error(`EmailJS REST returned ${resp.status}: ${respText}`);
+                console.warn('[EmailService] EmailJS REST API dispatch failed:', respText);
+            }
+        } catch (fetchErr) {
+            console.warn('[EmailService] EmailJS REST API fetch error:', fetchErr);
+            dispatchError = fetchErr;
+        }
+    }
+
+    // 3. Permanent Audit Log in Supabase PostgreSQL public.email_logs
+    try {
+        const client = typeof getSupabaseClient === 'function' ? getSupabaseClient() : null;
+        if (client) {
+            await client.from('email_logs').insert({
+                id: logId,
+                recipient_email: cleanEmail,
+                recipient_name: safeName,
+                subject: subject,
+                notification_type: type,
+                payload: {
+                    sender: senderData,
+                    receiver: receiverData,
+                    sent_at: new Date().toISOString(),
+                    error: dispatchSuccess ? null : (dispatchError?.message || String(dispatchError))
+                },
+                status: dispatchSuccess ? 'sent' : 'failed'
+            });
+            console.info(`[EmailService] Logged email notification to Supabase (id: ${logId}, status: ${dispatchSuccess ? 'sent' : 'failed'})`);
+        }
+    } catch (err) {
+        console.warn('[EmailService] Supabase email_logs note:', err?.message || err);
+    }
+
+    // 4. User feedback via Toast
     if (typeof showToast === 'function') {
         if (type === 'INTEREST_RECEIVED') {
-            showToast(`Notification email dispatched to ${toEmail.toLowerCase()}`);
+            showToast(`Notification email dispatched to ${cleanEmail}`);
         } else if (type === 'INTEREST_ACCEPTED') {
-            showToast(`Match confirmation email dispatched to ${toEmail.toLowerCase()}`);
+            showToast(`Match confirmation email dispatched to ${cleanEmail}`);
         } else if (type === 'INTEREST_DECLINED') {
             showToast(`Status update notification sent`);
         }
     }
 
     return {
-        success: true,
+        success: dispatchSuccess,
         logId,
         subject,
-        html
+        html,
+        error: dispatchError
     };
 }
 
@@ -757,31 +808,69 @@ async function sendOtpEmail(toEmail, otpCode, toName = 'Member', purpose = 'sign
 
     console.info(`[EmailService] 🔢 Sending 6-digit OTP (${purpose}): ${otpCode} to ${cleanEmail}`);
 
+    const otpParams = {
+        to_email: cleanEmail,
+        recipient_email: cleanEmail,
+        user_email: cleanEmail,
+        email: cleanEmail,
+        to: cleanEmail,
+        reply_to: EMAIL_CONFIG.fromEmail || 'lagnasetu330@gmail.com',
+        to_name: toName || 'Member',
+        recipient_name: toName || 'Member',
+        user_name: toName || 'Member',
+        name: toName || 'Member',
+        from_name: EMAIL_CONFIG.fromName,
+        subject: subject,
+        message: html,
+        message_html: html,
+        html: html,
+        body: html,
+        content: html
+    };
+
+    let otpSuccess = false;
+    let otpError = null;
+
     if (window.emailjs && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey) {
         try {
             await window.emailjs.send(
                 EMAIL_CONFIG.emailjs.serviceId,
                 EMAIL_CONFIG.emailjs.templateId,
-                {
-                    to_email: cleanEmail,
-                    to_name: toName || 'Member',
-                    recipient_email: cleanEmail,
-                    recipient_name: toName || 'Member',
-                    from_name: EMAIL_CONFIG.fromName,
-                    subject: subject,
-                    message: html,
-                    message_html: html
-                },
+                otpParams,
                 EMAIL_CONFIG.emailjs.publicKey
             );
-            console.info(`[EmailService] OTP email dispatched via EmailJS to ${cleanEmail}`);
+            otpSuccess = true;
+            console.info(`[EmailService] ✅ OTP email dispatched via EmailJS SDK to ${cleanEmail}`);
             return { success: true };
         } catch (ejsErr) {
-            console.warn('[EmailService] EmailJS OTP dispatch note:', ejsErr);
-            return { success: false, error: ejsErr };
+            console.warn('[EmailService] EmailJS OTP SDK note, trying REST API:', ejsErr);
+            otpError = ejsErr;
         }
     }
-    return { success: false, reason: 'emailjs_unconfigured' };
+
+    if (!otpSuccess && EMAIL_CONFIG.emailjs && EMAIL_CONFIG.emailjs.publicKey && typeof fetch === 'function') {
+        try {
+            const resp = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service_id: EMAIL_CONFIG.emailjs.serviceId,
+                    template_id: EMAIL_CONFIG.emailjs.templateId,
+                    user_id: EMAIL_CONFIG.emailjs.publicKey,
+                    template_params: otpParams
+                })
+            });
+            if (resp.ok) {
+                console.info(`[EmailService] ✅ OTP email dispatched via EmailJS REST API to ${cleanEmail}`);
+                return { success: true };
+            }
+        } catch (fetchErr) {
+            console.warn('[EmailService] EmailJS REST API fetch error:', fetchErr);
+            otpError = fetchErr;
+        }
+    }
+
+    return { success: otpSuccess, error: otpError, reason: 'emailjs_dispatch_failed' };
 }
 
 // Global Window Exports

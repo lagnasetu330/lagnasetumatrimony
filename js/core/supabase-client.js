@@ -1835,24 +1835,48 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
         receiverId = Math.abs(hash) || 20002;
     }
 
-    const senderEmail = (senderProfile.email || '').trim().toLowerCase();
-    let receiverEmail = (receiverProfile.email || '').trim().toLowerCase();
+    let senderEmail = (senderProfile.rawEmail || senderProfile.email || '').trim().toLowerCase();
+    if (senderEmail.includes('•')) senderEmail = '';
+    if (!senderEmail && window.state?.currentUser?.email && !window.state.currentUser.email.includes('•')) {
+        senderEmail = window.state.currentUser.email.trim().toLowerCase();
+    }
+
+    let receiverEmail = (receiverProfile.rawEmail || receiverProfile.email || '').trim().toLowerCase();
+    if (receiverEmail.includes('•')) receiverEmail = '';
+
     const interestId = `int_${senderId}_${receiverId}`;
 
-    // Production Fallback: Ensure receiver email is fetched from Supabase if absent in current profile object
+    // Production Fallback: Ensure receiver email is fetched from Supabase if absent or masked in current profile object
     if (!receiverEmail && client && receiverId) {
         try {
-            const { data: recRow } = await client
-                .from('profiles')
-                .select('email')
-                .eq('id', receiverId)
-                .maybeSingle();
-            if (recRow && recRow.email) {
+            const q = client.from('profiles').select('email').eq('id', receiverId);
+            const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+            const recRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+            if (recRow && recRow.email && !recRow.email.includes('•')) {
                 receiverEmail = recRow.email.trim().toLowerCase();
             }
         } catch (e) {
-            console.warn('[Supabase] Receiver email fallback fetch note:', e);
+            console.warn('[Supabase] Receiver email fallback fetch from profiles note:', e);
         }
+    }
+    if (!receiverEmail && client && receiverId) {
+        try {
+            const q = client.from('users').select('email').eq('id', receiverId);
+            const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+            const userRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+            if (userRow && userRow.email && !userRow.email.includes('•')) {
+                receiverEmail = userRow.email.trim().toLowerCase();
+            }
+        } catch (_) {}
+    }
+    if (!receiverEmail && typeof getStoredAccounts === 'function') {
+        try {
+            const accs = getStoredAccounts();
+            const recAcc = (accs || []).find(a => (receiverId && Number(a.id) === receiverId) || (receiverProfile.name && a.name === receiverProfile.name));
+            if (recAcc && recAcc.email && !recAcc.email.includes('•')) {
+                receiverEmail = recAcc.email.trim().toLowerCase();
+            }
+        } catch (_) {}
     }
 
     const realSenderPhoto = getSafeProfilePhoto(senderProfile);
@@ -1906,8 +1930,12 @@ async function supabaseSendInterest(senderProfile, receiverProfile) {
     }
 
     // 2. Dispatch Branded Email Notification to Receiver
-    if (receiverEmail && typeof sendMatrimonialEmailNotification === 'function') {
-        sendMatrimonialEmailNotification({
+    const dispatchEmailFn = (typeof sendMatrimonialEmailNotification === 'function')
+        ? sendMatrimonialEmailNotification
+        : ((typeof window !== 'undefined' && typeof window.sendMatrimonialEmailNotification === 'function') ? window.sendMatrimonialEmailNotification : null);
+
+    if (receiverEmail && !receiverEmail.includes('•') && dispatchEmailFn) {
+        dispatchEmailFn({
             type: 'INTEREST_RECEIVED',
             toEmail: receiverEmail,
             toName: receiverProfile.name,
@@ -2005,47 +2033,132 @@ async function supabaseFetchUserInterests(userEmail, userId) {
  */
 async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile, receiverProfile) {
     const client = getSupabaseClient();
-    if (client && interestId) {
+    if (client) {
         try {
-            await client.from('interests').update({
-                status: newStatus,
-                updated_at: new Date().toISOString()
-            }).eq('id', interestId);
-            console.info(`[Supabase] Interest ${interestId} updated to: ${newStatus}`);
+            let updated = false;
+            if (interestId) {
+                const { data: updData, error: updErr } = await client.from('interests').update({
+                    status: newStatus,
+                    updated_at: new Date().toISOString()
+                }).eq('id', interestId).select();
+                if (!updErr && Array.isArray(updData) && updData.length > 0) {
+                    updated = true;
+                    console.info(`[Supabase] Interest ${interestId} updated to: ${newStatus}`);
+                }
+            }
+            if (!updated && senderProfile?.id && receiverProfile?.id) {
+                const sId = Number(senderProfile.id);
+                const rId = Number(receiverProfile.id);
+                if (sId && rId) {
+                    await client.from('interests').update({
+                        status: newStatus,
+                        updated_at: new Date().toISOString()
+                    }).eq('sender_id', sId).eq('receiver_id', rId);
+                    console.info(`[Supabase] Interest (s:${sId}, r:${rId}) updated to: ${newStatus}`);
+                }
+            }
         } catch (e) {
             console.warn('[Supabase] Update interest status error:', e);
         }
     }
 
     // Send email notification to sender regarding accept / decline
-    let senderEmail = (senderProfile?.email || '').trim().toLowerCase();
+    let senderEmail = (senderProfile?.rawEmail || senderProfile?.email || '').trim().toLowerCase();
+    if (senderEmail.includes('•')) {
+        senderEmail = '';
+    }
     let senderName = senderProfile?.name || 'Member';
 
-    // Production Fallback: If senderEmail is missing, fetch from stored interest row in Supabase
-    if (!senderEmail && client && interestId) {
+    // Tier 1 Fallback: Fetch real unmasked sender email from stored interest row in Supabase
+    if (!senderEmail && client) {
         try {
-            const { data: intRow } = await client
-                .from('interests')
-                .select('sender_email, sender_name')
-                .eq('id', interestId)
-                .maybeSingle();
-            if (intRow && intRow.sender_email) {
+            let intRow = null;
+            if (interestId) {
+                const q = client.from('interests').select('sender_email, sender_name, sender_id').eq('id', interestId);
+                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+                intRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+            }
+            if (!intRow && senderProfile?.id && receiverProfile?.id) {
+                const q = client.from('interests')
+                    .select('sender_email, sender_name, sender_id')
+                    .eq('sender_id', Number(senderProfile.id))
+                    .eq('receiver_id', Number(receiverProfile.id));
+                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+                intRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+            }
+            if (intRow && intRow.sender_email && !intRow.sender_email.includes('•')) {
                 senderEmail = intRow.sender_email.trim().toLowerCase();
                 if ((!senderName || senderName === 'Member') && intRow.sender_name) {
                     senderName = intRow.sender_name;
                 }
             }
         } catch (e) {
-            console.warn('[Supabase] Sender email fallback fetch note:', e);
+            console.warn('[Supabase] Sender email fallback fetch from interests note:', e);
         }
     }
 
-    if (senderEmail && typeof sendMatrimonialEmailNotification === 'function') {
+    // Tier 2 Fallback: Fetch real unmasked sender email from public.profiles in Supabase
+    if (!senderEmail && client && senderProfile?.id) {
+        try {
+            const numSenderId = Number(senderProfile.id);
+            if (!isNaN(numSenderId) && numSenderId > 0) {
+                const q = client.from('profiles').select('email, name').eq('id', numSenderId);
+                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+                const profRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+                if (profRow && profRow.email && !profRow.email.includes('•')) {
+                    senderEmail = profRow.email.trim().toLowerCase();
+                    if (!senderName || senderName === 'Member') {
+                        senderName = profRow.name || senderName;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Supabase] Sender email fallback fetch from profiles note:', e);
+        }
+    }
+
+    // Tier 3 Fallback: Fetch real unmasked sender email from public.users in Supabase
+    if (!senderEmail && client && senderProfile?.id) {
+        try {
+            const numSenderId = Number(senderProfile.id);
+            if (!isNaN(numSenderId) && numSenderId > 0) {
+                const q = client.from('users').select('email, name').eq('id', numSenderId);
+                const res = (typeof q.maybeSingle === 'function') ? await q.maybeSingle() : await q.limit(1);
+                const userRow = Array.isArray(res?.data) ? res.data[0] : res?.data;
+                if (userRow && userRow.email && !userRow.email.includes('•')) {
+                    senderEmail = userRow.email.trim().toLowerCase();
+                    if (!senderName || senderName === 'Member') {
+                        senderName = userRow.name || senderName;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('[Supabase] Sender email fallback fetch from users note:', e);
+        }
+    }
+
+    // Tier 4 Fallback: Lookup in LocalStorage stored accounts
+    if (!senderEmail && typeof getStoredAccounts === 'function') {
+        try {
+            const accs = getStoredAccounts();
+            const sid = Number(senderProfile?.id);
+            const foundAcc = (accs || []).find(a => (sid && Number(a.id) === sid) || (senderName && a.name === senderName));
+            if (foundAcc && foundAcc.email && !foundAcc.email.includes('•')) {
+                senderEmail = foundAcc.email.trim().toLowerCase();
+            }
+        } catch (_) {}
+    }
+
+    const dispatchEmailFn = (typeof sendMatrimonialEmailNotification === 'function')
+        ? sendMatrimonialEmailNotification
+        : ((typeof window !== 'undefined' && typeof window.sendMatrimonialEmailNotification === 'function') ? window.sendMatrimonialEmailNotification : null);
+
+    if (senderEmail && !senderEmail.includes('•') && dispatchEmailFn) {
         const notifType = newStatus === 'accepted' ? 'INTEREST_ACCEPTED' : 'INTEREST_DECLINED';
         const realReceiverPhoto = getSafeProfilePhoto(receiverProfile);
         const realSenderPhoto = getSafeProfilePhoto(senderProfile);
 
-        sendMatrimonialEmailNotification({
+        await dispatchEmailFn({
             type: notifType,
             toEmail: senderEmail,
             toName: senderName,
@@ -2064,7 +2177,9 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
                 education: receiverProfile?.education || '',
                 photo: realReceiverPhoto
             }
-        }).catch(e => console.warn('[EmailService] Status dispatch error:', e));
+        });
+    } else {
+        console.warn('[Supabase] Could not resolve unmasked sender email to dispatch interest status notification:', senderProfile);
     }
 
     return { success: true };

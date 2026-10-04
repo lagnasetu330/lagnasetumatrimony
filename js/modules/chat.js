@@ -382,12 +382,13 @@ async function confirmSendInterest() {
  */
 function resolveFullUserProfile(userObj) {
     if (!userObj) return {};
-    const normEmail = (userObj.email || '').toLowerCase().trim();
+    const normEmail = (userObj.email || userObj.rawEmail || '').toLowerCase().trim();
+    const cleanEmail = (normEmail && !normEmail.includes('•')) ? normEmail : '';
     const normId = String(userObj.id || userObj.userId || '');
     
     let found = (window.PROFILES || []).find(p => 
         (normId && String(p.id) === normId) ||
-        (normEmail && p.email && p.email.toLowerCase().trim() === normEmail)
+        (cleanEmail && ((p.rawEmail && p.rawEmail.toLowerCase().trim() === cleanEmail) || (p.email && p.email.toLowerCase().trim() === cleanEmail)))
     );
     if (!found) {
         try {
@@ -397,7 +398,7 @@ function resolveFullUserProfile(userObj) {
                 if (Array.isArray(list)) {
                     found = list.find(p => 
                         (normId && String(p.id) === normId) ||
-                        (normEmail && p.email && p.email.toLowerCase().trim() === normEmail)
+                        (cleanEmail && ((p.rawEmail && p.rawEmail.toLowerCase().trim() === cleanEmail) || (p.email && p.email.toLowerCase().trim() === cleanEmail)))
                     );
                 }
             }
@@ -408,9 +409,13 @@ function resolveFullUserProfile(userObj) {
                           userObj.img || userObj.photo || (Array.isArray(userObj.photos) ? userObj.photos[0] : '') ||
                           (typeof state !== 'undefined' && state.regData && (state.regData.photo || (Array.isArray(state.regData.photos) ? state.regData.photos[0] : ''))) || '';
 
+    const finalEmail = cleanEmail || (found && found.rawEmail && !found.rawEmail.includes('•') ? found.rawEmail : '') || (userObj.email && !userObj.email.includes('•') ? userObj.email : '') || '';
+
     return {
-        ...userObj,
         ...(found || {}),
+        ...userObj,
+        email: finalEmail || userObj.email || '',
+        rawEmail: finalEmail || userObj.rawEmail || '',
         photo: resolvedPhoto,
         img: resolvedPhoto,
         photos: (found && found.photos) || userObj.photos || (resolvedPhoto ? [resolvedPhoto] : [])
@@ -1053,7 +1058,15 @@ async function acceptRequest(profileId) {
     const peerImg = (p && p.img && !p.img.includes('default_avatar'))
         ? p.img
         : ((r && r.senderPhoto) || '');
-    const peerEmail = (p && p.email) || (r && r.senderEmail) || '';
+
+    // Resolve clean unmasked sender email (never masked with bullets)
+    const realSenderEmail = (r && r.senderEmail && !r.senderEmail.includes('•'))
+        ? r.senderEmail.trim().toLowerCase()
+        : ((p && p.rawEmail && !p.rawEmail.includes('•'))
+            ? p.rawEmail.trim().toLowerCase()
+            : ((p && p.email && !p.email.includes('•')) ? p.email.trim().toLowerCase() : ''));
+
+    const peerEmail = realSenderEmail || (p && p.email && !p.email.includes('•') ? p.email : '') || (r && r.senderEmail && !r.senderEmail.includes('•') ? r.senderEmail : '') || '';
 
     let thread = CHAT_THREADS.find(t => Number(t.profileId) === pid || (peerEmail && t.peerEmail && t.peerEmail.toLowerCase() === peerEmail.toLowerCase()));
     if (!thread) {
@@ -1075,11 +1088,24 @@ async function acceptRequest(profileId) {
     }
 
     // Persist to Supabase and send congratulatory email to sender
-    if (typeof supabaseUpdateInterestStatus === 'function') {
+    const updateStatusFn = (typeof supabaseUpdateInterestStatus === 'function')
+        ? supabaseUpdateInterestStatus
+        : ((typeof window !== 'undefined' && typeof window.supabaseUpdateInterestStatus === 'function') ? window.supabaseUpdateInterestStatus : null);
+
+    if (updateStatusFn) {
         const interestId = (r && r.id) || `int_${pid}_${state.currentUser.id}`;
         try {
             const receiverObj = resolveFullUserProfile(state.currentUser);
-            await supabaseUpdateInterestStatus(interestId, 'accepted', p, receiverObj);
+            const senderObj = {
+                ...(p || {}),
+                id: pid,
+                name: peerName,
+                email: realSenderEmail,
+                rawEmail: realSenderEmail,
+                photo: peerImg,
+                img: peerImg
+            };
+            await updateStatusFn(interestId, 'accepted', senderObj, receiverObj);
         } catch (e) {
             console.warn('[Interest] Update status error:', e);
         }
@@ -1091,6 +1117,15 @@ async function declineRequest(profileId) {
     const r = INCOMING_REQUESTS.find(x => Number(x.profileId) === pid || Number(x.senderId) === pid);
     if (r) r.status = 'declined';
     const p = findProfile(pid, r ? r.senderEmail : '');
+    const peerName = (p && p.name && p.name !== 'Community Match' && p.name !== 'Community Member')
+        ? p.name
+        : ((r && r.senderName) || 'Member');
+    const realSenderEmail = (r && r.senderEmail && !r.senderEmail.includes('•'))
+        ? r.senderEmail.trim().toLowerCase()
+        : ((p && p.rawEmail && !p.rawEmail.includes('•'))
+            ? p.rawEmail.trim().toLowerCase()
+            : ((p && p.email && !p.email.includes('•')) ? p.email.trim().toLowerCase() : ''));
+
     showToast('Request declined');
     saveSessionState();
     renderInbox();
@@ -1098,11 +1133,22 @@ async function declineRequest(profileId) {
     refreshProfileButtons();
 
     // Persist to Supabase and send polite notification to sender
-    if (typeof supabaseUpdateInterestStatus === 'function') {
+    const updateStatusFn = (typeof supabaseUpdateInterestStatus === 'function')
+        ? supabaseUpdateInterestStatus
+        : ((typeof window !== 'undefined' && typeof window.supabaseUpdateInterestStatus === 'function') ? window.supabaseUpdateInterestStatus : null);
+
+    if (updateStatusFn) {
         const interestId = (r && r.id) || `int_${pid}_${state.currentUser.id}`;
         try {
             const receiverObj = resolveFullUserProfile(state.currentUser);
-            await supabaseUpdateInterestStatus(interestId, 'declined', p, receiverObj);
+            const senderObj = {
+                ...(p || {}),
+                id: pid,
+                name: peerName,
+                email: realSenderEmail,
+                rawEmail: realSenderEmail
+            };
+            await updateStatusFn(interestId, 'declined', senderObj, receiverObj);
         } catch (e) {
             console.warn('[Interest] Update status error:', e);
         }
