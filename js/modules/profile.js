@@ -47,45 +47,72 @@ async function submitProfileCompletion() {
     const isGirl = userGender === 'Girl';
 
     // Synchronize ID and Email across users and profiles tables
-    const profileId = (state.currentUser && state.currentUser.id) ? state.currentUser.id : (state.regData.userId || Date.now());
+    // Synchronize ID and Email across users and profiles tables (Guaranteed 64-bit BIGINT numeric ID)
+    let cleanProfileId = null;
+    const rawId = (state.currentUser && state.currentUser.id) ? state.currentUser.id : (state.regData.userId || Date.now());
+    if (typeof rawId === 'number' && Number.isFinite(rawId) && rawId > 0) {
+        cleanProfileId = Math.floor(rawId);
+    } else if (typeof rawId === 'string' && rawId.trim()) {
+        const digits = rawId.replace(/\D/g, '');
+        if (digits.length > 0) {
+            cleanProfileId = parseInt(digits.slice(-15), 10);
+        }
+    }
+    if (!cleanProfileId || isNaN(cleanProfileId)) {
+        cleanProfileId = Date.now();
+    }
     const userEmail = (state.currentUser && state.currentUser.email) ? state.currentUser.email : (state.regData.email || '');
 
-    // Create newly registered profile in PROFILES
+    // Photos list
+    const photosList = (Array.isArray(state.regData.photos) && state.regData.photos.filter(Boolean).length > 0)
+        ? state.regData.photos.filter(Boolean)
+        : (state.regData.photo ? [state.regData.photo] : (state.currentUser?.photos || (state.currentUser?.img ? [state.currentUser.img] : [])));
+    const mainImg = photosList[0] || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop');
+
+    // Create newly registered profile in PROFILES with complete field set
     const newProfile = {
-        id: Number(profileId) || profileId,
-        user_id: String(profileId),
+        id: cleanProfileId,
+        user_id: String(rawId || cleanProfileId),
         gender: isGirl ? 'girls' : 'boys',
         name: state.regData.name || state.currentUser?.name || '',
-        age: state.regData.age || 24,
-        city: state.regData.city,
-        occ: state.regData.occupation || 'Professional',
-        education: state.regData.education || 'Graduate',
-        income: state.regData.income || '₹40K – ₹75K',
-        height: state.regData.height ? `${state.regData.height} cm` : "5'6\"",
-        weight: state.regData.weight ? `${state.regData.weight} kg` : '60 kg',
-        marital: state.regData.marital || 'Unmarried',
-        physical: state.regData.physical || 'Normal',
-        dob: state.regData.dob || '',
+        age: parseInt(state.regData.age) || parseInt(state.currentUser?.age) || 24,
+        dob: state.regData.dob || state.currentUser?.dob || '',
+        height: state.regData.height ? (String(state.regData.height).includes('cm') ? state.regData.height : `${state.regData.height} cm`) : (state.currentUser?.height || "5'6\""),
+        weight: state.regData.weight ? (String(state.regData.weight).includes('kg') ? state.regData.weight : `${state.regData.weight} kg`) : (state.currentUser?.weight || '60 kg'),
+        education: state.regData.education || state.currentUser?.education || 'Graduate',
+        occ: state.regData.occupation || state.currentUser?.occupation || state.currentUser?.occ || 'Professional',
+        occupation: state.regData.occupation || state.currentUser?.occupation || state.currentUser?.occ || 'Professional',
+        income: state.regData.income || state.currentUser?.income || '₹40K – ₹75K',
+        marital: state.regData.marital || state.currentUser?.marital || 'Unmarried',
+        physical: state.regData.physical || state.currentUser?.physical || 'Normal',
         community: state.regData.caste || state.currentUser?.caste || '',
-        hobbies: (state.regData.hobbies && state.regData.hobbies.length > 0) ? state.regData.hobbies : [],
-        father: state.regData.fatherName || 'Father',
-        fatherOcc: state.regData.fatherOcc || 'Business',
-        fatherMobile: state.regData.fatherMobile,
-        ownMobile: state.regData.ownMobile, // stored internally for admin only, never rendered in public profile
-        mother: state.regData.motherName || 'Mother',
-        motherOcc: state.regData.motherOcc || 'Homemaker',
-        sister: state.regData.sister || 'None',
-        brother: state.regData.brother || 'None',
-        city: state.regData.city,
-        village: state.regData.city,
-        taluka: state.regData.taluka || state.regData.city,
-        district: state.regData.district,
-        address: state.regData.address,
-        fullAddress: state.regData.address,
-        full_address: state.regData.address,
-        img: (state.regData.photos && state.regData.photos.filter(Boolean)[0]) || state.regData.photo || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop'),
-        photos: (state.regData.photos && state.regData.photos.filter(Boolean).length > 0) ? state.regData.photos.filter(Boolean) : [state.regData.photo || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop')]
+        hobbies: (Array.isArray(state.regData.hobbies) && state.regData.hobbies.length > 0) ? state.regData.hobbies : (state.currentUser?.hobbies || []),
+        father: state.regData.fatherName || state.currentUser?.father || 'Father',
+        father_name: state.regData.fatherName || state.currentUser?.father || 'Father',
+        fatherOcc: state.regData.fatherOcc || state.currentUser?.fatherOcc || 'Business',
+        father_occ: state.regData.fatherOcc || state.currentUser?.fatherOcc || 'Business',
+        fatherMobile: state.regData.fatherMobile || state.currentUser?.fatherMobile || '',
+        father_mobile: state.regData.fatherMobile || state.currentUser?.fatherMobile || '',
+        fatherWhatsapp: state.regData.fatherWhatsapp !== false,
+        ownMobile: state.regData.ownMobile || state.currentUser?.mobile || '',
+        own_mobile: state.regData.ownMobile || state.currentUser?.mobile || '',
+        mother: state.regData.motherName || state.currentUser?.mother || 'Mother',
+        mother_name: state.regData.motherName || state.currentUser?.mother || 'Mother',
+        motherOcc: state.regData.motherOcc || state.currentUser?.motherOcc || 'Homemaker',
+        mother_occ: state.regData.motherOcc || state.currentUser?.motherOcc || 'Homemaker',
+        sister: state.regData.sister || state.currentUser?.sister || 'None',
+        brother: state.regData.brother || state.currentUser?.brother || 'None',
+        city: state.regData.city || state.currentUser?.city || '',
+        village: state.regData.city || state.currentUser?.village || state.currentUser?.city || '',
+        taluka: state.regData.taluka || state.currentUser?.taluka || state.regData.city || '',
+        district: state.regData.district || state.currentUser?.district || '',
+        address: state.regData.address || state.currentUser?.address || '',
+        fullAddress: state.regData.address || state.currentUser?.fullAddress || state.currentUser?.address || '',
+        full_address: state.regData.address || state.currentUser?.full_address || state.currentUser?.address || '',
+        img: mainImg,
+        photos: photosList.length > 0 ? photosList : [mainImg]
     };
+
     // Check Auto-Approve setting (configured from Admin Control Center)
     let isAutoApproved = true;
     try {
@@ -129,19 +156,35 @@ async function submitProfileCompletion() {
     newProfile.agreedTerms = true;
     newProfile.agreedTermsAt = (state.currentUser && state.currentUser.agreedTermsAt) || new Date().toISOString();
     newProfile.email = userEmail ? userEmail.toLowerCase().trim() : ((state.regData.name || 'member').toLowerCase().replace(/\s+/g, '.') + '@gmail.com');
-    newProfile.mobile = state.regData.ownMobile || state.regData.fatherMobile;
+    newProfile.mobile = state.regData.ownMobile || state.regData.fatherMobile || '';
 
-    PROFILES.unshift(newProfile);
-    saveCommunityProfiles();
-
-    // Persist newly registered member profile to Supabase PostgreSQL
+    // Persist newly registered member profile to Supabase PostgreSQL synchronously
     if (typeof supabaseUpsertProfile === 'function') {
-        supabaseUpsertProfile(newProfile).then(res => {
-            console.info('[Supabase] Profile registration synced live:', res);
-        }).catch(err => console.warn('[Supabase] Profile registration sync notice:', err));
+        try {
+            const upRes = await supabaseUpsertProfile(newProfile);
+            if (upRes && upRes.id) {
+                newProfile.id = upRes.id;
+            }
+            console.info('[Supabase] Profile registration synced live:', upRes);
+        } catch (err) {
+            console.warn('[Supabase] Profile registration sync notice:', err);
+        }
     }
 
-    // Sync current active user
+    // Keep PROFILES strictly updated
+    window.PROFILES = window.PROFILES || [];
+    const existPIdx = window.PROFILES.findIndex(p => p && (
+        (newProfile.id && p.id == newProfile.id) ||
+        (newProfile.email && p.email && p.email.toLowerCase().trim() === newProfile.email.toLowerCase().trim())
+    ));
+    if (existPIdx !== -1) {
+        window.PROFILES[existPIdx] = { ...window.PROFILES[existPIdx], ...newProfile };
+    } else {
+        window.PROFILES.unshift(newProfile);
+    }
+    saveCommunityProfiles();
+
+    // Sync current active user session with all 25+ fields
     state.currentUser = state.currentUser || {};
     state.currentUser.id = newProfile.id;
     state.currentUser.userId = String(newProfile.id);
@@ -153,14 +196,38 @@ async function submitProfileCompletion() {
     state.currentUser.email = newProfile.email;
     state.currentUser.name = newProfile.name;
     state.currentUser.gender = isGirl ? 'Girl' : 'Boy';
-    state.currentUser.caste = state.regData.caste || newProfile.community;
-    state.currentUser.mobile = state.regData.ownMobile || newProfile.mobile;
-    state.currentUser.city = state.regData.city;
-    state.currentUser.village = state.regData.city;
-    state.currentUser.taluka = state.regData.taluka || state.regData.city;
-    state.currentUser.district = state.regData.district;
-    state.currentUser.address = state.regData.address;
-    state.currentUser.fullAddress = state.regData.address;
+    state.currentUser.caste = newProfile.community;
+    state.currentUser.community = newProfile.community;
+    state.currentUser.dob = newProfile.dob;
+    state.currentUser.age = newProfile.age;
+    state.currentUser.height = newProfile.height;
+    state.currentUser.weight = newProfile.weight;
+    state.currentUser.education = newProfile.education;
+    state.currentUser.occupation = newProfile.occ;
+    state.currentUser.occ = newProfile.occ;
+    state.currentUser.income = newProfile.income;
+    state.currentUser.marital = newProfile.marital;
+    state.currentUser.physical = newProfile.physical;
+    state.currentUser.hobbies = newProfile.hobbies;
+    state.currentUser.father = newProfile.father;
+    state.currentUser.fatherName = newProfile.father;
+    state.currentUser.fatherOcc = newProfile.fatherOcc;
+    state.currentUser.fatherMobile = newProfile.fatherMobile;
+    state.currentUser.fatherWhatsapp = newProfile.fatherWhatsapp;
+    state.currentUser.mother = newProfile.mother;
+    state.currentUser.motherName = newProfile.mother;
+    state.currentUser.motherOcc = newProfile.motherOcc;
+    state.currentUser.sister = newProfile.sister;
+    state.currentUser.brother = newProfile.brother;
+    state.currentUser.city = newProfile.city;
+    state.currentUser.village = newProfile.village;
+    state.currentUser.taluka = newProfile.taluka;
+    state.currentUser.district = newProfile.district;
+    state.currentUser.address = newProfile.address;
+    state.currentUser.fullAddress = newProfile.fullAddress;
+    state.currentUser.full_address = newProfile.full_address;
+    state.currentUser.mobile = newProfile.ownMobile || newProfile.mobile;
+    state.currentUser.ownMobile = newProfile.ownMobile || newProfile.mobile;
     state.currentUser.img = newProfile.img;
     state.currentUser.photo = newProfile.img;
     state.currentUser.photos = newProfile.photos;
@@ -180,20 +247,24 @@ async function submitProfileCompletion() {
 
     // Update users table in Supabase so profile_complete = true is recorded live
     if (typeof supabaseUpsertUser === 'function') {
-        supabaseUpsertUser({
-            id: String(newProfile.id),
-            email: newProfile.email,
-            name: newProfile.name,
-            gender: isGirl ? 'Girl' : 'Boy',
-            caste: newProfile.community,
-            mobile: newProfile.mobile,
-            profileComplete: true,
-            status: isAutoApproved ? 'Active' : 'Pending',
-            paymentStatus: isGirl ? 'Free' : (state.currentUser.paymentStatus || 'Unpaid')
-        }).catch(err => console.warn('[Supabase] User profile completion sync notice:', err));
+        try {
+            await supabaseUpsertUser({
+                id: String(newProfile.id),
+                email: newProfile.email,
+                name: newProfile.name,
+                gender: isGirl ? 'Girl' : 'Boy',
+                caste: newProfile.community,
+                mobile: newProfile.mobile,
+                profileComplete: true,
+                status: isAutoApproved ? 'Active' : 'Pending',
+                paymentStatus: isGirl ? 'Free' : (state.currentUser.paymentStatus || 'Unpaid')
+            });
+        } catch (err) {
+            console.warn('[Supabase] User profile completion sync notice:', err);
+        }
     }
 
-    // Persist completed profile status to stored accounts
+    // Persist completed profile status and all fields to stored accounts
     try {
         if (typeof getStoredAccounts === 'function' && typeof saveStoredAccounts === 'function') {
             const accounts = getStoredAccounts();
@@ -203,13 +274,38 @@ async function submitProfileCompletion() {
                 accounts[uIdx].name = newProfile.name;
                 accounts[uIdx].gender = isGirl ? 'Girl' : 'Boy';
                 accounts[uIdx].caste = newProfile.community;
-                accounts[uIdx].mobile = newProfile.mobile;
-                accounts[uIdx].city = state.regData.city;
-                accounts[uIdx].village = state.regData.city;
-                accounts[uIdx].taluka = state.regData.taluka || state.regData.city;
-                accounts[uIdx].district = state.regData.district;
-                accounts[uIdx].address = state.regData.address;
-                accounts[uIdx].fullAddress = state.regData.address;
+                accounts[uIdx].community = newProfile.community;
+                accounts[uIdx].dob = newProfile.dob;
+                accounts[uIdx].age = newProfile.age;
+                accounts[uIdx].height = newProfile.height;
+                accounts[uIdx].weight = newProfile.weight;
+                accounts[uIdx].education = newProfile.education;
+                accounts[uIdx].occupation = newProfile.occ;
+                accounts[uIdx].occ = newProfile.occ;
+                accounts[uIdx].income = newProfile.income;
+                accounts[uIdx].marital = newProfile.marital;
+                accounts[uIdx].physical = newProfile.physical;
+                accounts[uIdx].hobbies = newProfile.hobbies;
+                accounts[uIdx].father = newProfile.father;
+                accounts[uIdx].fatherName = newProfile.father;
+                accounts[uIdx].fatherOcc = newProfile.fatherOcc;
+                accounts[uIdx].fatherMobile = newProfile.fatherMobile;
+                accounts[uIdx].mother = newProfile.mother;
+                accounts[uIdx].motherName = newProfile.mother;
+                accounts[uIdx].motherOcc = newProfile.motherOcc;
+                accounts[uIdx].sister = newProfile.sister;
+                accounts[uIdx].brother = newProfile.brother;
+                accounts[uIdx].mobile = newProfile.ownMobile || newProfile.mobile;
+                accounts[uIdx].ownMobile = newProfile.ownMobile || newProfile.mobile;
+                accounts[uIdx].city = newProfile.city;
+                accounts[uIdx].village = newProfile.village;
+                accounts[uIdx].taluka = newProfile.taluka;
+                accounts[uIdx].district = newProfile.district;
+                accounts[uIdx].address = newProfile.address;
+                accounts[uIdx].fullAddress = newProfile.fullAddress;
+                accounts[uIdx].img = newProfile.img;
+                accounts[uIdx].photo = newProfile.img;
+                accounts[uIdx].photos = newProfile.photos;
                 accounts[uIdx].profileId = newProfile.id;
                 accounts[uIdx].profileComplete = true;
                 accounts[uIdx].genderToken = state.currentUser.genderToken;

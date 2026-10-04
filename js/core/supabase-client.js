@@ -174,9 +174,30 @@ async function supabaseUpdateUserPassword(newPassword) {
  */
 function mapProfileForSupabase(p) {
     if (!p) return null;
+    let cleanId = null;
+    if (typeof p.id === 'number' && Number.isFinite(p.id) && p.id > 0) {
+        cleanId = Math.floor(p.id);
+    } else if (typeof p.id === 'string' && p.id.trim()) {
+        const digits = p.id.replace(/\D/g, '');
+        if (digits.length > 0) {
+            cleanId = parseInt(digits.slice(-15), 10);
+        }
+    }
+    if (!cleanId && p.user_id) {
+        const digits = String(p.user_id).replace(/\D/g, '');
+        if (digits.length > 0) {
+            cleanId = parseInt(digits.slice(-15), 10);
+        }
+    }
+    if (!cleanId || isNaN(cleanId)) {
+        cleanId = Date.now();
+    }
+
+    const userIdStr = String(p.userId || p.user_id || p.id || cleanId);
+
     return {
-        id: p.id || Date.now(),
-        user_id: String(p.userId || p.user_id || p.id || ''),
+        id: cleanId,
+        user_id: userIdStr,
         gender: p.gender || 'boys',
         name: p.name || '',
         age: parseInt(p.age) || 24,
@@ -190,14 +211,15 @@ function mapProfileForSupabase(p) {
         physical: p.physical || 'Normal',
         community: p.community || p.caste || '',
         hobbies: Array.isArray(p.hobbies) ? p.hobbies : [],
-        father: p.father || p.father_name || '',
+        father: p.father || p.father_name || p.fatherName || '',
         father_occ: p.fatherOcc || p.father_occ || '',
         father_mobile: p.fatherMobile || p.father_mobile || '',
+        father_whatsapp: p.fatherWhatsapp !== false && p.father_whatsapp !== false,
         own_mobile: p.ownMobile || p.own_mobile || p.mobile || '',
-        mother: p.mother || p.mother_name || '',
+        mother: p.mother || p.mother_name || p.motherName || '',
         mother_occ: p.motherOcc || p.mother_occ || '',
-        sister: p.sister || '—',
-        brother: p.brother || '—',
+        sister: p.sister || 'None',
+        brother: p.brother || 'None',
         village: p.village || p.city || '',
         taluka: p.taluka || '',
         district: p.district || '',
@@ -217,6 +239,34 @@ function mapProfileForSupabase(p) {
         featured: !!p.featured,
         raw_data: {
             ...p,
+            id: cleanId,
+            userId: userIdStr,
+            user_id: userIdStr,
+            dob: p.dob || '',
+            height: p.height || '',
+            weight: p.weight || '',
+            education: p.education || '',
+            occ: p.occ || p.occupation || '',
+            occupation: p.occ || p.occupation || '',
+            income: p.income || '',
+            marital: p.marital || 'Unmarried',
+            physical: p.physical || 'Normal',
+            community: p.community || p.caste || '',
+            hobbies: Array.isArray(p.hobbies) ? p.hobbies : [],
+            father: p.father || p.father_name || p.fatherName || '',
+            fatherOcc: p.fatherOcc || p.father_occ || '',
+            fatherMobile: p.fatherMobile || p.father_mobile || '',
+            mother: p.mother || p.mother_name || p.motherName || '',
+            motherOcc: p.motherOcc || p.mother_occ || '',
+            sister: p.sister || 'None',
+            brother: p.brother || 'None',
+            village: p.village || p.city || '',
+            city: p.city || p.village || '',
+            taluka: p.taluka || '',
+            district: p.district || '',
+            fullAddress: p.fullAddress || p.full_address || p.address || '',
+            address: p.fullAddress || p.full_address || p.address || '',
+            ownMobile: p.ownMobile || p.own_mobile || p.mobile || '',
             visible: (p.visible !== false && p.visible !== 'false'),
             agreedTerms: p.agreedTerms !== undefined ? p.agreedTerms : true,
             agreedTermsAt: p.agreedTermsAt || new Date().toISOString()
@@ -436,8 +486,15 @@ async function supabaseFetchProfiles(filters = {}) {
         }
         if (Array.isArray(data)) {
             let mapped = data.map(mapProfileFromSupabase).filter(Boolean).filter(p => !isUserPurged(p));
-            // Filter out non-visible profiles from public community feed
-            mapped = mapped.filter(p => p.visible !== false && p.accountStatus !== 'suspended' && p.accountStatus !== 'deleted');
+            // Filter out non-visible profiles from public community feed (EXCEPT for current user's own profile)
+            const curEmail = (typeof state !== 'undefined' && state.currentUser?.email) ? state.currentUser.email.trim().toLowerCase() : '';
+            const curId = (typeof state !== 'undefined' && state.currentUser?.id) ? String(state.currentUser.id) : '';
+            mapped = mapped.filter(p => {
+                const isOwnProfile = (curEmail && p.email && p.email.trim().toLowerCase() === curEmail) ||
+                                     (curId && (String(p.id) === curId || String(p.userId) === curId));
+                if (isOwnProfile) return true;
+                return p.visible !== false && p.accountStatus !== 'suspended' && p.accountStatus !== 'deleted';
+            });
             if (filters.gender && filters.gender !== 'all') {
                 if (filters.gender === 'boys') {
                     mapped = mapped.filter(p => typeof isBoyGender === 'function' ? isBoyGender(p.gender) : (p.gender === 'boys' || p.gender === 'Boy'));
@@ -586,6 +643,32 @@ async function supabaseUpsertProfile(profile) {
 
     try {
         const payload = mapProfileForSupabase(profile);
+        if (!payload || !payload.id) return { success: false, error: 'Invalid profile payload' };
+
+        // Check if a profile with this email already exists in Supabase to reuse its primary key id
+        if (payload.email) {
+            try {
+                const normEmail = String(payload.email).trim().toLowerCase();
+                const { data: existingRows } = await client
+                    .from('profiles')
+                    .select('id, user_id')
+                    .ilike('email', normEmail)
+                    .limit(1);
+                if (Array.isArray(existingRows) && existingRows.length > 0 && existingRows[0].id) {
+                    payload.id = existingRows[0].id;
+                    if (existingRows[0].user_id && !payload.user_id) {
+                        payload.user_id = existingRows[0].user_id;
+                    }
+                    if (profile) {
+                        profile.id = payload.id;
+                    }
+                    if (payload.raw_data) {
+                        payload.raw_data.id = payload.id;
+                    }
+                }
+            } catch (_) {}
+        }
+
         let { data, error } = await client
             .from('profiles')
             .upsert(payload, { onConflict: 'id' });
@@ -611,7 +694,10 @@ async function supabaseUpsertProfile(profile) {
             return { success: false, error };
         }
         console.info('[Supabase] Profile persisted successfully:', payload.name, payload.id);
-        return { success: true, data };
+        if (profile) {
+            profile.id = payload.id;
+        }
+        return { success: true, data, id: payload.id };
     } catch (err) {
         console.warn('[Supabase] Profile upsert error:', err);
         return { success: false, error: err };
@@ -682,12 +768,14 @@ async function supabaseFetchAllProfilesForAdmin() {
         }
 
         const userMap = new Map();
+        let allUsersList = [];
         try {
             const usersRes = await client
                 .from('users')
-                .select('id, email, agreed_terms, agreed_terms_at')
+                .select('*')
                 .neq('status', 'Deleted');
             if (usersRes && Array.isArray(usersRes.data)) {
+                allUsersList = usersRes.data;
                 usersRes.data.forEach(u => {
                     if (u.email) userMap.set(String(u.email).toLowerCase().trim(), u);
                     if (u.id) userMap.set(String(u.id), u);
@@ -698,22 +786,92 @@ async function supabaseFetchAllProfilesForAdmin() {
         }
 
         const data = (profilesRes && Array.isArray(profilesRes.data)) ? profilesRes.data : [];
-        return data.map(p => {
+        const seenEmails = new Set();
+        const seenIds = new Set();
+
+        const mappedProfiles = data.map(p => {
             const mapped = mapProfileFromSupabase(p, true);
             if (!mapped || (typeof isUserPurged === 'function' && isUserPurged(mapped))) return null;
             const normEmail = (mapped.email || '').toLowerCase().trim();
             const normId = String(mapped.id || mapped.userId || '');
+            if (normEmail) seenEmails.add(normEmail);
+            if (normId) seenIds.add(normId);
+
             const uMatch = userMap.get(normEmail) || userMap.get(normId);
 
             if (uMatch) {
                 mapped.agreedTerms = uMatch.agreed_terms !== false;
                 mapped.agreedTermsAt = uMatch.agreed_terms_at || mapped.agreedTermsAt || p.created_at || null;
+                if (uMatch.role) mapped.role = uMatch.role;
+                if (!mapped.mobile && uMatch.mobile) mapped.mobile = uMatch.mobile;
+                if (!mapped.caste && uMatch.caste) mapped.community = uMatch.caste;
             } else {
                 mapped.agreedTerms = (mapped.agreedTerms !== undefined) ? mapped.agreedTerms : true;
                 mapped.agreedTermsAt = mapped.agreedTermsAt || p.created_at || null;
             }
             return mapped;
         }).filter(Boolean);
+
+        // Auto-heal / Synthesize profiles for any user in users table that has completed profile but missing from profiles table
+        allUsersList.forEach(u => {
+            if (!u || !u.email) return;
+            const normEmail = String(u.email).toLowerCase().trim();
+            const normId = String(u.id || '');
+            if (seenEmails.has(normEmail) || seenIds.has(normId)) return;
+            if (normEmail.includes('@report.internal') || normEmail.includes('@deleted.local') || normEmail.includes('@lagnasetu.app')) return;
+
+            const isGirl = (u.gender === 'girls' || u.gender === 'Girl' || u.gender === 'girl');
+            const synthProfile = {
+                id: parseInt(normId.replace(/\D/g, '').slice(-15), 10) || Date.now(),
+                userId: normId,
+                user_id: normId,
+                name: u.name || 'Member',
+                gender: isGirl ? 'girls' : 'boys',
+                community: u.caste || 'Luhar Suthar',
+                age: 24,
+                dob: '',
+                height: '',
+                weight: '',
+                education: '',
+                occ: '',
+                occupation: '',
+                income: '',
+                marital: 'Unmarried',
+                physical: 'Normal',
+                hobbies: [],
+                father: '',
+                fatherOcc: '',
+                fatherMobile: '',
+                mother: '',
+                motherOcc: '',
+                sister: 'None',
+                brother: 'None',
+                village: '',
+                city: '',
+                taluka: '',
+                district: '',
+                address: '',
+                fullAddress: '',
+                img: isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop',
+                photos: [],
+                email: normEmail,
+                mobile: u.mobile || '',
+                ownMobile: u.mobile || '',
+                rawEmail: normEmail,
+                rawOwnMobile: u.mobile || '',
+                verifyStatus: u.profile_complete ? 'approved' : 'pending',
+                paymentStatus: isGirl ? 'free' : (u.payment_status || 'unpaid'),
+                accountStatus: u.status === 'Suspended' ? 'suspended' : 'active',
+                visible: true,
+                registered: u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
+                agreedTerms: u.agreed_terms !== false,
+                agreedTermsAt: u.agreed_terms_at || u.created_at || null
+            };
+            mappedProfiles.push(synthProfile);
+            seenEmails.add(normEmail);
+        });
+
+        return mappedProfiles;
     } catch (e) {
         console.warn('[Supabase] Admin profiles fetch error:', e);
         return [];
@@ -3558,13 +3716,24 @@ async function supabaseGetAppSetting(key, defaultValue = null) {
     const client = getSupabaseClient();
     if (!client) return defaultValue;
     try {
-        const { data, error } = await client
+        let query = client
             .from('app_settings')
             .select('value')
-            .eq('key', key)
-            .maybeSingle();
-        if (!error && data && data.value !== undefined && data.value !== null) {
-            return data.value;
+            .eq('key', key);
+        let result;
+        if (typeof query.maybeSingle === 'function') {
+            result = await query.maybeSingle();
+        } else if (typeof query.limit === 'function') {
+            const { data, error } = await query.limit(1);
+            result = { data: Array.isArray(data) ? data[0] : data, error };
+        } else {
+            result = await query;
+            if (Array.isArray(result?.data)) {
+                result.data = result.data[0];
+            }
+        }
+        if (!result?.error && result?.data && result.data.value !== undefined && result.data.value !== null) {
+            return result.data.value;
         }
     } catch (e) {
         console.warn(`[Supabase] Error reading setting ${key}:`, e);

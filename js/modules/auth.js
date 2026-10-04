@@ -1218,6 +1218,37 @@ async function doLogin() {
                 matchedUser.photo = matchedUser.img;
             }
         }
+
+        // Deep reconciliation of full matrimonial profile fields from Supabase
+        if (prof) {
+            matchedUser.dob = prof.dob || matchedUser.dob || '';
+            matchedUser.age = prof.age || matchedUser.age || 24;
+            matchedUser.height = prof.height || matchedUser.height || '';
+            matchedUser.weight = prof.weight || matchedUser.weight || '';
+            matchedUser.education = prof.education || matchedUser.education || '';
+            matchedUser.occupation = prof.occupation || prof.occ || matchedUser.occupation || '';
+            matchedUser.occ = prof.occupation || prof.occ || matchedUser.occ || '';
+            matchedUser.income = prof.income || matchedUser.income || '';
+            matchedUser.marital = prof.marital || matchedUser.marital || 'Unmarried';
+            matchedUser.physical = prof.physical || matchedUser.physical || 'Normal';
+            matchedUser.hobbies = Array.isArray(prof.hobbies) ? prof.hobbies : (matchedUser.hobbies || []);
+            matchedUser.father = prof.father || prof.father_name || matchedUser.father || '';
+            matchedUser.fatherName = prof.father || prof.father_name || matchedUser.fatherName || '';
+            matchedUser.fatherOcc = prof.father_occ || prof.fatherOcc || matchedUser.fatherOcc || '';
+            matchedUser.fatherMobile = prof.father_mobile || prof.fatherMobile || matchedUser.fatherMobile || '';
+            matchedUser.mother = prof.mother || prof.mother_name || matchedUser.mother || '';
+            matchedUser.motherName = prof.mother || prof.mother_name || matchedUser.motherName || '';
+            matchedUser.motherOcc = prof.mother_occ || prof.motherOcc || matchedUser.motherOcc || '';
+            matchedUser.sister = prof.sister || matchedUser.sister || 'None';
+            matchedUser.brother = prof.brother || matchedUser.brother || 'None';
+            matchedUser.village = prof.village || prof.city || matchedUser.village || '';
+            matchedUser.taluka = prof.taluka || matchedUser.taluka || '';
+            matchedUser.district = prof.district || matchedUser.district || '';
+            matchedUser.fullAddress = prof.full_address || prof.address || matchedUser.fullAddress || '';
+            matchedUser.full_address = prof.full_address || prof.address || matchedUser.full_address || '';
+            matchedUser.ownMobile = prof.own_mobile || prof.mobile || matchedUser.ownMobile || '';
+            matchedUser.photos = (Array.isArray(prof.photos) && prof.photos.length > 0) ? prof.photos : (prof.img ? [prof.img] : (matchedUser.photos || []));
+        }
     }
 
     if (matchedUser) {
@@ -1393,6 +1424,25 @@ async function doLogin() {
                 if (matchedUser.district && !state.regData.district) state.regData.district = matchedUser.district;
                 if (matchedUser.address && !state.regData.address) state.regData.address = matchedUser.address;
                 if (matchedUser.photo && !state.regData.photo) state.regData.photo = matchedUser.photo;
+                if (matchedUser.dob && !state.regData.dob) state.regData.dob = matchedUser.dob;
+                if (matchedUser.age && !state.regData.age) state.regData.age = matchedUser.age;
+                if (matchedUser.height && !state.regData.height) state.regData.height = matchedUser.height;
+                if (matchedUser.weight && !state.regData.weight) state.regData.weight = matchedUser.weight;
+                if (matchedUser.education && !state.regData.education) state.regData.education = matchedUser.education;
+                if ((matchedUser.occupation || matchedUser.occ) && !state.regData.occupation) state.regData.occupation = matchedUser.occupation || matchedUser.occ;
+                if (matchedUser.income && !state.regData.income) state.regData.income = matchedUser.income;
+                if (matchedUser.marital && !state.regData.marital) state.regData.marital = matchedUser.marital;
+                if (matchedUser.physical && !state.regData.physical) state.regData.physical = matchedUser.physical;
+                if (matchedUser.hobbies && (!state.regData.hobbies || !state.regData.hobbies.length)) state.regData.hobbies = matchedUser.hobbies;
+                if (matchedUser.father && !state.regData.fatherName) state.regData.fatherName = matchedUser.father;
+                if (matchedUser.fatherOcc && !state.regData.fatherOcc) state.regData.fatherOcc = matchedUser.fatherOcc;
+                if (matchedUser.fatherMobile && !state.regData.fatherMobile) state.regData.fatherMobile = matchedUser.fatherMobile;
+                if (matchedUser.mother && !state.regData.motherName) state.regData.motherName = matchedUser.mother;
+                if (matchedUser.motherOcc && !state.regData.motherOcc) state.regData.motherOcc = matchedUser.motherOcc;
+                if (matchedUser.sister && !state.regData.sister) state.regData.sister = matchedUser.sister;
+                if (matchedUser.brother && !state.regData.brother) state.regData.brother = matchedUser.brother;
+                if (matchedUser.taluka && !state.regData.taluka) state.regData.taluka = matchedUser.taluka;
+                if (matchedUser.photos && (!state.regData.photos || !state.regData.photos.length)) state.regData.photos = matchedUser.photos;
             }
 
             // Determine exact remaining step

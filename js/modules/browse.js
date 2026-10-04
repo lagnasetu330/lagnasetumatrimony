@@ -186,53 +186,104 @@ function getCurrentUserProfile() {
     const curEmail = (state.currentUser.email || '').toLowerCase().trim();
     const curName = (state.currentUser.name || '').toLowerCase().trim();
 
+    // 1. Search in memory PROFILES array
     let myProfile = (window.PROFILES || []).find(p => {
         if (!p) return false;
-        if (curId && (p.id === curId || String(p.id) === String(curId) || p.userId === curId || String(p.userId) === String(curId))) return true;
+        if (curId && (p.id == curId || String(p.id) === String(curId) || p.userId == curId || String(p.userId) === String(curId) || p.user_id == curId || String(p.user_id) === String(curId))) return true;
         if (curEmail && p.email && p.email.toLowerCase().trim() === curEmail) return true;
         if (curName && p.name && p.name.toLowerCase().trim() === curName) return true;
         return false;
     });
 
-    if (!myProfile) {
-        const isGirl = (state.currentUser.gender || state.regData?.gender) === 'Girl' || (state.currentUser.gender || state.regData?.gender) === 'girls';
+    // 2. Cross-reference stored accounts for any missing profile details
+    let storedAcc = null;
+    if (typeof getStoredAccounts === 'function') {
+        try {
+            const accs = getStoredAccounts();
+            storedAcc = accs.find(a => a && (
+                (curEmail && a.email && a.email.toLowerCase().trim() === curEmail) ||
+                (curId && (a.id == curId || a.profileId == curId || a.userId == curId))
+            ));
+        } catch (_) {}
+    }
+
+    if (myProfile) {
+        // Hydrate any missing fields in myProfile from state.currentUser, storedAcc, or state.regData
+        const src = storedAcc || state.currentUser || {};
+        if (!myProfile.dob && src.dob) myProfile.dob = src.dob;
+        if (!myProfile.age && src.age) myProfile.age = src.age;
+        if (!myProfile.height && src.height) myProfile.height = src.height;
+        if (!myProfile.weight && src.weight) myProfile.weight = src.weight;
+        if (!myProfile.education && src.education) myProfile.education = src.education;
+        if (!myProfile.occ && (src.occupation || src.occ)) myProfile.occ = src.occupation || src.occ;
+        if (!myProfile.income && src.income) myProfile.income = src.income;
+        if (!myProfile.marital && src.marital) myProfile.marital = src.marital;
+        if (!myProfile.physical && src.physical) myProfile.physical = src.physical;
+        if ((!myProfile.hobbies || !myProfile.hobbies.length) && Array.isArray(src.hobbies)) myProfile.hobbies = src.hobbies;
+        if (!myProfile.father && (src.father || src.fatherName)) myProfile.father = src.father || src.fatherName;
+        if (!myProfile.fatherOcc && src.fatherOcc) myProfile.fatherOcc = src.fatherOcc;
+        if (!myProfile.fatherMobile && src.fatherMobile) myProfile.fatherMobile = src.fatherMobile;
+        if (!myProfile.mother && (src.mother || src.motherName)) myProfile.mother = src.mother || src.motherName;
+        if (!myProfile.motherOcc && src.motherOcc) myProfile.motherOcc = src.motherOcc;
+        if ((!myProfile.sister || myProfile.sister === '—') && src.sister) myProfile.sister = src.sister;
+        if ((!myProfile.brother || myProfile.brother === '—') && src.brother) myProfile.brother = src.brother;
+        if (!myProfile.village && (src.village || src.city)) myProfile.village = src.village || src.city;
+        if (!myProfile.city && (src.city || src.village)) myProfile.city = src.city || src.village;
+        if (!myProfile.taluka && src.taluka) myProfile.taluka = src.taluka;
+        if (!myProfile.district && src.district) myProfile.district = src.district;
+        if (!myProfile.fullAddress && (src.fullAddress || src.address || src.full_address)) myProfile.fullAddress = src.fullAddress || src.address || src.full_address;
+        if (!myProfile.ownMobile && (src.ownMobile || src.mobile)) myProfile.ownMobile = src.ownMobile || src.mobile;
+        if ((!myProfile.photos || !myProfile.photos.length) && (Array.isArray(src.photos) && src.photos.length > 0)) myProfile.photos = src.photos;
+    } else {
+        const isGirl = (state.currentUser.gender || state.regData?.gender || storedAcc?.gender) === 'Girl' || (state.currentUser.gender || state.regData?.gender || storedAcc?.gender) === 'girls';
+        const fallbackPhotos = (state.currentUser.photos && state.currentUser.photos.length) 
+            ? state.currentUser.photos 
+            : (storedAcc?.photos || (state.regData?.photos || []));
+        const fallbackImg = state.currentUser.img || storedAcc?.img || state.regData?.photo || fallbackPhotos[0] || (isGirl ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=800&auto=format&fit=crop' : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop');
+
         myProfile = {
-            id: curId || Date.now(),
-            name: state.currentUser.name || state.regData?.name || '',
+            id: curId || storedAcc?.profileId || storedAcc?.id || Date.now(),
+            user_id: String(curId || storedAcc?.id || ''),
+            name: state.currentUser.name || storedAcc?.name || state.regData?.name || '',
             gender: isGirl ? 'girls' : 'boys',
-            community: state.currentUser.caste || state.regData?.caste || 'Luhar Suthar',
-            dob: state.currentUser.dob || state.regData?.dob || '',
-            age: state.currentUser.age || state.regData?.age || 24,
-            height: state.currentUser.height || state.regData?.height || "5'6\"",
-            weight: state.currentUser.weight || state.regData?.weight || '60 kg',
-            marital: state.currentUser.marital || state.regData?.marital || 'Unmarried',
-            physical: state.currentUser.physical || state.regData?.physical || 'Normal',
-            occ: state.currentUser.occupation || state.currentUser.occ || state.regData?.occupation || 'Professional',
-            income: state.currentUser.income || state.regData?.income || '₹40K – ₹75K',
-            education: state.currentUser.education || state.regData?.education || 'Graduate',
-            father: state.currentUser.father || state.regData?.fatherName || '',
-            fatherOcc: state.currentUser.fatherOcc || state.regData?.fatherOcc || 'Business',
-            fatherMobile: state.currentUser.fatherMobile || state.regData?.fatherMobile || '',
-            mother: state.currentUser.mother || state.regData?.motherName || '',
-            motherOcc: state.currentUser.motherOcc || state.regData?.motherOcc || 'Homemaker',
-            sister: state.currentUser.sister || state.regData?.sister || 'None',
-            brother: state.currentUser.brother || state.regData?.brother || 'None',
-            village: state.currentUser.village || state.currentUser.city || state.regData?.city || '',
-            city: state.currentUser.city || state.currentUser.village || state.regData?.city || '',
-            taluka: state.currentUser.taluka || state.regData?.taluka || '',
-            district: state.currentUser.district || state.regData?.district || '',
-            address: state.currentUser.address || state.regData?.address || '',
-            fullAddress: state.currentUser.fullAddress || state.currentUser.full_address || state.currentUser.address || state.regData?.address || '',
-            hobbies: state.currentUser.hobbies || state.regData?.hobbies || [],
-            ownMobile: state.currentUser.mobile || state.regData?.ownMobile || '',
-            img: state.currentUser.img || state.regData?.photo || '',
-            photos: (state.currentUser.photos && state.currentUser.photos.length) ? state.currentUser.photos : (state.regData?.photos || []),
+            community: state.currentUser.caste || storedAcc?.caste || state.regData?.caste || 'Luhar Suthar',
+            dob: state.currentUser.dob || storedAcc?.dob || state.regData?.dob || '',
+            age: state.currentUser.age || storedAcc?.age || state.regData?.age || 24,
+            height: state.currentUser.height || storedAcc?.height || state.regData?.height || "5'6\"",
+            weight: state.currentUser.weight || storedAcc?.weight || state.regData?.weight || '60 kg',
+            marital: state.currentUser.marital || storedAcc?.marital || state.regData?.marital || 'Unmarried',
+            physical: state.currentUser.physical || storedAcc?.physical || state.regData?.physical || 'Normal',
+            occ: state.currentUser.occupation || state.currentUser.occ || storedAcc?.occupation || storedAcc?.occ || state.regData?.occupation || 'Professional',
+            occupation: state.currentUser.occupation || state.currentUser.occ || storedAcc?.occupation || storedAcc?.occ || state.regData?.occupation || 'Professional',
+            income: state.currentUser.income || storedAcc?.income || state.regData?.income || '₹40K – ₹75K',
+            education: state.currentUser.education || storedAcc?.education || state.regData?.education || 'Graduate',
+            father: state.currentUser.father || state.currentUser.fatherName || storedAcc?.father || storedAcc?.fatherName || state.regData?.fatherName || '',
+            fatherOcc: state.currentUser.fatherOcc || storedAcc?.fatherOcc || state.regData?.fatherOcc || '',
+            fatherMobile: state.currentUser.fatherMobile || storedAcc?.fatherMobile || state.regData?.fatherMobile || '',
+            mother: state.currentUser.mother || state.currentUser.motherName || storedAcc?.mother || storedAcc?.motherName || state.regData?.motherName || '',
+            motherOcc: state.currentUser.motherOcc || storedAcc?.motherOcc || state.regData?.motherOcc || '',
+            sister: state.currentUser.sister || storedAcc?.sister || state.regData?.sister || 'None',
+            brother: state.currentUser.brother || storedAcc?.brother || state.regData?.brother || 'None',
+            village: state.currentUser.village || state.currentUser.city || storedAcc?.village || storedAcc?.city || state.regData?.city || '',
+            city: state.currentUser.city || state.currentUser.village || storedAcc?.city || storedAcc?.village || state.regData?.city || '',
+            taluka: state.currentUser.taluka || storedAcc?.taluka || state.regData?.taluka || '',
+            district: state.currentUser.district || storedAcc?.district || state.regData?.district || '',
+            address: state.currentUser.address || storedAcc?.address || state.regData?.address || '',
+            fullAddress: state.currentUser.fullAddress || state.currentUser.full_address || state.currentUser.address || storedAcc?.fullAddress || storedAcc?.address || state.regData?.address || '',
+            full_address: state.currentUser.fullAddress || state.currentUser.full_address || state.currentUser.address || storedAcc?.fullAddress || storedAcc?.address || state.regData?.address || '',
+            hobbies: state.currentUser.hobbies || storedAcc?.hobbies || state.regData?.hobbies || [],
+            ownMobile: state.currentUser.ownMobile || state.currentUser.mobile || storedAcc?.ownMobile || storedAcc?.mobile || state.regData?.ownMobile || '',
+            mobile: state.currentUser.ownMobile || state.currentUser.mobile || storedAcc?.ownMobile || storedAcc?.mobile || state.regData?.ownMobile || '',
+            email: state.currentUser.email || storedAcc?.email || '',
+            img: fallbackImg,
+            photos: fallbackPhotos.length > 0 ? fallbackPhotos : [fallbackImg],
             visible: (state.currentUser.visible !== false && state.currentUser.visible !== 'false'),
             accountStatus: state.currentUser.status === 'Suspended' ? 'suspended' : 'active',
             paymentStatus: state.currentUser.paymentStatus || 'unpaid'
         };
         window.PROFILES = window.PROFILES || [];
         window.PROFILES.unshift(myProfile);
+        if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
     }
     return myProfile;
 }
@@ -271,15 +322,38 @@ function populateEditProfile() {
     const dobEl = document.getElementById('editDobInput');
     if (dobEl) dobEl.value = myProfile.dob || state.currentUser?.dob || '';
 
+    // Height (cm) - Safe parse for cm or feet/inches
     const heightEl = document.getElementById('editHeight');
     if (heightEl) {
-        const hVal = parseInt(myProfile.height) || parseInt(state.currentUser?.height) || 170;
+        let hVal = 170;
+        const rawH = myProfile.height || state.currentUser?.height || '';
+        if (rawH) {
+            const digits = parseInt(String(rawH).replace(/\D/g, ''), 10);
+            if (!isNaN(digits) && digits >= 90 && digits <= 250) {
+                hVal = digits;
+            } else if (String(rawH).includes("'")) {
+                const match = String(rawH).match(/(\d+)'\s*(\d+)?/);
+                if (match) {
+                    const feet = parseInt(match[1], 10);
+                    const inches = parseInt(match[2] || 0, 10);
+                    hVal = Math.round((feet * 12 + inches) * 2.54);
+                }
+            }
+        }
         heightEl.value = String(hVal);
     }
 
+    // Weight (kg) - Safe parse
     const weightEl = document.getElementById('editWeight');
     if (weightEl) {
-        const wVal = parseInt(myProfile.weight) || parseInt(state.currentUser?.weight) || 65;
+        let wVal = 65;
+        const rawW = myProfile.weight || state.currentUser?.weight || '';
+        if (rawW) {
+            const digits = parseInt(String(rawW).replace(/\D/g, ''), 10);
+            if (!isNaN(digits) && digits >= 30 && digits <= 200) {
+                wVal = digits;
+            }
+        }
         weightEl.value = String(wVal);
     }
 
@@ -511,9 +585,25 @@ function saveEditProfile() {
     if (state.currentUser) {
         state.currentUser.visible = isVisible;
         state.currentUser.name = fullName;
-        state.currentUser.mobile = formatPhoneNumber(cleanOwnMobile);
         state.currentUser.dob = dobVal;
         state.currentUser.age = calculatedAge;
+        state.currentUser.height = heightVal ? `${heightVal} cm` : '';
+        state.currentUser.weight = weightVal ? `${weightVal} kg` : '';
+        state.currentUser.education = eduVal;
+        state.currentUser.occupation = occVal;
+        state.currentUser.occ = occVal;
+        state.currentUser.income = incomeVal;
+        state.currentUser.marital = maritalVal;
+        state.currentUser.physical = physicalVal;
+        state.currentUser.father = fatherNameVal;
+        state.currentUser.fatherName = fatherNameVal;
+        state.currentUser.fatherOcc = fatherOccVal;
+        state.currentUser.fatherMobile = formatPhoneNumber(cleanFatherMobile);
+        state.currentUser.mother = motherNameVal;
+        state.currentUser.motherName = motherNameVal;
+        state.currentUser.motherOcc = motherOccVal;
+        state.currentUser.sister = sisterVal;
+        state.currentUser.brother = brotherVal;
         state.currentUser.village = city;
         state.currentUser.city = city;
         state.currentUser.taluka = talukaVal;
@@ -522,6 +612,13 @@ function saveEditProfile() {
         state.currentUser.fullAddress = addrVal;
         state.currentUser.full_address = addrVal;
         state.currentUser.hobbies = updatedHobbies;
+        state.currentUser.mobile = formatPhoneNumber(cleanOwnMobile);
+        state.currentUser.ownMobile = formatPhoneNumber(cleanOwnMobile);
+        if (photos.length > 0) {
+            state.currentUser.photos = photos;
+            state.currentUser.img = photos[0];
+            state.currentUser.photo = photos[0];
+        }
     }
 
     if (state.regData) {
@@ -534,7 +631,7 @@ function saveEditProfile() {
         state.regData.hobbies = updatedHobbies;
     }
 
-    // Persist to stored accounts
+    // Persist all 25+ fields to stored accounts
     try {
         if (typeof getStoredAccounts === 'function' && typeof saveStoredAccounts === 'function') {
             const accounts = getStoredAccounts();
@@ -542,7 +639,27 @@ function saveEditProfile() {
             if (uIdx !== -1) {
                 accounts[uIdx].visible = isVisible;
                 accounts[uIdx].name = fullName;
+                accounts[uIdx].dob = dobVal;
+                accounts[uIdx].age = calculatedAge;
+                accounts[uIdx].height = heightVal ? `${heightVal} cm` : '';
+                accounts[uIdx].weight = weightVal ? `${weightVal} kg` : '';
+                accounts[uIdx].education = eduVal;
+                accounts[uIdx].occupation = occVal;
+                accounts[uIdx].occ = occVal;
+                accounts[uIdx].income = incomeVal;
+                accounts[uIdx].marital = maritalVal;
+                accounts[uIdx].physical = physicalVal;
+                accounts[uIdx].father = fatherNameVal;
+                accounts[uIdx].fatherName = fatherNameVal;
+                accounts[uIdx].fatherOcc = fatherOccVal;
+                accounts[uIdx].fatherMobile = formatPhoneNumber(cleanFatherMobile);
+                accounts[uIdx].mother = motherNameVal;
+                accounts[uIdx].motherName = motherNameVal;
+                accounts[uIdx].motherOcc = motherOccVal;
+                accounts[uIdx].sister = sisterVal;
+                accounts[uIdx].brother = brotherVal;
                 accounts[uIdx].mobile = formatPhoneNumber(cleanOwnMobile);
+                accounts[uIdx].ownMobile = formatPhoneNumber(cleanOwnMobile);
                 accounts[uIdx].city = city;
                 accounts[uIdx].village = city;
                 accounts[uIdx].taluka = talukaVal;
@@ -550,6 +667,12 @@ function saveEditProfile() {
                 accounts[uIdx].address = addrVal;
                 accounts[uIdx].fullAddress = addrVal;
                 accounts[uIdx].full_address = addrVal;
+                accounts[uIdx].hobbies = updatedHobbies;
+                if (photos.length > 0) {
+                    accounts[uIdx].photos = photos;
+                    accounts[uIdx].img = photos[0];
+                    accounts[uIdx].photo = photos[0];
+                }
                 saveStoredAccounts(accounts);
             }
         }
@@ -1698,4 +1821,7 @@ if (typeof renderFilterCasteOptions !== 'undefined') window.renderFilterCasteOpt
 if (typeof renderFilterCityOptions !== 'undefined') window.renderFilterCityOptions = renderFilterCityOptions;
 if (typeof updateAgeSliderView !== 'undefined') window.updateAgeSliderView = updateAgeSliderView;
 if (typeof openShareModal !== 'undefined') window.openShareModal = openShareModal;
+if (typeof populateEditProfile !== 'undefined') window.populateEditProfile = populateEditProfile;
+if (typeof getCurrentUserProfile !== 'undefined') window.getCurrentUserProfile = getCurrentUserProfile;
+if (typeof saveEditProfile !== 'undefined') window.saveEditProfile = saveEditProfile;
 

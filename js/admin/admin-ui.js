@@ -460,6 +460,25 @@
                 }
             } catch (_) {}
 
+            // 4. Search in stored accounts / LS_AUTH_ACCOUNTS
+            try {
+                const rawAcc = localStorage.getItem('LS_AUTH_ACCOUNTS') || localStorage.getItem('LS_COMMUNITY_USERS');
+                if (rawAcc) {
+                    const accList = JSON.parse(rawAcc);
+                    if (Array.isArray(accList)) {
+                        found = accList.find(a => {
+                            if (!a) return false;
+                            if (String(a.id).trim() === strId) return true;
+                            if (a.profileId && String(a.profileId).trim() === strId) return true;
+                            if (a.userId && String(a.userId).trim() === strId) return true;
+                            if (a.email && a.email.toLowerCase().trim() === lowerId) return true;
+                            return false;
+                        });
+                        if (found) return found;
+                    }
+                }
+            } catch (_) {}
+
             return null;
         }
 

@@ -57,7 +57,7 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
             if (typeof state !== 'undefined' && state.currentUser && state.currentUser.email) {
                 const myEmail = state.currentUser.email.trim().toLowerCase();
                 const curId = state.currentUser.id || state.currentUser.profileId;
-                const myProf = PROFILES.find(p => p && ((p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId))));
+                const myProf = PROFILES.find(p => p && ((p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId || p.user_id == curId))));
                 if (myProf && myProf.name && myProf.community) {
                     if (!state.currentUser.name || state.currentUser.name === 'Member') {
                         state.currentUser.name = myProf.name;
@@ -68,11 +68,42 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
                     if (!state.currentUser.caste) {
                         state.currentUser.caste = myProf.community;
                     }
+                    state.currentUser.community = myProf.community;
                     if (!state.currentUser.img || !state.currentUser.photo) {
                         state.currentUser.img = myProf.img || (Array.isArray(myProf.photos) && myProf.photos[0]);
                         state.currentUser.photo = state.currentUser.img;
                     }
                     state.currentUser.profileId = myProf.id;
+                    state.currentUser.dob = myProf.dob || state.currentUser.dob || '';
+                    state.currentUser.age = myProf.age || state.currentUser.age || 24;
+                    state.currentUser.height = myProf.height || state.currentUser.height || '';
+                    state.currentUser.weight = myProf.weight || state.currentUser.weight || '';
+                    state.currentUser.education = myProf.education || state.currentUser.education || '';
+                    state.currentUser.occupation = myProf.occ || myProf.occupation || state.currentUser.occupation || '';
+                    state.currentUser.occ = myProf.occ || myProf.occupation || state.currentUser.occ || '';
+                    state.currentUser.income = myProf.income || state.currentUser.income || '';
+                    state.currentUser.marital = myProf.marital || state.currentUser.marital || 'Unmarried';
+                    state.currentUser.physical = myProf.physical || state.currentUser.physical || 'Normal';
+                    state.currentUser.hobbies = Array.isArray(myProf.hobbies) ? myProf.hobbies : (state.currentUser.hobbies || []);
+                    state.currentUser.father = myProf.father || state.currentUser.father || '';
+                    state.currentUser.fatherName = myProf.father || state.currentUser.fatherName || '';
+                    state.currentUser.fatherOcc = myProf.fatherOcc || state.currentUser.fatherOcc || '';
+                    state.currentUser.fatherMobile = myProf.fatherMobile || state.currentUser.fatherMobile || '';
+                    state.currentUser.mother = myProf.mother || state.currentUser.mother || '';
+                    state.currentUser.motherName = myProf.mother || state.currentUser.motherName || '';
+                    state.currentUser.motherOcc = myProf.motherOcc || state.currentUser.motherOcc || '';
+                    state.currentUser.sister = myProf.sister || state.currentUser.sister || 'None';
+                    state.currentUser.brother = myProf.brother || state.currentUser.brother || 'None';
+                    state.currentUser.village = myProf.village || myProf.city || state.currentUser.village || '';
+                    state.currentUser.city = myProf.village || myProf.city || state.currentUser.city || '';
+                    state.currentUser.taluka = myProf.taluka || state.currentUser.taluka || '';
+                    state.currentUser.district = myProf.district || state.currentUser.district || '';
+                    state.currentUser.address = myProf.fullAddress || myProf.address || state.currentUser.address || '';
+                    state.currentUser.fullAddress = myProf.fullAddress || myProf.address || state.currentUser.fullAddress || '';
+                    state.currentUser.ownMobile = myProf.ownMobile || state.currentUser.ownMobile || '';
+                    state.currentUser.mobile = myProf.ownMobile || myProf.mobile || state.currentUser.mobile || '';
+                    state.currentUser.photos = (Array.isArray(myProf.photos) && myProf.photos.length > 0) ? myProf.photos : (state.currentUser.photos || [state.currentUser.img]);
+
                     const isDone = typeof isProfileFullyComplete === 'function' ? isProfileFullyComplete(state.currentUser) : true;
                     state.currentUser.profileComplete = isDone;
                     state.profileComplete = isDone;
