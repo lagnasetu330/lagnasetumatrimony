@@ -688,6 +688,7 @@ function syncGenderUI() {
             if (homeGirlsCount) homeGirlsCount.textContent = `${totalBoys} verified profile${totalBoys === 1 ? '' : 's'}`;
         }
         if (heroTileBoys) {
+            heroTileBoys.className = 'hero-tile boys';
             if (heroTitleBoys) heroTitleBoys.textContent = userCaste ? `${userCaste}` : 'My Community';
             if (homeBoysCount) homeBoysCount.textContent = `${myCasteBoys} community groom${myCasteBoys === 1 ? '' : 's'}`;
         }
@@ -762,24 +763,15 @@ function handleHeroTileClick(type) {
     const isGirl = typeof isGirlGender === 'function' ? isGirlGender(userGender) : (userGender === 'Girl' || userGender === 'girl');
 
     if (isBoy) {
+        if (state.filters) state.filters.caste = (type === 'boys') ? 'MY_COMMUNITY' : 'All';
         setTab('girls');
-        if (type === 'boys') {
-            // Clicked 2nd tile (My Community Brides)
-            if (state.filters) state.filters.caste = 'MY_COMMUNITY';
-        } else {
-            if (state.filters) state.filters.caste = 'All';
-        }
         go('scr-browse');
     } else if (isGirl) {
+        if (state.filters) state.filters.caste = (type === 'boys') ? 'MY_COMMUNITY' : 'All';
         setTab('boys');
-        if (type === 'boys') {
-            // Clicked 2nd tile (My Community Grooms)
-            if (state.filters) state.filters.caste = 'MY_COMMUNITY';
-        } else {
-            if (state.filters) state.filters.caste = 'All';
-        }
         go('scr-browse');
     } else {
+        if (state.filters) state.filters.caste = 'All';
         setTab(type);
         go('scr-browse');
     }
