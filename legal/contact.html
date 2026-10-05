@@ -72,7 +72,7 @@
                             Direct correspondence for billing, profile verification, inquiries &amp; general assistance.
                         </div>
                     </div>
-                    <a href="mailto:lagnasetu330@gmail.com?subject=Lagna%20Setu%20Support%20Inquiry" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Lagna Setu Support Inquiry');" class="legal-contact-action mail-act">
+                    <a href="mailto:mangalsetu.in@gmail.com?subject=Mangal%20Setu%20Support%20Inquiry" onclick="openSmartEmail(event, 'mangalsetu.in@gmail.com', 'Mangal Setu Support Inquiry');" class="legal-contact-action mail-act">
                         <span class="lca-left">
                             <i class="fa-solid fa-paper-plane"></i>
                             <span>Send Official Email</span>
@@ -150,10 +150,10 @@
                     <span>Grievance Officer Contact Details</span>
                 </div>
                 <div class="legal-shield-text">
-                    <b>Name / Officer:</b> Grievance Redressal Officer, Lagna Setu Matrimony<br>
+                    <b>Name / Officer:</b> Grievance Redressal Officer, Mangal Setu Matrimony<br>
                     <b>Designation:</b> Head of Customer Trust &amp; Safety<br>
                     <b>Official Grievance Desk:</b> 
-                    <a href="mailto:lagnasetu330@gmail.com?subject=Attention:%20Grievance%20Officer%20-%20Lagna%20Setu" onclick="openSmartEmail(event, 'lagnasetu330@gmail.com', 'Attention: Grievance Officer - Lagna Setu');" class="legal-grievance-btn">
+                    <a href="mailto:mangalsetu.in@gmail.com?subject=Attention:%20Grievance%20Officer%20-%20Mangal%20Setu" onclick="openSmartEmail(event, 'mangalsetu.in@gmail.com', 'Attention: Grievance Officer - Mangal Setu');" class="legal-grievance-btn">
                         <i class="fa-solid fa-envelope-open-text"></i> Write to Grievance Officer <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i>
                     </a><br>
                     <b>Operating Headquarters:</b> Jasdan / Gujarat, India<br>
@@ -249,8 +249,8 @@
         // Smart email opener: opens Gmail Web compose on PC desktop, native email app on mobile
         function openSmartEmail(e, email, subject, body) {
             if (e && e.preventDefault) e.preventDefault();
-            email = email || 'lagnasetu330@gmail.com';
-            subject = subject || 'Lagna Setu Support Inquiry';
+            email = email || 'mangalsetu.in@gmail.com';
+            subject = subject || 'Mangal Setu Support Inquiry';
             body = body || '';
             
             try {
@@ -337,9 +337,9 @@
             } catch(err) {}
 
             // Pre-generate direct WhatsApp & Gmail Links
-            const waBody = `*New Lagna Setu Inquiry*\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nSubject: ${subject}\n\n*Message:*\n${message}`;
+            const waBody = `*New Mangal Setu Inquiry*\nName: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nSubject: ${subject}\n\n*Message:*\n${message}`;
             const waUrl = `https://wa.me/919726362863?text=${encodeURIComponent(waBody)}`;
-            const mailUrl = `mailto:lagnasetu330@gmail.com?subject=${encodeURIComponent(`[Lagna Setu Contact] ${subject} - ${name}`)}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nSubject: ${subject}\n\nMessage:\n${message}`)}`;
+            const mailUrl = `mailto:mangalsetu.in@gmail.com?subject=${encodeURIComponent(`[Mangal Setu Contact] ${subject} - ${name}`)}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\nPhone: ${phone || 'N/A'}\nSubject: ${subject}\n\nMessage:\n${message}`)}`;
 
             let emailSent = false;
 
@@ -361,7 +361,7 @@
               ✦ NEW MEMBER INQUIRY ✦
             </div>
             <h1 style="margin:0;font-size:24px;font-weight:900;color:#ffffff;letter-spacing:0.5px;">
-              LAGNA SETU HELP DESK
+              MANGAL SETU HELP DESK
             </h1>
             <div style="font-size:12.5px;color:#F0E4FA;margin-top:6px;">
               Direct Message from Contact Us Page
@@ -400,15 +400,15 @@ ${safeMessage}
             </div>
 
             <div style="text-align:center;">
-              <a href="mailto:${safeEmail}?subject=Re: [Lagna Setu] ${safeSubject}&body=Hello ${safeName},%0D%0A%0D%0AThank you for reaching out to Lagna Setu Support." style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#ffffff !important;text-decoration:none;padding:13px 30px;border-radius:28px;font-size:14px;font-weight:800;box-shadow:0 6px 20px rgba(123,44,191,0.35);">
-                ✉️ Reply to  via Email
+              <a href="mailto:${safeEmail}?subject=Re: [Mangal Setu] ${safeSubject}&body=Hello ${safeName},%0D%0A%0D%0AThank you for reaching out to Mangal Setu Support." style="display:inline-block;background:linear-gradient(135deg, #7B2CBF 0%, #9D4EDD 100%);color:#ffffff !important;text-decoration:none;padding:13px 30px;border-radius:28px;font-size:14px;font-weight:800;box-shadow:0 6px 20px rgba(123,44,191,0.35);">
+                ✉️ Reply via Email
               </a>
             </div>
           </td>
         </tr>
         <tr>
           <td style="background:#FAF8FC;padding:20px;text-align:center;font-size:12px;color:#726E7A;border-top:1.5px solid #ECE5F5;line-height:1.6;">
-            <b>Lagna Setu Community Matrimony Platform</b><br>
+            <b>Mangal Setu Community Matrimony Platform</b><br>
             Official Support Administration • Jasdan / Gujarat, India
           </td>
         </tr>
@@ -418,21 +418,21 @@ ${safeMessage}
 </table>
 `;
 
-            // 2. Primary Dispatch via EmailJS (Official Lagna Setu Branded Email)
+            // 2. Primary Dispatch via EmailJS (Official Mangal Setu Branded Email)
             if (window.emailjs) {
                 try {
                     await window.emailjs.send(
                         'service_r4l6cqu',
                         'template_t68k6ba',
                         {
-                            to_email: 'lagnasetu330@gmail.com',
-                            to_name: 'Lagna Setu Admin Cell',
-                            recipient_email: 'lagnasetu330@gmail.com',
-                            recipient_name: 'Lagna Setu Admin Cell',
+                            to_email: 'mangalsetu.in@gmail.com',
+                            to_name: 'Mangal Setu Admin Cell',
+                            recipient_email: 'mangalsetu.in@gmail.com',
+                            recipient_name: 'Mangal Setu Admin Cell',
                             from_name: name,
                             sender_name: name,
                             reply_to: email,
-                            subject: `[Lagna Setu Inquiry] ${cleanSubject} - from ${name}`,
+                            subject: `[Mangal Setu Inquiry] ${cleanSubject} - from ${name}`,
                             
                             message: emailHtml,
                             message_html: emailHtml,
@@ -458,7 +458,7 @@ ${safeMessage}
             // 3. Fallback only if EmailJS failed (e.g. ad-blocker or quota limit)
             if (!emailSent) {
                 try {
-                    await fetch("https://formsubmit.co/ajax/lagnasetu330@gmail.com", {
+                    await fetch("https://formsubmit.co/ajax/mangalsetu.in@gmail.com", {
                         method: "POST",
                         headers: {
                             'Content-Type': 'application/json',

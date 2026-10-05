@@ -965,7 +965,7 @@ window.escapeHtml = escapeHtmlAdmin;
         }).join('')}
       </div>`;
             } else {
-                let contact = { whatsapp: '+91 97263 62863', phone: '+91 97263 62863', email: 'lagnasetu330@gmail.com' };
+                let contact = { whatsapp: '+91 97263 62863', phone: '+91 97263 62863', email: 'mangalsetu.in@gmail.com' };
                 try {
                     const stored = localStorage.getItem(LS_CONTACT_KEY);
                     if (stored) {
@@ -986,7 +986,7 @@ window.escapeHtml = escapeHtmlAdmin;
         async function saveContactDetails() {
             const wa = document.getElementById('supportWhatsapp')?.value.trim() || '+91 97263 62863';
             const phone = document.getElementById('supportPhone')?.value.trim() || '+91 97263 62863';
-            const email = document.getElementById('supportEmail')?.value.trim() || 'lagnasetu330@gmail.com';
+            const email = document.getElementById('supportEmail')?.value.trim() || 'mangalsetu.in@gmail.com';
             const contact = { whatsapp: wa, phone: phone, email: email };
             if (typeof supabaseSetAppSetting === 'function') {
                 await supabaseSetAppSetting('contact_details', contact);

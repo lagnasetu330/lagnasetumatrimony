@@ -387,14 +387,14 @@ function openRazorpayCheckout() {
         try {
             const user = (typeof state !== 'undefined' && state.currentUser) || {};
             const boyName = user.name || 'Community Member';
-            const boyEmail = user.email || 'lagnasetu330@gmail.com';
+            const boyEmail = user.email || 'mangalsetu.in@gmail.com';
             const boyPhone = user.mobile ? user.mobile.replace(/[^0-9]/g, '').slice(-10) : '9726362863';
 
             const options = {
                 key: window.RAZORPAY_KEY_ID,
                 amount: 9900, // ₹99 in paise
                 currency: 'INR',
-                name: 'Lagna Setu',
+                name: 'Mangal Setu',
                 description: 'Boys 30-Day Membership Pass (₹99)',
                 image: 'images/lagna_setu_logo.png',
                 notes: {

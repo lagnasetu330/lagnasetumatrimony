@@ -22,7 +22,7 @@ const DEFAULT_FAQS = [
     ['How do members contact each other?', 'A member can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request to unlock chat.'],
     ['Is a member\'s phone number public?', 'No. A member\'s own mobile number is kept strictly private for Admin review only. Only the father\'s contact number is shown on the public profile.'],
     ['How do multi-photo profiles work?', 'Members can upload up to 3 high-resolution photos. Admin and verified members can view all photos in the photo gallery carousel.'],
-    ['How can I contact official Admin support?', 'You can reach our Jasdan administrative cell via WhatsApp or Phone at +91 97263 62863 or email lagnasetu330@gmail.com.']
+    ['How can I contact official Admin support?', 'You can reach our Jasdan administrative cell via WhatsApp or Phone at +91 97263 62863 or email mangalsetu.in@gmail.com.']
 ];
 
 let REMOTE_GUIDE_STEPS = null;
@@ -156,7 +156,7 @@ function filterFaqs(val) {
 }
 
 function contactSupportAction(type) {
-    let contact = { whatsapp: '+91 97263 62863', phone: '+91 97263 62863', email: 'lagnasetu330@gmail.com' };
+    let contact = { whatsapp: '+91 97263 62863', phone: '+91 97263 62863', email: 'mangalsetu.in@gmail.com' };
     if (REMOTE_CONTACT && typeof REMOTE_CONTACT === 'object') {
         if (REMOTE_CONTACT.whatsapp) contact.whatsapp = REMOTE_CONTACT.whatsapp;
         if (REMOTE_CONTACT.phone) contact.phone = REMOTE_CONTACT.phone;
