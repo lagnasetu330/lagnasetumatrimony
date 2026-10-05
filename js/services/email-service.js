@@ -12,12 +12,12 @@
    ============================================================================== */
 
 const EMAIL_CONFIG = {
-    appName: 'Lagna Setu Matrimony',
-    fromEmail: 'lagnasetu330@gmail.com',
-    fromName: 'Lagna Setu Matrimony',
+    appName: 'Mangal Setu Matrimony',
+    fromEmail: 'mangalsetu330@gmail.com',
+    fromName: 'Mangal Setu Matrimony',
     appUrl: (typeof window !== 'undefined' && window.location && window.location.origin) 
         ? (window.location.origin + window.location.pathname) 
-        : 'https://lagnasetu.com',
+        : 'https://mangalsetu.in',
     primaryColor: '#7B2CBF', // Royal Amethyst Purple
     primaryDark: '#5A189A',  // Deep Royal Purple
     primaryLight: '#F0E4FA', // Soft Lavender Lilac

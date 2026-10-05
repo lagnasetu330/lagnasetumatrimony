@@ -5,64 +5,64 @@
 
   <!-- Homepage / Primary Landing Page -->
   <url>
-    <loc>https://www.lagnasetu.in/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
-    <xhtml:link rel="alternate" hreflang="en-IN" href="https://www.lagnasetu.in/" />
-    <xhtml:link rel="alternate" hreflang="gu-IN" href="https://www.lagnasetu.in/" />
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.lagnasetu.in/" />
+    <xhtml:link rel="alternate" hreflang="en-IN" href="https://www.mangalsetu.in/" />
+    <xhtml:link rel="alternate" hreflang="gu-IN" href="https://www.mangalsetu.in/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.mangalsetu.in/" />
     <image:image>
-      <image:loc>https://www.lagnasetu.in/images/lagna_setu-welcome_banner.png</image:loc>
-      <image:title>Lagna Setu — Trusted Hindu Gujarati Matrimony</image:title>
+      <image:loc>https://www.mangalsetu.in/images/lagna_setu-welcome_banner.png</image:loc>
+      <image:title>Mangal Setu — Trusted Hindu Gujarati Matrimony</image:title>
       <image:caption>Connecting genuine brides and grooms across 50+ Hindu communities in Gujarat</image:caption>
     </image:image>
     <image:image>
-      <image:loc>https://www.lagnasetu.in/images/lagna_setu_logo.png</image:loc>
-      <image:title>Lagna Setu Official Brand Logo</image:title>
+      <image:loc>https://www.mangalsetu.in/images/lagna_setu_logo.png</image:loc>
+      <image:title>Mangal Setu Official Brand Logo</image:title>
     </image:image>
   </url>
 
   <!-- Web App / Discovery & Registration -->
   <url>
-    <loc>https://www.lagnasetu.in/app.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/app.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
 
   <!-- Legal & Support Pages -->
   <url>
-    <loc>https://www.lagnasetu.in/legal/contact.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/legal/contact.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://www.lagnasetu.in/legal/service-pricing.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/legal/service-pricing.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://www.lagnasetu.in/legal/privacy-policy.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/legal/privacy-policy.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://www.lagnasetu.in/legal/terms.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/legal/terms.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://www.lagnasetu.in/legal/refund-policy.html</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://www.mangalsetu.in/legal/refund-policy.html</loc>
+    <lastmod>2026-10-05</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

@@ -1,7 +1,7 @@
 {
-  "name": "Lagna Setu — Matrimony Community",
-  "short_name": "Lagna Setu",
-  "description": "Lagna Setu — Connecting Matrimonial Communities",
+  "name": "Mangal Setu — Matrimony Community",
+  "short_name": "Mangal Setu",
+  "description": "Mangal Setu — Connecting Matrimonial Communities",
   "start_url": "./app.html",
   "scope": "./",
   "display": "standalone",
