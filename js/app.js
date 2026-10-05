@@ -28,21 +28,16 @@ function initApp() {
         if (typeof supabaseCheckUserExists === 'function') {
             supabaseCheckUserExists(state.currentUser.email).then(check => {
                 if (check && check.online && !check.exists) {
-                    if (!state.profileComplete && typeof supabaseUpsertUser === 'function') {
-                        console.warn('[MangalSetu] Incomplete profile user not in Supabase yet. Re-syncing.');
-                        supabaseUpsertUser(state.currentUser).catch(() => {});
+                    console.warn('[MangalSetu] Active session user was deleted in Supabase. Logging out.');
+                    if (typeof purgeUserAccountLocally === 'function') {
+                        purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
                     } else {
-                        console.warn('[MangalSetu] Active session user was deleted in Supabase. Logging out.');
-                        if (typeof purgeUserAccountLocally === 'function') {
-                            purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
-                        } else {
-                            state.currentUser = null;
-                            state.profileComplete = false;
-                            sessionStorage.clear();
-                        }
-                        if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
-                        if (typeof go === 'function') go('scr-welcome', true);
+                        state.currentUser = null;
+                        state.profileComplete = false;
+                        sessionStorage.clear();
                     }
+                    if (typeof showToast === 'function') showToast('Your account was deleted. Please register again.');
+                    if (typeof go === 'function') go('scr-welcome', true);
                 } else if (check && check.online && check.isSuspended) {
                     if (typeof enforceUserSuspendedModal === 'function') {
                         enforceUserSuspendedModal(check.suspensionReason);

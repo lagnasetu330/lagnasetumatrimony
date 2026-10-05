@@ -64,22 +64,11 @@ window.getStoredAccounts = getStoredAccounts;
 
 function saveStoredAccounts(accounts) {
     try {
-        localStorage.setItem(LS_ACCOUNTS_KEY, JSON.stringify(accounts));
-        // Keep LS_COMMUNITY_USERS in sync for any legacy components
+        const cleanList = Array.isArray(accounts) ? accounts : [];
+        localStorage.setItem(LS_ACCOUNTS_KEY, JSON.stringify(cleanList));
+        // Keep LS_COMMUNITY_USERS strictly synchronized so deleted accounts can never resurrect
         const legacyKey = window.LS_USERS_KEY || 'LS_COMMUNITY_USERS';
-        const rawLegacy = localStorage.getItem(legacyKey);
-        const users = rawLegacy ? JSON.parse(rawLegacy) : [];
-        if (Array.isArray(users)) {
-            accounts.forEach(acc => {
-                const idx = users.findIndex(u => u.email && acc.email && u.email.toLowerCase() === acc.email.toLowerCase());
-                if (idx !== -1) {
-                    users[idx] = { ...users[idx], ...acc };
-                } else {
-                    users.push(acc);
-                }
-            });
-            localStorage.setItem(legacyKey, JSON.stringify(users));
-        }
+        localStorage.setItem(legacyKey, JSON.stringify(cleanList));
     } catch(e) {}
 }
 window.saveStoredAccounts = saveStoredAccounts;
@@ -375,6 +364,17 @@ function purgeUserAccountLocally(email, id) {
             sessionStorage.clear();
             localStorage.removeItem('LS_ACTIVE_USER');
             localStorage.removeItem('mangalSetu_user');
+            localStorage.removeItem('mangalSetu_activeUser');
+            localStorage.removeItem('mangalSetu_lastActiveTimestamp');
+            localStorage.removeItem('mangalSetu_profileComplete');
+            localStorage.removeItem('mangalSetu_membershipPaid');
+            localStorage.removeItem('mangalSetu_activeScreen');
+            localStorage.removeItem('lagnaSetu_user');
+            localStorage.removeItem('lagnaSetu_activeUser');
+            localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
+            localStorage.removeItem('lagnaSetu_profileComplete');
+            localStorage.removeItem('lagnaSetu_membershipPaid');
+            localStorage.removeItem('lagnaSetu_activeScreen');
             state.history = ['scr-welcome'];
             resetRegistrationStateAndInputs();
             if (typeof closeAllModals === 'function') {
@@ -1080,34 +1080,13 @@ async function doLogin() {
             supabaseUserCheck = await supabaseCheckUserExists(email);
             if (supabaseUserCheck && supabaseUserCheck.online) {
                 if (!supabaseUserCheck.exists) {
-                    // Check if local account exists
-                    if (matchedUser) {
-                        const isLocalPassValid = (matchedUser.passwordHash === passHash) || (matchedUser.passwordHash === legacyHash);
-                        // If password matches and profile is incomplete (in-progress registration)
-                        if (isLocalPassValid && !matchedUser.profileComplete) {
-                            console.warn('[Login] User registered locally but not yet synced to Supabase. Auto-healing to Supabase.');
-                            if (typeof supabaseUpsertUser === 'function') {
-                                try { await supabaseUpsertUser(matchedUser); } catch (_) {}
-                            }
-                            supabaseUserCheck = { online: true, exists: true, user: matchedUser, profile: null, isSuspended: false };
-                        } else if (matchedUser.profileComplete) {
-                            // Completed profile was deleted in Supabase by Admin!
-                            purgeUserAccountLocally(email);
-                            if (passInput) passInput.value = '';
-                            showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
-                            return;
-                        } else {
-                            // Incorrect password
-                            LOGIN_SECURITY.failedAttempts++;
-                            highlightFieldError(passInput, 'Incorrect password');
-                            return;
-                        }
-                    } else {
-                        // User does not exist locally or in Supabase
-                        if (passInput) passInput.value = '';
-                        showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
-                        return;
-                    }
+                    // Supabase is the absolute Single Source of Truth!
+                    // If account does NOT exist in Supabase, it has been deleted.
+                    console.warn(`[Login] Account ${email} not found in Supabase. Purging locally and blocking login.`);
+                    purgeUserAccountLocally(email, matchedUser ? (matchedUser.id || matchedUser.userId) : null);
+                    if (passInput) passInput.value = '';
+                    showToast('No account found with this Gmail ID (it may have been deleted). Please register.');
+                    return;
                 }
                 if (supabaseUserCheck && supabaseUserCheck.isSuspended) {
                     if (passInput) passInput.value = '';
