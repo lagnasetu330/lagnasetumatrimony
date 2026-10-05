@@ -499,28 +499,14 @@ function handleSendSignupOtp() {
         if (inp) inp.value = '';
     }
 
-    // Dispatch 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
+    // Dispatch 6-digit OTP code exclusively via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaEmailJs = false;
         if (typeof sendOtpEmail === 'function') {
             try {
                 await sendOtpEmail(email, generatedOtp, state.regData.name || 'Member', 'signup');
-                sentViaEmailJs = true;
                 console.info('[Auth] Signup OTP dispatched successfully via EmailJS');
             } catch (err) {
                 console.warn('[EmailService] Signup OTP notice:', err);
-            }
-        }
-
-        // Secondary fallback to Supabase if EmailJS is unavailable
-        if (!sentViaEmailJs && typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
-            try {
-                const res = await supabaseSendEmailOtp(email);
-                if (res && !res.error) {
-                    console.info('[Auth] Signup OTP dispatched via Supabase fallback');
-                }
-            } catch (err) {
-                console.warn('[Supabase] SMTP notice:', err);
             }
         }
     })();
@@ -570,28 +556,14 @@ function handleResendSignupOtp() {
         if (inp) inp.value = '';
     }
 
-    // Dispatch fresh 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
+    // Dispatch fresh 6-digit OTP code exclusively via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaEmailJs = false;
         if (typeof sendOtpEmail === 'function') {
             try {
                 await sendOtpEmail(state.regData.email, generatedOtp, state.regData.name || 'Member', 'signup');
-                sentViaEmailJs = true;
                 console.info('[Auth] Resend OTP dispatched successfully via EmailJS');
             } catch (err) {
                 console.warn('[EmailService] Resend OTP notice:', err);
-            }
-        }
-
-        // Secondary fallback to Supabase if EmailJS is unavailable
-        if (!sentViaEmailJs && typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
-            try {
-                const res = await supabaseSendEmailOtp(state.regData.email);
-                if (res && !res.error) {
-                    console.info('[Auth] Resend OTP dispatched via Supabase fallback');
-                }
-            } catch (err) {
-                console.warn('[Supabase] Resend OTP notice:', err);
             }
         }
     })();
@@ -994,14 +966,7 @@ async function signupOtpVerified() {
         state.regData.photos = ['', '', ''];
     }
 
-    // Also register in Supabase Auth & public.users table
-    if (typeof supabaseAuthSignUp === 'function') {
-        supabaseAuthSignUp(newUser.email, rawPass, { name: '', gender: '' })
-            .then(res => {
-                if (res && res.user && state.currentUser) state.currentUser.supabaseId = res.user.id;
-            })
-            .catch(err => console.warn('[Supabase] Auth note:', err?.message || 'Registered'));
-    }
+    // Register in Supabase public.users table (PostgreSQL Database Single Source of Truth)
     if (typeof supabaseUpsertUser === 'function') {
         try {
             await supabaseUpsertUser(newUser);
@@ -1743,28 +1708,14 @@ function handleSendForgotOtp(isResend = false) {
         if (inp) inp.value = '';
     }
 
-    // Dispatch 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
+    // Dispatch 6-digit OTP code exclusively via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaEmailJs = false;
         if (typeof sendOtpEmail === 'function') {
             try {
                 await sendOtpEmail(email, generatedOtp, 'Member', 'reset');
-                sentViaEmailJs = true;
                 console.info('[Auth] Password reset OTP dispatched successfully via EmailJS');
             } catch (err) {
                 console.warn('[EmailService] Reset OTP notice:', err);
-            }
-        }
-
-        // Secondary fallback to Supabase if EmailJS is unavailable
-        if (!sentViaEmailJs && typeof supabaseSendPasswordReset === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
-            try {
-                const res = await supabaseSendPasswordReset(email);
-                if (res && !res.error) {
-                    console.info('[Auth] Password reset OTP dispatched via Supabase fallback');
-                }
-            } catch (err) {
-                console.warn('[Supabase] Reset OTP notice:', err);
             }
         }
     })();
@@ -1792,9 +1743,11 @@ async function verifyForgotOtp() {
         return;
     }
 
-    // 2. Validate OTP: Primary check with Supabase Auth recovery, fallback to generatedOtp / test bypass
+    // 2. Validate OTP: Primary check with EmailJS dispatched OTP
     let isValid = false;
-    if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient() && forgotPasswordState.email) {
+    if (forgotPasswordState.otp && entered === forgotPasswordState.otp) {
+        isValid = true;
+    } else if (typeof supabaseVerifyEmailOtp === 'function' && getSupabaseClient() && forgotPasswordState.email) {
         try {
             const client = getSupabaseClient();
             let res = await client.auth.verifyOtp({
@@ -1803,7 +1756,6 @@ async function verifyForgotOtp() {
                 type: 'recovery'
             });
             if (res && res.error) {
-                // If recovery type failed, test email type as fallback
                 const retry = await client.auth.verifyOtp({
                     email: forgotPasswordState.email.toLowerCase(),
                     token: entered,
@@ -1817,9 +1769,6 @@ async function verifyForgotOtp() {
         } catch (e) {
             console.warn('[Supabase] Recovery OTP verification note:', e);
         }
-    }
-    if (!isValid && forgotPasswordState.otp && entered === forgotPasswordState.otp) {
-        isValid = true;
     }
 
     if (!isValid) {
