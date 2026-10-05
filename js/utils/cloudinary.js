@@ -139,7 +139,7 @@ function extractCloudinaryPublicId(url) {
         const uploadIdx = url.indexOf('/upload/');
         if (uploadIdx === -1) return null;
         let sub = url.substring(uploadIdx + 8);
-        
+
         const parts = sub.split('/');
         const cleanParts = [];
         let reachedPublicPath = false;
@@ -166,7 +166,7 @@ function extractCloudinaryPublicId(url) {
             fullPath = fullPath.substring(0, dotIdx);
         }
         return fullPath || null;
-    } catch(e) {
+    } catch (e) {
         return null;
     }
 }
@@ -181,7 +181,7 @@ async function generateSha1Hex(message) {
         const hashBuffer = await crypto.subtle.digest('SHA-1', data);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    } catch(e) {
+    } catch (e) {
         console.warn('[Cloudinary] Crypto SHA-1 error:', e);
         return null;
     }
@@ -212,7 +212,7 @@ async function deleteFromCloudinary(publicIdOrUrl, options = {}) {
                 console.info('[Cloudinary] Successfully deleted image via delete_token:', publicId || deleteToken);
                 return { success: true, method: 'token', result: data };
             }
-        } catch(e) {
+        } catch (e) {
             console.warn('[Cloudinary] delete_by_token notice:', e);
         }
     }
@@ -241,7 +241,7 @@ async function deleteFromCloudinary(publicIdOrUrl, options = {}) {
                 console.info('[Cloudinary] Destroy API result for', publicId, data);
                 return { success: data.result === 'ok' || data.result === 'not found', result: data };
             }
-        } catch(err) {
+        } catch (err) {
             console.warn('[Cloudinary] Signed destroy notice:', err);
         }
     }
