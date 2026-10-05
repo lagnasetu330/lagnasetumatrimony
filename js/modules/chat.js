@@ -220,50 +220,70 @@ function getDailyInterestUsage() {
     const now = Date.now();
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
 
-    let localTimestamps = [];
+    let localItems = [];
     try {
         const raw = localStorage.getItem(userKey);
         if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
-                localTimestamps = parsed.filter(t => typeof t === 'number' && !isNaN(t));
+                localItems = parsed;
             }
         }
     } catch (_) {
-        localTimestamps = [];
+        localItems = [];
     }
 
-    // Merge with any timestamps stored in OUTGOING_REQUESTS
-    const memTimestamps = (typeof OUTGOING_REQUESTS !== 'undefined' && Array.isArray(OUTGOING_REQUESTS))
-        ? OUTGOING_REQUESTS
-            .map(r => r.timestamp || (r.createdAt ? new Date(r.createdAt).getTime() : 0))
-            .filter(t => t > 0 && typeof t === 'number' && !isNaN(t))
-        : [];
+    // Merge entries: each entry has { profileId, timestamp }
+    const mergedMap = new Map();
 
-    const all = [...localTimestamps, ...memTimestamps];
-    const valid = all.filter(t => (now - t) < TWENTY_FOUR_HOURS);
-    valid.sort((a, b) => a - b);
-
-    // Deduplicate timestamps that were logged within 5 seconds of each other
-    const deduped = [];
-    for (const t of valid) {
-        if (!deduped.some(existing => Math.abs(existing - t) < 5000)) {
-            deduped.push(t);
+    // 1. From localStorage
+    localItems.forEach(item => {
+        if (typeof item === 'number') {
+            const diff = now - item;
+            if (diff >= -60000 && diff < TWENTY_FOUR_HOURS) {
+                mergedMap.set('ts_' + item, { timestamp: item });
+            }
+        } else if (item && typeof item === 'object' && item.timestamp) {
+            const diff = now - item.timestamp;
+            if (diff >= -60000 && diff < TWENTY_FOUR_HOURS) {
+                const key = item.profileId ? ('p_' + item.profileId) : ('ts_' + item.timestamp);
+                mergedMap.set(key, item);
+            }
         }
+    });
+
+    // 2. From OUTGOING_REQUESTS (in-memory & loaded from Supabase)
+    if (typeof OUTGOING_REQUESTS !== 'undefined' && Array.isArray(OUTGOING_REQUESTS)) {
+        OUTGOING_REQUESTS.forEach(r => {
+            if (!r) return;
+            const ts = r.timestamp || (r.createdAt ? new Date(r.createdAt).getTime() : 0);
+            if (ts > 0) {
+                const diff = now - ts;
+                if (diff >= -60000 && diff < TWENTY_FOUR_HOURS) {
+                    const key = r.profileId ? ('p_' + r.profileId) : ('ts_' + ts);
+                    mergedMap.set(key, { profileId: r.profileId, timestamp: ts });
+                }
+            }
+        });
     }
 
+    // Collect all valid entries within last 24 hours
+    const validEntries = Array.from(mergedMap.values());
+    validEntries.sort((a, b) => a.timestamp - b.timestamp);
+
+    // Save cleaned list back to localStorage
     try {
-        localStorage.setItem(userKey, JSON.stringify(deduped));
+        localStorage.setItem(userKey, JSON.stringify(validEntries));
     } catch (_) {}
 
-    const count = deduped.length;
+    const count = validEntries.length;
     const remaining = Math.max(0, DAILY_INTEREST_LIMIT - count);
     const isLimitReached = count >= DAILY_INTEREST_LIMIT;
 
     let resetInHours = 0;
     let resetInMinutes = 0;
-    if (deduped.length > 0) {
-        const oldest = deduped[0];
+    if (validEntries.length > 0) {
+        const oldest = validEntries[0].timestamp;
         const diffMs = Math.max(0, (oldest + TWENTY_FOUR_HOURS) - now);
         resetInHours = Math.ceil(diffMs / (60 * 60 * 1000));
         resetInMinutes = Math.ceil(diffMs / (60 * 1000));
@@ -275,22 +295,30 @@ function getDailyInterestUsage() {
         isLimitReached,
         resetInHours,
         resetInMinutes,
-        timestamps: deduped
+        timestamps: validEntries.map(e => e.timestamp)
     };
 }
 window.getDailyInterestUsage = getDailyInterestUsage;
 
-function recordDailyInterestSent(timestamp = Date.now()) {
+function recordDailyInterestSent(profileId, timestamp = Date.now()) {
     const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
     if (!curUser) return;
     const normId = String(curUser.id || curUser.userId || '');
     const normEmail = (curUser.email || '').toLowerCase().trim();
     const userKey = 'LS_DAILY_INTERESTS_' + (normId || normEmail || 'guest');
 
-    const usage = getDailyInterestUsage();
-    usage.timestamps.push(timestamp);
+    let current = [];
     try {
-        localStorage.setItem(userKey, JSON.stringify(usage.timestamps));
+        const raw = localStorage.getItem(userKey);
+        if (raw) current = JSON.parse(raw);
+        if (!Array.isArray(current)) current = [];
+    } catch (_) {
+        current = [];
+    }
+
+    current.push({ profileId: Number(profileId) || 0, timestamp });
+    try {
+        localStorage.setItem(userKey, JSON.stringify(current));
     } catch (_) {}
 }
 window.recordDailyInterestSent = recordDailyInterestSent;
@@ -378,8 +406,9 @@ async function confirmSendInterest() {
     }
 
     // Record the sent request to update daily count
-    recordDailyInterestSent(nowTs);
-    const remainingCount = Math.max(0, DAILY_INTEREST_LIMIT - (usage.count + 1));
+    recordDailyInterestSent(pid, nowTs);
+    const newUsage = getDailyInterestUsage();
+    const remainingCount = newUsage.remaining;
 
     closeModal('modalInterest');
     showToast(`Interest request sent to ${p.name}! (${remainingCount} of 5 daily requests remaining) 💍`);
