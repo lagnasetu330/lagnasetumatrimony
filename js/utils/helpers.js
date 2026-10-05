@@ -637,24 +637,137 @@ function goToRegStep3() {
 function quickInterest(id) {
     openInterestModal(id);
 }
-function quickCall(phone) {
-    if (!phone || phone.includes('•') || phone.replace(/[^0-9]/g, '').length < 10) {
+async function quickCall(phone, profileId) {
+    let clean = (phone && typeof phone === 'string' && !phone.includes('•')) ? phone.replace(/[^0-9]/g, '') : '';
+    const pid = profileId || (typeof state !== 'undefined' && state.activeProfileId) || (typeof window !== 'undefined' && window.currentViewingProfileId);
+
+    // If phone is missing or masked, resolve authorized contact on-demand
+    if (!clean || clean.length < 10) {
+        const curUser = (typeof state !== 'undefined') ? state.currentUser : null;
+        const isSelf = curUser && pid && ((curUser.id && String(curUser.id) === String(pid)) || (curUser.userId && String(curUser.userId) === String(pid)));
+        const isAdmin = (typeof isSessionValidSync === 'function' && isSessionValidSync()) || 
+                        (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
+        const isAccepted = (typeof interestStatusFor === 'function' && pid) ? interestStatusFor(pid) === 'accepted' : false;
+
+        if (!isSelf && !isAdmin && !isAccepted) {
+            if (typeof showToast === 'function') {
+                showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+            }
+            return;
+        }
+
+        // Check in-memory cache first
+        if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE && window.AUTHORIZED_CONTACT_CACHE.has(Number(pid))) {
+            const cached = window.AUTHORIZED_CONTACT_CACHE.get(Number(pid));
+            const cPhone = (cached && cached.fatherMobile && !cached.fatherMobile.includes('•')) ? cached.fatherMobile : (cached?.ownMobile && !cached.ownMobile.includes('•') ? cached.ownMobile : '');
+            if (cPhone) clean = cPhone.replace(/[^0-9]/g, '');
+        }
+
+        // If still not found, fetch from Supabase authorized RPC
+        if ((!clean || clean.length < 10) && typeof supabaseFetchAuthorizedContact === 'function' && pid) {
+            try {
+                if (typeof showToast === 'function') showToast('Connecting call to family...');
+                const contact = await supabaseFetchAuthorizedContact(pid);
+                const realPhone = (contact && contact.fatherMobile && !contact.fatherMobile.includes('•'))
+                    ? contact.fatherMobile
+                    : (contact && contact.ownMobile && !contact.ownMobile.includes('•') ? contact.ownMobile : '');
+                if (realPhone) {
+                    clean = realPhone.replace(/[^0-9]/g, '');
+                    const p = (typeof findProfile === 'function') ? findProfile(pid) : null;
+                    if (p) {
+                        p.fatherMobile = realPhone;
+                        p.rawFatherMobile = realPhone;
+                        const wrap = document.getElementById('profileFatherContactWrap');
+                        if (wrap && typeof renderFatherContactSection === 'function') {
+                            wrap.outerHTML = renderFatherContactSection(p);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('[quickCall] Fetch contact note:', err);
+            }
+        }
+    }
+
+    if (!clean || clean.length < 10) {
         if (typeof showToast === 'function') {
-            showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+            showToast('Family mobile number is not yet available or configured.');
         }
         return;
     }
-    window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
+
+    let dial = clean;
+    if (dial.length === 10) dial = '+91' + dial;
+    else if (!dial.startsWith('+')) dial = '+' + dial;
+    window.location.href = `tel:${dial}`;
 }
-function quickWhatsApp(phone, name) {
-    if (!phone || phone.includes('•') || phone.replace(/[^0-9]/g, '').length < 10) {
+
+async function quickWhatsApp(phone, name, profileId) {
+    let clean = (phone && typeof phone === 'string' && !phone.includes('•')) ? phone.replace(/[^0-9]/g, '') : '';
+    const pid = profileId || (typeof state !== 'undefined' && state.activeProfileId) || (typeof window !== 'undefined' && window.currentViewingProfileId);
+
+    // If phone is missing or masked, resolve authorized contact on-demand
+    if (!clean || clean.length < 10) {
+        const curUser = (typeof state !== 'undefined') ? state.currentUser : null;
+        const isSelf = curUser && pid && ((curUser.id && String(curUser.id) === String(pid)) || (curUser.userId && String(curUser.userId) === String(pid)));
+        const isAdmin = (typeof isSessionValidSync === 'function' && isSessionValidSync()) || 
+                        (typeof window !== 'undefined' && window.location.pathname.includes('admin'));
+        const isAccepted = (typeof interestStatusFor === 'function' && pid) ? interestStatusFor(pid) === 'accepted' : false;
+
+        if (!isSelf && !isAdmin && !isAccepted) {
+            if (typeof showToast === 'function') {
+                showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+            }
+            return;
+        }
+
+        // Check in-memory cache first
+        if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE && window.AUTHORIZED_CONTACT_CACHE.has(Number(pid))) {
+            const cached = window.AUTHORIZED_CONTACT_CACHE.get(Number(pid));
+            const cPhone = (cached && cached.fatherMobile && !cached.fatherMobile.includes('•')) ? cached.fatherMobile : (cached?.ownMobile && !cached.ownMobile.includes('•') ? cached.ownMobile : '');
+            if (cPhone) clean = cPhone.replace(/[^0-9]/g, '');
+        }
+
+        // If still not found, fetch from Supabase authorized RPC
+        if ((!clean || clean.length < 10) && typeof supabaseFetchAuthorizedContact === 'function' && pid) {
+            try {
+                if (typeof showToast === 'function') showToast('Opening WhatsApp...');
+                const contact = await supabaseFetchAuthorizedContact(pid);
+                const realPhone = (contact && contact.fatherMobile && !contact.fatherMobile.includes('•'))
+                    ? contact.fatherMobile
+                    : (contact && contact.ownMobile && !contact.ownMobile.includes('•') ? contact.ownMobile : '');
+                if (realPhone) {
+                    clean = realPhone.replace(/[^0-9]/g, '');
+                    const p = (typeof findProfile === 'function') ? findProfile(pid) : null;
+                    if (p) {
+                        p.fatherMobile = realPhone;
+                        p.rawFatherMobile = realPhone;
+                        const wrap = document.getElementById('profileFatherContactWrap');
+                        if (wrap && typeof renderFatherContactSection === 'function') {
+                            wrap.outerHTML = renderFatherContactSection(p);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('[quickWhatsApp] Fetch contact note:', err);
+            }
+        }
+    }
+
+    if (!clean || clean.length < 10) {
         if (typeof showToast === 'function') {
-            showToast('🔒 Contact is protected. WhatsApp & Call unlock once interest is accepted.');
+            showToast('Family WhatsApp number is not yet available or configured.');
         }
         return;
     }
-    const clean = phone.replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(`Namaste, we saw ${name}'s profile on Mangal Setu Matrimony and would like to connect.`);
+
+    // Format for WhatsApp international: Ensure country code 91
+    if (clean.length === 10) {
+        clean = '91' + clean;
+    }
+
+    const memberName = name || 'Family';
+    const text = encodeURIComponent(`Namaste, we saw ${memberName}'s profile on Mangal Setu Matrimony and would like to connect.`);
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
 }
 function openQuickReport(id) {

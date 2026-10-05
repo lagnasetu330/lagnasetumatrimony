@@ -1177,7 +1177,8 @@ async function doLogin() {
             matchedUser.father = prof.father || prof.father_name || matchedUser.father || '';
             matchedUser.fatherName = prof.father || prof.father_name || matchedUser.fatherName || '';
             matchedUser.fatherOcc = prof.father_occ || prof.fatherOcc || matchedUser.fatherOcc || '';
-            matchedUser.fatherMobile = prof.father_mobile || prof.fatherMobile || matchedUser.fatherMobile || '';
+            const cleanProfFM = (!prof.rawFatherMobile?.includes('•') && prof.rawFatherMobile) || (!prof.father_mobile?.includes('•') && prof.father_mobile) || (!prof.fatherMobile?.includes('•') && prof.fatherMobile) || '';
+            if (cleanProfFM) matchedUser.fatherMobile = cleanProfFM;
             matchedUser.mother = prof.mother || prof.mother_name || matchedUser.mother || '';
             matchedUser.motherName = prof.mother || prof.mother_name || matchedUser.motherName || '';
             matchedUser.motherOcc = prof.mother_occ || prof.motherOcc || matchedUser.motherOcc || '';
@@ -1188,7 +1189,8 @@ async function doLogin() {
             matchedUser.district = prof.district || matchedUser.district || '';
             matchedUser.fullAddress = prof.full_address || prof.address || matchedUser.fullAddress || '';
             matchedUser.full_address = prof.full_address || prof.address || matchedUser.full_address || '';
-            matchedUser.ownMobile = prof.own_mobile || prof.mobile || matchedUser.ownMobile || '';
+            const cleanProfOM = (!prof.rawOwnMobile?.includes('•') && prof.rawOwnMobile) || (!prof.own_mobile?.includes('•') && prof.own_mobile) || (!prof.mobile?.includes('•') && prof.mobile) || '';
+            if (cleanProfOM) matchedUser.ownMobile = cleanProfOM;
             matchedUser.photos = (Array.isArray(prof.photos) && prof.photos.length > 0) ? prof.photos : (prof.img ? [prof.img] : (matchedUser.photos || []));
         }
     }

@@ -181,9 +181,16 @@ function mapProfileForSupabase(p) {
         hobbies: Array.isArray(p.hobbies) ? p.hobbies : [],
         father: p.father || p.father_name || p.fatherName || '',
         father_occ: p.fatherOcc || p.father_occ || '',
-        father_mobile: p.fatherMobile || p.father_mobile || '',
+        father_mobile: (!p.rawFatherMobile?.includes('•') && p.rawFatherMobile) ||
+                       (!p.father_mobile?.includes('•') && p.father_mobile) ||
+                       (!p.fatherMobile?.includes('•') && p.fatherMobile) ||
+                       '',
         father_whatsapp: p.fatherWhatsapp !== false && p.father_whatsapp !== false,
-        own_mobile: p.ownMobile || p.own_mobile || p.mobile || '',
+        own_mobile: (!p.rawOwnMobile?.includes('•') && p.rawOwnMobile) ||
+                    (!p.own_mobile?.includes('•') && p.own_mobile) ||
+                    (!p.ownMobile?.includes('•') && p.ownMobile) ||
+                    (!p.mobile?.includes('•') && p.mobile) ||
+                    '',
         mother: p.mother || p.mother_name || p.motherName || '',
         mother_occ: p.motherOcc || p.mother_occ || '',
         sister: p.sister || 'None',
@@ -223,7 +230,14 @@ function mapProfileForSupabase(p) {
             hobbies: Array.isArray(p.hobbies) ? p.hobbies : [],
             father: p.father || p.father_name || p.fatherName || '',
             fatherOcc: p.fatherOcc || p.father_occ || '',
-            fatherMobile: p.fatherMobile || p.father_mobile || '',
+            fatherMobile: (!p.rawFatherMobile?.includes('•') && p.rawFatherMobile) ||
+                          (!p.father_mobile?.includes('•') && p.father_mobile) ||
+                          (!p.fatherMobile?.includes('•') && p.fatherMobile) ||
+                          '',
+            rawFatherMobile: (!p.rawFatherMobile?.includes('•') && p.rawFatherMobile) ||
+                             (!p.father_mobile?.includes('•') && p.father_mobile) ||
+                             (!p.fatherMobile?.includes('•') && p.fatherMobile) ||
+                             '',
             mother: p.mother || p.mother_name || p.motherName || '',
             motherOcc: p.motherOcc || p.mother_occ || '',
             sister: p.sister || 'None',
@@ -234,7 +248,16 @@ function mapProfileForSupabase(p) {
             district: p.district || '',
             fullAddress: p.fullAddress || p.full_address || p.address || '',
             address: p.fullAddress || p.full_address || p.address || '',
-            ownMobile: p.ownMobile || p.own_mobile || p.mobile || '',
+            ownMobile: (!p.rawOwnMobile?.includes('•') && p.rawOwnMobile) ||
+                       (!p.own_mobile?.includes('•') && p.own_mobile) ||
+                       (!p.ownMobile?.includes('•') && p.ownMobile) ||
+                       (!p.mobile?.includes('•') && p.mobile) ||
+                       '',
+            rawOwnMobile: (!p.rawOwnMobile?.includes('•') && p.rawOwnMobile) ||
+                          (!p.own_mobile?.includes('•') && p.own_mobile) ||
+                          (!p.ownMobile?.includes('•') && p.ownMobile) ||
+                          (!p.mobile?.includes('•') && p.mobile) ||
+                          '',
             visible: (p.visible !== false && p.visible !== 'false'),
             agreedTerms: p.agreedTerms !== undefined ? p.agreedTerms : true,
             agreedTermsAt: p.agreedTermsAt || new Date().toISOString()
@@ -344,9 +367,25 @@ function mapProfileFromSupabase(row, forAdmin = false) {
         typeof isSessionValidSync === 'function'
     ));
 
-    const canViewUnmasked = isSelf || isAdmin;
+    const isAccepted = (typeof interestStatusFor === 'function') && (
+        interestStatusFor(row.id) === 'accepted' || 
+        (row.user_id && interestStatusFor(row.user_id) === 'accepted') ||
+        (row.email && interestStatusFor(row.email) === 'accepted')
+    );
+    const canViewUnmasked = isSelf || isAdmin || isAccepted;
 
-    const rawFatherMobile = row.father_mobile || raw.fatherMobile || raw.father_mobile || '';
+    let rawFatherMobile = (!row.father_mobile?.includes('•') && row.father_mobile) ||
+                          (!raw.fatherMobile?.includes('•') && raw.fatherMobile) ||
+                          (!raw.father_mobile?.includes('•') && raw.father_mobile) ||
+                          row.father_mobile || raw.fatherMobile || '';
+    if (canViewUnmasked && (!rawFatherMobile || rawFatherMobile.includes('•'))) {
+        if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE && window.AUTHORIZED_CONTACT_CACHE.has(Number(row.id))) {
+            const cached = window.AUTHORIZED_CONTACT_CACHE.get(Number(row.id));
+            if (cached && cached.fatherMobile && !cached.fatherMobile.includes('•')) {
+                rawFatherMobile = cached.fatherMobile;
+            }
+        }
+    }
     const rawOwnMobile = row.own_mobile || raw.ownMobile || row.own_mobile || row.mobile || '';
     const rawEmail = row.email || raw.email || '';
     const rawFullAddress = row.full_address || raw.fullAddress || row.address || '';
@@ -604,18 +643,22 @@ async function supabaseFetchAuthorizedContact(profileId) {
                         message: rpcData.message || 'Direct contact details unlock only after Interest is accepted by member.'
                     };
                 }
-                return {
+                const res = {
                     authorized: true,
                     fatherMobile: rpcData.father_mobile || '',
                     ownMobile: rpcData.own_mobile || '',
                     email: rpcData.email || '',
                     fullAddress: rpcData.full_address || ''
                 };
+                if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE) {
+                    window.AUTHORIZED_CONTACT_CACHE.set(numId, res);
+                }
+                return res;
             }
         } catch (_) {}
 
         // 2. Direct Authorized Query (Only reached if already validated through interest check)
-        let query = client.from('profiles').select('id, email, mobile, own_mobile, father_mobile, full_address, address');
+        let query = client.from('profiles').select('id, email, mobile, own_mobile, father_mobile, full_address, address, raw_data');
         if (!isNaN(numId) && numId > 0) {
             query = query.eq('id', numId);
         } else {
@@ -628,13 +671,27 @@ async function supabaseFetchAuthorizedContact(profileId) {
             return null;
         }
 
-        return {
+        const rd = (data.raw_data && typeof data.raw_data === 'object') ? data.raw_data : {};
+        const realFM = (!data.father_mobile?.includes('•') && data.father_mobile) ||
+                       (!rd.fatherMobile?.includes('•') && rd.fatherMobile) ||
+                       (!rd.rawFatherMobile?.includes('•') && rd.rawFatherMobile) ||
+                       data.father_mobile || '';
+        const realOM = (!data.own_mobile?.includes('•') && data.own_mobile) ||
+                       (!data.mobile?.includes('•') && data.mobile) ||
+                       (!rd.ownMobile?.includes('•') && rd.ownMobile) ||
+                       data.own_mobile || data.mobile || '';
+
+        const res = {
             authorized: true,
-            fatherMobile: data.father_mobile || '',
-            ownMobile: data.own_mobile || data.mobile || '',
-            email: data.email || '',
-            fullAddress: data.full_address || data.address || ''
+            fatherMobile: realFM,
+            ownMobile: realOM,
+            email: data.email || rd.email || '',
+            fullAddress: data.full_address || data.address || rd.fullAddress || ''
         };
+        if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE) {
+            window.AUTHORIZED_CONTACT_CACHE.set(numId, res);
+        }
+        return res;
     } catch (e) {
         console.warn('[Supabase] Authorized contact fetch error:', e);
         return null;

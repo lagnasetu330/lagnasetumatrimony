@@ -930,7 +930,20 @@ function renderFatherContactSection(p) {
     }
 
     if (isContactUnlocked) {
-        const phone = p.fatherMobile || p.father_mobile || '';
+        // Resolve unmasked father mobile if already in cache or memory
+        let phone = '';
+        if (p.rawFatherMobile && !p.rawFatherMobile.includes('•')) {
+            phone = p.rawFatherMobile;
+        } else if (p.fatherMobile && !p.fatherMobile.includes('•')) {
+            phone = p.fatherMobile;
+        } else if (p.father_mobile && !p.father_mobile.includes('•')) {
+            phone = p.father_mobile;
+        } else if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE && window.AUTHORIZED_CONTACT_CACHE.has(Number(p.id))) {
+            const cached = window.AUTHORIZED_CONTACT_CACHE.get(Number(p.id));
+            const cPhone = (cached && cached.fatherMobile && !cached.fatherMobile.includes('•')) ? cached.fatherMobile : (cached?.ownMobile && !cached.ownMobile.includes('•') ? cached.ownMobile : '');
+            if (cPhone) phone = cPhone;
+        }
+
         return `
         <div id="profileFatherContactWrap">
             <div class="section-label" style="display:flex;align-items:center;gap:8px;">
@@ -944,8 +957,8 @@ function renderFatherContactSection(p) {
                 </div>
             </div>
             <div class="contact-btn-row">
-                <button class="contact-btn wa" onclick="quickWhatsApp('${phone}','${escapeHtml(p.name)}')"><i class="fa-brands fa-whatsapp"></i> WhatsApp Father</button>
-                <button class="contact-btn call" onclick="quickCall('${phone}')"><i class="fa-solid fa-phone"></i> Call Father</button>
+                <button class="contact-btn wa" onclick="quickWhatsApp('${escapeHtml(phone)}','${escapeHtml(p.name)}',${p.id})"><i class="fa-brands fa-whatsapp"></i> WhatsApp Father</button>
+                <button class="contact-btn call" onclick="quickCall('${escapeHtml(phone)}',${p.id})"><i class="fa-solid fa-phone"></i> Call Father</button>
             </div>
         </div>`;
     }
@@ -1137,11 +1150,20 @@ function openProfile(id) {
     const isContactUnlocked = isSelf || (interestStatus === 'accepted') || ((typeof isSessionValidSync === 'function' && isSessionValidSync()));
     if (isContactUnlocked && typeof supabaseFetchAuthorizedContact === 'function') {
         supabaseFetchAuthorizedContact(p.id).then(contact => {
-            if (contact && contact.fatherMobile && !contact.fatherMobile.includes('•••')) {
-                p.fatherMobile = contact.fatherMobile;
-                p.father_mobile = contact.fatherMobile;
-                if (contact.ownMobile) p.ownMobile = contact.ownMobile;
-                if (contact.email) p.email = contact.email;
+            if (contact) {
+                if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE) {
+                    window.AUTHORIZED_CONTACT_CACHE.set(Number(p.id), contact);
+                }
+                const realPhone = (contact.fatherMobile && !contact.fatherMobile.includes('•'))
+                    ? contact.fatherMobile
+                    : (contact.ownMobile && !contact.ownMobile.includes('•') ? contact.ownMobile : '');
+                if (realPhone) {
+                    p.fatherMobile = realPhone;
+                    p.father_mobile = realPhone;
+                    p.rawFatherMobile = realPhone;
+                }
+                if (contact.ownMobile && !contact.ownMobile.includes('•')) p.ownMobile = contact.ownMobile;
+                if (contact.email && !contact.email.includes('•')) p.email = contact.email;
                 if (contact.fullAddress) {
                     p.fullAddress = contact.fullAddress;
                     const addrEl = document.querySelector('#scr-profile .detail-row [style*="max-width:60%"]');
@@ -1450,9 +1472,18 @@ function refreshProfileContactState(profileId) {
             }
             if (typeof supabaseFetchAuthorizedContact === 'function') {
                 supabaseFetchAuthorizedContact(p.id).then(contact => {
-                    if (contact && contact.fatherMobile && !contact.fatherMobile.includes('•••')) {
-                        p.fatherMobile = contact.fatherMobile;
-                        p.father_mobile = contact.fatherMobile;
+                    if (contact) {
+                        if (typeof window !== 'undefined' && window.AUTHORIZED_CONTACT_CACHE) {
+                            window.AUTHORIZED_CONTACT_CACHE.set(Number(p.id), contact);
+                        }
+                        const realPhone = (contact.fatherMobile && !contact.fatherMobile.includes('•'))
+                            ? contact.fatherMobile
+                            : (contact.ownMobile && !contact.ownMobile.includes('•') ? contact.ownMobile : '');
+                        if (realPhone) {
+                            p.fatherMobile = realPhone;
+                            p.father_mobile = realPhone;
+                            p.rawFatherMobile = realPhone;
+                        }
                         const updatedWrap = document.getElementById('profileFatherContactWrap');
                         if (updatedWrap && typeof renderFatherContactSection === 'function') {
                             updatedWrap.outerHTML = renderFatherContactSection(p);

@@ -173,17 +173,30 @@ function findProfile(id, email) {
 
 /* ============================================================ INTEREST REQUESTS ============================================================ */
 function interestStatusFor(profileId) {
+    if (!profileId) return null;
     const pid = Number(profileId);
+    const p = (typeof findProfile === 'function') ? findProfile(profileId) : null;
+    const pEmail = (p && p.email && !p.email.includes('•')) ? p.email.trim().toLowerCase() : '';
+
     // 1. Check outgoing requests sent by me
-    const out = OUTGOING_REQUESTS.find(r => Number(r.profileId) === pid);
+    const out = OUTGOING_REQUESTS.find(r => 
+        (!isNaN(pid) && pid > 0 && (Number(r.profileId) === pid || Number(r.receiverId) === pid)) ||
+        (pEmail && r.receiverEmail && r.receiverEmail.trim().toLowerCase() === pEmail)
+    );
     if (out) return out.status;
 
     // 2. Check incoming requests received by me
-    const inc = INCOMING_REQUESTS.find(r => Number(r.profileId) === pid);
+    const inc = INCOMING_REQUESTS.find(r => 
+        (!isNaN(pid) && pid > 0 && (Number(r.profileId) === pid || Number(r.senderId) === pid)) ||
+        (pEmail && r.senderEmail && r.senderEmail.trim().toLowerCase() === pEmail)
+    );
     if (inc) return inc.status;
 
     // 3. Check unlocked threads
-    const thread = CHAT_THREADS.find(t => Number(t.profileId) === pid);
+    const thread = CHAT_THREADS.find(t => 
+        (!isNaN(pid) && pid > 0 && Number(t.profileId) === pid) ||
+        (pEmail && t.peerEmail && t.peerEmail.trim().toLowerCase() === pEmail)
+    );
     if (thread && thread.messages && thread.messages.length > 0) return 'accepted';
 
     return null;
