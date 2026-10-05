@@ -26,9 +26,9 @@ const EMAIL_CONFIG = {
   accentDeep: '#DDA200',   // Deep Gold
   bg: '#FAF8FC',           // Mangal Setu Brand Page Background
   emailjs: {
-    publicKey: (typeof atob === 'function') ? atob('a0ItRDlSaUozanFwVEV2VTc=') : ['kB-', 'D9Ri', 'J3jq', 'pTEvU7'].join(''),
-    serviceId: (typeof window !== 'undefined' && window.EMAILJS_SERVICE_ID) || 'service_r4l6cqu',
-    templateId: (typeof window !== 'undefined' && window.EMAILJS_TEMPLATE_ID) || 'template_t68k6ba'
+    publicKey: (typeof atob === 'function') ? atob('enBHUUdMdFZGbWxPRHdjYmw=') : ['zpGQ', 'GLtV', 'FmlO', 'Dwcbl'].join(''),
+    serviceId: (typeof window !== 'undefined' && window.EMAILJS_SERVICE_ID) || 'service_905m0pj',
+    templateId: (typeof window !== 'undefined' && window.EMAILJS_TEMPLATE_ID) || 'template_6ilo4ih'
   },
   webhookUrl: (typeof window !== 'undefined' && window.EMAIL_WEBHOOK_URL) || null
 };

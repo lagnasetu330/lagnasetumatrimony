@@ -237,11 +237,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
     <script>
-        // Initialize EmailJS with Lagna Setu credentials
+        // Initialize EmailJS with Mangal Setu credentials
         (function() {
             if (window.emailjs && typeof window.emailjs.init === 'function') {
                 try {
-                    window.emailjs.init({ publicKey: 'kB-D9RiJ3jqpTEvU7' });
+                    window.emailjs.init({ publicKey: 'zpGQGLtVFmlODwcbl' });
                 } catch(e) {}
             }
         })();
@@ -422,8 +422,8 @@ ${safeMessage}
             if (window.emailjs) {
                 try {
                     await window.emailjs.send(
-                        'service_r4l6cqu',
-                        'template_t68k6ba',
+                        'service_905m0pj',
+                        'template_6ilo4ih',
                         {
                             to_email: 'mangalsetu.in@gmail.com',
                             to_name: 'Mangal Setu Admin Cell',
@@ -447,7 +447,7 @@ ${safeMessage}
                             user_phone: phone || 'Not provided',
                             user_subject: cleanSubject
                         },
-                        'kB-D9RiJ3jqpTEvU7'
+                        'zpGQGLtVFmlODwcbl'
                     );
                     emailSent = true;
                 } catch(ejsErr) {
