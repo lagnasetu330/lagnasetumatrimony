@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU: FIX PROFILES VISIBILITY & RLS POLICIES
+-- MANGAL SETU: FIX PROFILES VISIBILITY & RLS POLICIES
 -- Run this script in your Supabase Project Dashboard -> SQL Editor -> Run
 -- ==============================================================================
 

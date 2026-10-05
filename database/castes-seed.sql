@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — ALL 143 GUJARATI CASTES MASTER SEED
+-- MANGAL SETU — ALL 143 GUJARATI CASTES MASTER SEED
 -- ==============================================================================
 
 CREATE TABLE IF NOT EXISTS public.castes (

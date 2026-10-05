@@ -1,7 +1,7 @@
 /* ==============================================================================
-   LAGNA SETU — MATRIMONIAL EMAIL NOTIFICATION SERVICE
+   MANGAL SETU — MATRIMONIAL EMAIL NOTIFICATION SERVICE
    Production-ready branded HTML email templates & notification dispatcher
-   Uniform with Lagna Setu UI Design System:
+   Uniform with Mangal Setu UI Design System:
    - Primary Royal Purple: #7B2CBF
    - Deep Royal Purple: #5A189A
    - Electric Orchid: #9D4EDD
@@ -98,7 +98,7 @@ function renderEmailAvatar(photoUrl, name, size = 88, borderColor = '#7B2CBF') {
 }
 
 /**
- * Generate Branded Lagna Setu Email HTML Wrapper (100% Uniform with App UI)
+ * Generate Branded Mangal Setu Email HTML Wrapper (100% Uniform with App UI)
  */
 function wrapEmailTemplate(title, preheader, bodyContent) {
   return `<!DOCTYPE html>

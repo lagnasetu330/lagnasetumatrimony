@@ -13,7 +13,7 @@ function loadCommunityProfiles() {
                 return parsed.filter(p => p && (typeof isUserPurged !== 'function' || !isUserPurged(p)));
             }
         }
-        const sessionCached = sessionStorage.getItem('lagnaSetu_profiles');
+        const sessionCached = sessionStorage.getItem('mangalSetu_profiles');
         if (sessionCached) {
             const parsed = JSON.parse(sessionCached);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -30,7 +30,7 @@ function saveCommunityProfiles() {
     try {
         if (Array.isArray(PROFILES) && PROFILES.length > 0) {
             localStorage.setItem(LS_PROFILES_KEY, JSON.stringify(PROFILES));
-            sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
+            sessionStorage.setItem('mangalSetu_profiles', JSON.stringify(PROFILES));
         }
     } catch(e) {}
 }
@@ -485,7 +485,7 @@ async function checkCurrentUserStatus() {
 
 const FAQS = [
     ['How do I register?', 'Tap "Create account" on the welcome screen and complete all 3 steps: community, personal & family details, and address.'],
-    ['Is Lagna Setu free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
+    ['Is Mangal Setu free for girls?', 'Yes! 100% Lifetime Free access is guaranteed for all community girls.'],
     ['How much is the membership pass for boys?', 'Boys get 30 Days Full Access for just ₹99, giving direct contact to verified community brides\' families.'],
     ['How do I contact a profile?', 'You can direct Call or WhatsApp the girl\'s father using the verified contact buttons, or send an in-app interest request.'],
     ['Is my personal phone number visible to everyone?', 'No. Your personal registration number is kept strictly private for Admin review only. Only your father\'s contact number is shown to verified members.'],

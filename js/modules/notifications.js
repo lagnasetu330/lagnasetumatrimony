@@ -1,5 +1,5 @@
 /* ============================================================
-   LAGNA SETU — REAL-TIME USER NOTIFICATION SYSTEM
+   MANGAL SETU — REAL-TIME USER NOTIFICATION SYSTEM
    Dynamic, persistent, and live Supabase connected notifications
    ============================================================ */
 
@@ -12,7 +12,7 @@ function getUserNotifsStorageKey() {
         uid = state.currentUser.id || state.currentUser.email || 'guest';
     } else {
         try {
-            const raw = sessionStorage.getItem('lagnaSetu_currentUser') || localStorage.getItem('lagnaSetu_activeUser');
+            const raw = sessionStorage.getItem('mangalSetu_currentUser') || localStorage.getItem('mangalSetu_activeUser');
             if (raw) {
                 const u = JSON.parse(raw);
                 if (u && (u.id || u.email)) uid = u.id || u.email;

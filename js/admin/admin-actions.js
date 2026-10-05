@@ -369,14 +369,14 @@ window.escapeHtml = escapeHtmlAdmin;
                         window.PROFILES[pIdx].verifyStatus = 'approved';
                     }
                 }
-                const cachedProfiles = JSON.parse(sessionStorage.getItem('lagnaSetu_profiles') || '[]');
+                const cachedProfiles = JSON.parse(sessionStorage.getItem('mangalSetu_profiles') || '[]');
                 if (Array.isArray(cachedProfiles) && cachedProfiles.length > 0) {
                     const cpIdx = cachedProfiles.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
                     if (cpIdx !== -1) {
                         cachedProfiles[cpIdx].visible = true;
                         cachedProfiles[cpIdx].accountStatus = 'active';
                         cachedProfiles[cpIdx].verifyStatus = 'approved';
-                        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(cachedProfiles));
+                        sessionStorage.setItem('mangalSetu_profiles', JSON.stringify(cachedProfiles));
                     }
                 }
             } catch (_) {}
@@ -1425,8 +1425,8 @@ async function updateAdminEmail() {
     }
 
     // If Remember Me is active, sync stored email
-    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
-        localStorage.setItem('lagnaSetu_admin_rememberEmail', newEmail);
+    if (localStorage.getItem('mangalSetu_admin_rememberMe') === 'true') {
+        localStorage.setItem('mangalSetu_admin_rememberEmail', newEmail);
     }
 
     syncSettingsUI();

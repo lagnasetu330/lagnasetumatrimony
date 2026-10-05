@@ -175,11 +175,11 @@ function contactSupportAction(type) {
 
     if (type === 'whatsapp') {
         const cleanNumber = contact.whatsapp.replace(/[^0-9]/g, '');
-        window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent('Hello Lagna Setu Support, I need help with my account.')}`, '_blank');
+        window.open(`https://wa.me/${cleanNumber}?text=${encodeURIComponent('Hello Mangal Setu Support, I need help with my account.')}`, '_blank');
     } else if (type === 'phone') {
         window.location.href = `tel:${contact.phone.replace(/[^0-9+]/g, '')}`;
     } else if (type === 'email') {
-        window.location.href = `mailto:${contact.email}?subject=${encodeURIComponent('Support Request — Lagna Setu')}`;
+        window.location.href = `mailto:${contact.email}?subject=${encodeURIComponent('Support Request — Mangal Setu')}`;
     }
 }
 

@@ -1,9 +1,9 @@
 /* ============================================================
-   LAGNA SETU SERVICE WORKER (PWA)
+   MANGAL SETU SERVICE WORKER (PWA)
    Strategy: Network-First with Fallback Cache (Ensures instant updates)
    ============================================================ */
 
-const CACHE_NAME = 'lagna-setu-v1.2';
+const CACHE_NAME = 'mangal-setu-v1.2';
 
 // Core assets to pre-cache on install
 const PRECACHE_ASSETS = [
@@ -11,8 +11,8 @@ const PRECACHE_ASSETS = [
     './index.html',
     './app.html',
     './manifest.json',
-    './images/lagna_setu_logo.png',
-    './images/lagna_setu-welcome_banner.png',
+    './images/mangal_setu_logo.png',
+    './images/mangal_setu-welcome_banner.png',
     './images/icon-192.png',
     './images/icon-512.png',
     './css/tokens.css',

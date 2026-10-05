@@ -6,7 +6,7 @@
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Mangal Setu — Connecting Communities</title>
-    <link rel="icon" type="image/png" href="images/lagna_setu_logo.png">
+    <link rel="icon" type="image/png" href="images/mangal_setu_logo.png">
     <link rel="apple-touch-icon" href="images/icon-192.png">
     <!-- Progressive Web App (PWA) Manifest & Meta Tags -->
     <link rel="manifest" href="manifest.json">
@@ -24,7 +24,7 @@
                     'LS_ADMIN_PAYMENTS', 'LS_ADMIN_INTERESTS', 'LS_ADMIN_REPORTS',
                     'LS_ADMIN_NOTIFS', 'LS_COMMUNITY_FAQS', 'LS_COMMUNITY_HOWITWORKS',
                     'LS_COMMUNITY_CASTES', 'LS_COMMUNITY_MAINTENANCE', 'LS_COMMUNITY_AUTO_APPROVE',
-                    'lagnaSetu_profiles', 'LS_PURGED_USER_CACHE'
+                    'mangalSetu_profiles', 'LS_PURGED_USER_CACHE'
                 ];
                 legacyKeys.forEach(function (k) { localStorage.removeItem(k); });
                 if (localStorage.getItem(PURGE_FLAG) !== 'true') {
@@ -34,21 +34,21 @@
         })();
         (function () {
             try {
-                var lsUser = localStorage.getItem('lagnaSetu_activeUser');
-                var lastActive = Number(localStorage.getItem('lagnaSetu_lastActiveTimestamp') || 0);
+                var lsUser = localStorage.getItem('mangalSetu_activeUser');
+                var lastActive = Number(localStorage.getItem('mangalSetu_lastActiveTimestamp') || 0);
                 var TEN_MIN = 10 * 60 * 1000;
                 var isSessionValid = Boolean(lsUser && lastActive && ((Date.now() - lastActive) <= TEN_MIN));
                 if (!isSessionValid && lsUser && lastActive && ((Date.now() - lastActive) > TEN_MIN)) {
                     try {
-                        localStorage.removeItem('lagnaSetu_activeUser');
-                        localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
-                        sessionStorage.removeItem('lagnaSetu_currentUser');
+                        localStorage.removeItem('mangalSetu_activeUser');
+                        localStorage.removeItem('mangalSetu_lastActiveTimestamp');
+                        sessionStorage.removeItem('mangalSetu_currentUser');
                     } catch (_) { }
                 }
 
-                var visited = sessionStorage.getItem('lagnaSetu_visited');
+                var visited = sessionStorage.getItem('mangalSetu_visited');
                 var hash = window.location.hash.replace('#/', '');
-                var saved = sessionStorage.getItem('lagnaSetu_activeScreen');
+                var saved = sessionStorage.getItem('mangalSetu_activeScreen');
                 var target = '';
                 if (isSessionValid) {
                     target = hash ? ('scr-' + hash) : (saved || 'scr-home');
@@ -97,7 +97,7 @@
                 <div class="gloader-spin-arc"></div>
                 <div class="gloader-icon"><i class="fa-solid fa-shield-heart"></i></div>
             </div>
-            <div class="gloader-title">Lagna Setu</div>
+            <div class="gloader-title">Mangal Setu</div>
             <div class="gloader-subtitle">Matrimony Community</div>
             <div class="gloader-status-wrap">
                 <div class="gloader-dots">
@@ -126,7 +126,7 @@
                 </defs>
             </svg>
         </div>
-        <div class="ds-brand">Lagna Setu</div>
+        <div class="ds-brand">Mangal Setu</div>
         <div class="ds-nav">
             <button class="ds-item" data-nav="scr-home" onclick="go('scr-home')"><i
                     class="fa-solid fa-house"></i><span>Home</span></button>
@@ -197,7 +197,7 @@
                         </defs>
                     </svg>
                 </div>
-                <div class="h-display h-xl" style="margin-bottom:6px;">Lagna Setu</div>
+                <div class="h-display h-xl" style="margin-bottom:6px;">Mangal Setu</div>
                 <div class="p-muted" style="font-weight:700;letter-spacing:.02em;color:var(--secondary);">Connecting
                     Communities</div>
                 <div style="margin-top:34px;"><i class="fa-solid fa-circle-notch spin"
@@ -222,16 +222,16 @@
                                 </linearGradient>
                             </defs>
                         </svg>
-                        <b class="h-md" style="font-family:var(--font-display);">Lagna Setu</b>
+                        <b class="h-md" style="font-family:var(--font-display);">Mangal Setu</b>
                     </div>
                     <button class="btn btn-ghost btn-sm" onclick="go('scr-login')">Log in</button>
                 </div>
 
                 <div
                     style="margin-top:26px;border-radius:24px;overflow:hidden;height:230px;position:relative;box-shadow:var(--shadow-soft);">
-                    <img src="images/lagna_setu-welcome_banner.png"
+                    <img src="images/mangal_setu-welcome_banner.png"
                         style="width:100%;height:100%;object-fit:cover;object-position:center 25%;"
-                        alt="Lagna Setu Indian Wedding">
+                        alt="Mangal Setu Indian Wedding">
                     <div
                         style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(90,24,154,0) 35%,rgba(58,14,102,.75) 100%);">
                     </div>
@@ -1249,7 +1249,7 @@
                 <p class="p-muted" style="margin-top:-8px;margin-bottom:12px;font-size:12px;"><i
                         class="fa-solid fa-lock"></i> Your personal mobile number is kept private and is never shown
                     on your profile to other members. Direct WhatsApp &amp; Call options connect to your family, and
-                    your personal number is visible to the Lagna Setu admin team only.</p>
+                    your personal number is visible to the Mangal Setu admin team only.</p>
                 <div class="field"><label>Your mobile number (private)</label>
                     <div class="input-icon-wrap"><i class="fa-solid fa-phone leading"></i><input class="input"
                             id="editOwnMobile" placeholder="+91 98765 43210" value=""></div>
@@ -1848,7 +1848,7 @@
                             R</div>
                         <div>
                             <div style="font-size:13px;font-weight:800;color:#0c2340;">Razorpay Trusted Business</div>
-                            <div style="font-size:10.5px;color:var(--text-muted);">Lagna Setu 30-Day Pass</div>
+                            <div style="font-size:10.5px;color:var(--text-muted);">Mangal Setu 30-Day Pass</div>
                         </div>
                     </div>
                     <button class="icon-btn" onclick="closeModal('modalRazorpayCheckout')"
@@ -2047,7 +2047,7 @@
                     </button>
                 </div>
                 <p class="p-muted" style="font-size:12.5px;margin-bottom:14px;">Select the reason for reporting this
-                    profile. Lagna Setu admins review all reports within 24 hours.</p>
+                    profile. Mangal Setu admins review all reports within 24 hours.</p>
                 <div class="field">
                     <label>Reason <span style="color:var(--error);">*</span></label>
                     <div class="dd" id="ddReportReason">
@@ -2598,7 +2598,7 @@
                     <i class="fa-solid fa-gear fa-spin"></i> Scheduled System Upgrades
                 </div>
                 <p class="p-muted" style="font-size:13px;line-height:1.65;margin-bottom:18px;">
-                    Lagna Setu is temporarily undergoing scheduled maintenance to upgrade database performance,
+                    Mangal Setu is temporarily undergoing scheduled maintenance to upgrade database performance,
                     stability, and speed. Member browsing and logins are temporarily paused.
                 </p>
                 <div class="card"
@@ -2632,7 +2632,7 @@
                 style="max-width: 400px; width: 92%; padding: 26px 22px; text-align: center; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
                 <div
                     style="width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 20px; overflow: hidden; box-shadow: 0 8px 20px rgba(123,44,191,0.25); border: 2.5px solid #fff;">
-                    <img src="images/icon-192.png" alt="Lagna Setu Logo"
+                    <img src="images/icon-192.png" alt="Mangal Setu Logo"
                         style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <div
@@ -2640,10 +2640,10 @@
                     Fast &amp; Seamless Experience
                 </div>
                 <h3 style="font-size: 20px; font-weight: 800; color: var(--text); margin: 0 0 8px;">
-                    Install Lagna Setu App
+                    Install Mangal Setu App
                 </h3>
                 <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0 0 18px;">
-                    Add Lagna Setu to your home screen! Open with 1 tap in full-screen mode — no app store download
+                    Add Mangal Setu to your home screen! Open with 1 tap in full-screen mode — no app store download
                     required.
                 </p>
 
@@ -2688,7 +2688,7 @@
                 style="max-width: 390px; width: 92%; padding: 26px 20px; text-align: center; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);">
                 <div
                     style="width: 68px; height: 68px; margin: 0 auto 14px; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 20px rgba(123,44,191,0.2); border: 2px solid #fff;">
-                    <img src="images/icon-192.png" alt="Lagna Setu Logo"
+                    <img src="images/icon-192.png" alt="Mangal Setu Logo"
                         style="width: 100%; height: 100%; object-fit: cover;">
                 </div>
                 <h3 style="font-size: 18px; font-weight: 800; color: var(--text); margin: 0 0 6px;">
@@ -2718,7 +2718,7 @@
                         style="display: flex; align-items: flex-start; gap: 12px; font-size: 12.5px; color: var(--text);">
                         <span
                             style="width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 11px;">3</span>
-                        <span>Tap <b>'Add'</b> in the top right corner. Lagna Setu will be added to your home
+                        <span>Tap <b>'Add'</b> in the top right corner. Mangal Setu will be added to your home
                             screen!</span>
                     </div>
                 </div>

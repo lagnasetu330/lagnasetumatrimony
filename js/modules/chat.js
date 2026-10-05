@@ -79,7 +79,7 @@ function findProfile(id, email) {
 
     // 2B. Match from sessionStorage / localStorage cached profiles
     try {
-        const cachedRaw = sessionStorage.getItem('lagnaSetu_profiles') || localStorage.getItem('LS_COMMUNITY_PROFILES');
+        const cachedRaw = sessionStorage.getItem('mangalSetu_profiles') || localStorage.getItem('LS_COMMUNITY_PROFILES');
         if (cachedRaw) {
             const cachedList = JSON.parse(cachedRaw);
             if (Array.isArray(cachedList) && cachedList.length > 0) {

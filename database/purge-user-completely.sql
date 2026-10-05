@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — COMPLETE A TO Z USER PURGE (AUTHENTICATION + DATABASE)
+-- MANGAL SETU — COMPLETE A TO Z USER PURGE (AUTHENTICATION + DATABASE)
 -- Resolves:
 --   1. Removes invalid p.user_email column reference in payments table
 --   2. Resolves column ambiguity in reports table

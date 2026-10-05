@@ -1796,11 +1796,11 @@ function renderFavorites() {
 }
 
 function openShareModal() {
-    const shareText = "Find your ideal life partner from our community on Lagna Setu matrimonial app!";
+    const shareText = "Find your ideal life partner from our community on Mangal Setu matrimonial app!";
     const shareUrl = window.location.origin + window.location.pathname;
     if (navigator.share) {
         navigator.share({
-            title: 'Lagna Setu - Community Matrimonial',
+            title: 'Mangal Setu - Community Matrimonial',
             text: shareText,
             url: shareUrl
         }).catch(() => {});

@@ -320,11 +320,11 @@ async function submitProfileCompletion() {
 
     saveCommunityProfiles();
     try {
-        localStorage.setItem('lagnaSetu_profileComplete', 'true');
-        localStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(isGirl));
-        localStorage.setItem('lagnaSetu_activeScreen', isGirl ? 'scr-home' : 'scr-membership');
-        sessionStorage.setItem('lagnaSetu_profileComplete', 'true');
-        sessionStorage.setItem('lagnaSetu_just_registered', 'true');
+        localStorage.setItem('mangalSetu_profileComplete', 'true');
+        localStorage.setItem('mangalSetu_membershipPaid', JSON.stringify(isGirl));
+        localStorage.setItem('mangalSetu_activeScreen', isGirl ? 'scr-home' : 'scr-membership');
+        sessionStorage.setItem('mangalSetu_profileComplete', 'true');
+        sessionStorage.setItem('mangalSetu_just_registered', 'true');
     } catch (_) {}
     if (typeof clearRegDraft === 'function') {
         clearRegDraft(newProfile.email);
@@ -396,7 +396,7 @@ function openRazorpayCheckout() {
                 currency: 'INR',
                 name: 'Mangal Setu',
                 description: 'Boys 30-Day Membership Pass (₹99)',
-                image: 'images/lagna_setu_logo.png',
+                image: 'images/mangal_setu_logo.png',
                 notes: {
                     service: '30-Day Matrimonial Directory Access Pass',
                     nature: 'Instant Digital Service (Non-refundable)',
@@ -674,7 +674,7 @@ function resetDemoTestPass() {
     state.membershipPaid = false;
     delete state.currentUser.paymentToken;
     try {
-        localStorage.setItem('lagnaSetu_membershipPaid', 'false');
+        localStorage.setItem('mangalSetu_membershipPaid', 'false');
     } catch (_) {}
     if (typeof saveSessionState === 'function') saveSessionState();
     if (typeof updateMembershipScreen === 'function') updateMembershipScreen();
@@ -1337,7 +1337,7 @@ async function confirmDeleteAccount() {
     if (state.favorites) state.favorites.clear();
     sessionStorage.clear();
     localStorage.removeItem('LS_ACTIVE_USER');
-    localStorage.removeItem('lagnaSetu_user');
+    localStorage.removeItem('mangalSetu_user');
     state.history = ['scr-welcome'];
 
     if (typeof resetRegistrationStateAndInputs === 'function') {

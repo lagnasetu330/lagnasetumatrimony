@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — PRODUCTION SECURITY MASTER SCRIPT
+-- MANGAL SETU — PRODUCTION SECURITY MASTER SCRIPT
 -- Target: Supabase PostgreSQL Database (Production Hardening)
 -- Purpose:
 --   1. Permanently REMOVES dangerous "DELETE USING (true)" policies

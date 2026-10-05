@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — PRO-LEVEL SECURITY HARDENING & RLS POLICIES
+-- MANGAL SETU — PRO-LEVEL SECURITY HARDENING & RLS POLICIES
 -- Target: Supabase PostgreSQL Database
 -- Resolves: All 22 Security Advisor Warnings & Prevents Unauthorized DB Tampering
 -- ==============================================================================

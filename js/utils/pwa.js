@@ -1,5 +1,5 @@
 /* ============================================================
-   LAGNA SETU — PWA (PROGRESSIVE WEB APP) MANAGER
+   MANGAL SETU — PWA (PROGRESSIVE WEB APP) MANAGER
    Features:
    - Service worker registration with instant update check
    - Auto-install prompt ONLY for newly registered accounts
@@ -71,8 +71,8 @@
         console.log('[PWA] App successfully installed to Home Screen / App Drawer.');
         window.deferredPwaPrompt = null;
         try {
-            localStorage.setItem('lagnaSetu_pwa_dismissed', 'true');
-            localStorage.setItem('lagnaSetu_pwa_installed', 'true');
+            localStorage.setItem('mangalSetu_pwa_dismissed', 'true');
+            localStorage.setItem('mangalSetu_pwa_installed', 'true');
         } catch (_) {}
 
         if (typeof closeModal === 'function') {
@@ -81,7 +81,7 @@
         }
 
         if (typeof showToast === 'function') {
-            showToast('✓ Lagna Setu app successfully added to your home screen!');
+            showToast('✓ Mangal Setu app successfully added to your home screen!');
         }
 
         updatePwaMenuUI();
@@ -97,8 +97,8 @@
         let isJustRegistered = false;
 
         try {
-            dismissed = localStorage.getItem('lagnaSetu_pwa_dismissed') === 'true';
-            isJustRegistered = sessionStorage.getItem('lagnaSetu_just_registered') === 'true';
+            dismissed = localStorage.getItem('mangalSetu_pwa_dismissed') === 'true';
+            isJustRegistered = sessionStorage.getItem('mangalSetu_just_registered') === 'true';
         } catch (_) {}
 
         // Strictly verify this is a new registration
@@ -108,7 +108,7 @@
                 if (!isRunningStandalone() && typeof openModal === 'function') {
                     openModal('modalPwaInstall');
                     try {
-                        sessionStorage.removeItem('lagnaSetu_just_registered');
+                        sessionStorage.removeItem('mangalSetu_just_registered');
                     } catch (_) {}
                 }
             }, 1500);
@@ -119,7 +119,7 @@
     window.triggerPwaInstall = function () {
         if (isRunningStandalone()) {
             if (typeof showToast === 'function') {
-                showToast('✓ Lagna Setu app is already installed on your device.');
+                showToast('✓ Mangal Setu app is already installed on your device.');
             }
             return;
         }
@@ -136,8 +136,8 @@
                 if (choiceResult.outcome === 'accepted') {
                     console.log('[PWA] User accepted the install prompt.');
                     try {
-                        localStorage.setItem('lagnaSetu_pwa_dismissed', 'true');
-                        localStorage.setItem('lagnaSetu_pwa_installed', 'true');
+                        localStorage.setItem('mangalSetu_pwa_dismissed', 'true');
+                        localStorage.setItem('mangalSetu_pwa_installed', 'true');
                     } catch (_) {}
                 } else {
                     console.log('[PWA] User dismissed the install prompt.');
@@ -156,7 +156,7 @@
             return;
         }
 
-        // Otherwise open the custom Lagna Setu Install modal with instructions
+        // Otherwise open the custom Mangal Setu Install modal with instructions
         if (typeof openModal === 'function') {
             openModal('modalPwaInstall');
         }
@@ -165,8 +165,8 @@
     // 6. DISMISS INSTALL PROMPT
     window.dismissPwaInstall = function () {
         try {
-            localStorage.setItem('lagnaSetu_pwa_dismissed', 'true');
-            sessionStorage.removeItem('lagnaSetu_just_registered');
+            localStorage.setItem('mangalSetu_pwa_dismissed', 'true');
+            sessionStorage.removeItem('mangalSetu_just_registered');
         } catch (_) {}
         if (typeof closeModal === 'function') {
             closeModal('modalPwaInstall');
@@ -175,7 +175,7 @@
 
     // 7. SYNC MENU UI (UPDATE TEXT IF INSTALLED)
     function updatePwaMenuUI() {
-        const isInstalled = isRunningStandalone() || localStorage.getItem('lagnaSetu_pwa_installed') === 'true';
+        const isInstalled = isRunningStandalone() || localStorage.getItem('mangalSetu_pwa_installed') === 'true';
 
         // Mobile menu item
         const menuItem = document.getElementById('menuItemInstallApp');

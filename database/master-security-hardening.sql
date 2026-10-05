@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — MASTER PRODUCTION SECURITY & HARDENING SCRIPT
+-- MANGAL SETU — MASTER PRODUCTION SECURITY & HARDENING SCRIPT
 -- Target: Supabase PostgreSQL Database (Run in Supabase Dashboard -> SQL Editor)
 -- Purpose:
 --   1. Prevents unauthorized data theft (masks phone numbers & addresses at DB level)
@@ -52,7 +52,7 @@ BEGIN
     SELECT value INTO stored_val FROM public.app_settings WHERE key = 'admin_credentials' LIMIT 1;
     
     IF stored_val IS NULL THEN
-        IF norm_email = 'admin@lagnasetu.app' AND p_hash = def_hash THEN
+        IF norm_email = 'admin@mangalsetu.in' AND p_hash = def_hash THEN
             RETURN jsonb_build_object('success', true, 'email', norm_email);
         ELSE
             RETURN jsonb_build_object('success', false, 'error', 'Invalid admin credentials');
@@ -551,4 +551,4 @@ REVOKE EXECUTE ON FUNCTION public.delete_user_account_completely(TEXT, TEXT) FRO
 GRANT EXECUTE ON FUNCTION public.delete_user_account_completely(TEXT, TEXT) TO authenticated, service_role, anon;
 
 -- Verification Notice
-SELECT 'Lagna Setu Master Security Hardening script executed successfully. Database is now fully hardened against public data theft and tampering.' AS status;
+SELECT 'Mangal Setu Master Security Hardening script executed successfully. Database is now fully hardened against public data theft and tampering.' AS status;

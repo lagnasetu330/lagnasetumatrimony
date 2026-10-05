@@ -1016,7 +1016,7 @@
                         }
                     }
                 }
-                const cachedProfiles = JSON.parse(sessionStorage.getItem('lagnaSetu_profiles') || '[]');
+                const cachedProfiles = JSON.parse(sessionStorage.getItem('mangalSetu_profiles') || '[]');
                 if (Array.isArray(cachedProfiles) && cachedProfiles.length > 0) {
                     const cpIdx = cachedProfiles.findIndex(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
                     if (cpIdx !== -1) {
@@ -1025,7 +1025,7 @@
                             cachedProfiles[cpIdx].accountStatus = u.accountStatus;
                             cachedProfiles[cpIdx].verifyStatus = u.verifyStatus;
                         }
-                        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(cachedProfiles));
+                        sessionStorage.setItem('mangalSetu_profiles', JSON.stringify(cachedProfiles));
                     }
                 }
             } catch (_) {}
@@ -1444,7 +1444,7 @@
                 purgeKeyList('LS_AUTH_ACCOUNTS');
                 purgeKeyList('LS_COMMUNITY_USERS');
                 purgeKeyList('LS_ADMIN_PAYMENTS', true);
-                sessionStorage.removeItem('lagnaSetu_profiles');
+                sessionStorage.removeItem('mangalSetu_profiles');
             } catch(e) {
                 console.warn('[Admin Delete] Local storage purge note:', e);
             }

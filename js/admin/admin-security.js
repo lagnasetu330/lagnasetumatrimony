@@ -38,7 +38,7 @@ window.LS_ADMIN_CREDS_KEY = LS_ADMIN_CREDS_KEY;
  */
 function getEffectiveAdminCreds() {
     var creds = {
-        email: 'admin@lagnasetu.app',
+        email: 'admin@mangalsetu.in',
         passHash: DEFAULT_ADMIN_HASH
     };
     try {
@@ -109,10 +109,10 @@ function decodeStoredAdminPass(p) {
 function restoreAdminRememberMe() {
     try {
         // Purge any legacy stored password immediately
-        try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
+        try { localStorage.removeItem('mangalSetu_admin_rememberPass'); } catch (_) {}
 
-        const isRem = localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true';
-        const remEmail = localStorage.getItem('lagnaSetu_admin_rememberEmail') || '';
+        const isRem = localStorage.getItem('mangalSetu_admin_rememberMe') === 'true';
+        const remEmail = localStorage.getItem('mangalSetu_admin_rememberEmail') || '';
         const chk = document.getElementById('adminRememberMe');
         const emailInput = document.getElementById('loginEmail');
 
@@ -224,13 +224,13 @@ async function doLogin() {
         // Handle Remember Me (Remember only email, NEVER store passwords in localStorage)
         const chk = document.getElementById('adminRememberMe');
         if (chk && chk.checked) {
-            localStorage.setItem('lagnaSetu_admin_rememberMe', 'true');
-            localStorage.setItem('lagnaSetu_admin_rememberEmail', email);
+            localStorage.setItem('mangalSetu_admin_rememberMe', 'true');
+            localStorage.setItem('mangalSetu_admin_rememberEmail', email);
         } else {
-            localStorage.removeItem('lagnaSetu_admin_rememberMe');
-            localStorage.removeItem('lagnaSetu_admin_rememberEmail');
+            localStorage.removeItem('mangalSetu_admin_rememberMe');
+            localStorage.removeItem('mangalSetu_admin_rememberEmail');
         }
-        try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
+        try { localStorage.removeItem('mangalSetu_admin_rememberPass'); } catch (_) {}
 
         var sessionToken = await generateAdminSessionToken(creds.email, creds.passHash);
         sessionStorage.setItem('admin_isLoggedIn', 'true');
@@ -336,7 +336,7 @@ async function updateAdminPassword() {
     sessionStorage.setItem('admin_session_token', refreshedToken);
 
     // Always purge any stored password
-    try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
+    try { localStorage.removeItem('mangalSetu_admin_rememberPass'); } catch (_) {}
 
     if (curInput) curInput.value = '';
     if (newInput) newInput.value = '';
@@ -615,7 +615,7 @@ async function completeAdminPasswordReset() {
     window.ADMIN_CREDS = ADMIN_CREDS;
 
     // Always purge any stored password
-    try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
+    try { localStorage.removeItem('mangalSetu_admin_rememberPass'); } catch (_) {}
 
     // Clear security lockouts & reset state
     clearLoginSecurityState();

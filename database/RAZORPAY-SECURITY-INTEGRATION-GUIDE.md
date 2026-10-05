@@ -1,4 +1,4 @@
-# Lagna Setu — Production Razorpay Security Integration Guide
+# Mangal Setu — Production Razorpay Security Integration Guide
 **100% Tamper-Proof Payment Architecture for Boys 30 Days Pass (₹99)**
 
 ---
@@ -114,7 +114,7 @@ async function startSecureRazorpayPayment() {
             key: orderData.keyId,
             amount: orderData.amount, // 9900 paise
             currency: orderData.currency,
-            name: 'Lagna Setu Matrimony',
+            name: 'Mangal Setu Matrimony',
             description: 'Boys 30 Days Pass (₹99)',
             order_id: orderData.orderId,
             prefill: {

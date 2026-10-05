@@ -1,5 +1,5 @@
 -- ==============================================================================
--- LAGNA SETU — SUPABASE POSTGRESQL PRODUCTION DATABASE SCHEMA
+-- MANGAL SETU — SUPABASE POSTGRESQL PRODUCTION DATABASE SCHEMA
 -- Community Matrimony Web & Mobile Architecture
 -- Realtime Sync, Strict 30-Day Boy Pass Enforcement & Cloudinary CDN Integration
 -- Safe & Idempotent: Can be executed multiple times without errors (DROP POLICY IF EXISTS)

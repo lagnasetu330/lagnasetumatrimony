@@ -213,7 +213,7 @@ function purgeUserAccountLocally(email, id) {
     const normEmail = email ? String(email).trim().toLowerCase() : '';
     const normId = id ? String(id).trim() : '';
 
-    console.warn(`[LagnaSetu] Purging account locally for email: ${normEmail}, id: ${normId}`);
+    console.warn(`[MangalSetu] Purging account locally for email: ${normEmail}, id: ${normId}`);
 
     if (typeof registerPurgedUserId === 'function') {
         registerPurgedUserId(normEmail, normId);
@@ -276,7 +276,7 @@ function purgeUserAccountLocally(email, id) {
                 localStorage.setItem('LS_COMMUNITY_PROFILES', JSON.stringify(filtered));
             }
         }
-        sessionStorage.removeItem('lagnaSetu_profiles');
+        sessionStorage.removeItem('mangalSetu_profiles');
     } catch(e) {}
 
     // 4. Purge from LS_ADMIN_PAYMENTS
@@ -312,7 +312,7 @@ function purgeUserAccountLocally(email, id) {
             }
         }
         // Purge local interest storage
-        const intKeys = ['LS_COMMUNITY_INTERESTS', 'lagnaSetu_interests'];
+        const intKeys = ['LS_COMMUNITY_INTERESTS', 'mangalSetu_interests'];
         intKeys.forEach(k => {
             try {
                 const rawInt = localStorage.getItem(k);
@@ -343,7 +343,7 @@ function purgeUserAccountLocally(email, id) {
 
         // Clean any chat message keys in localStorage
         Object.keys(localStorage).forEach(k => {
-            if (k.startsWith('lagnaSetu_chat_') || k.startsWith('chat_thread_')) {
+            if (k.startsWith('mangalSetu_chat_') || k.startsWith('chat_thread_')) {
                 if ((normId && k.includes(normId)) || (normEmail && k.includes(normEmail))) {
                     localStorage.removeItem(k);
                 }
@@ -367,14 +367,14 @@ function purgeUserAccountLocally(email, id) {
             if (typeof supabaseLeavePresence === 'function') {
                 supabaseLeavePresence();
             }
-            sessionStorage.removeItem('lagnaSetu_currentUser');
-            sessionStorage.removeItem('lagnaSetu_user');
-            sessionStorage.removeItem('lagnaSetu_activeScreen');
-            sessionStorage.removeItem('lagnaSetu_profileComplete');
-            sessionStorage.removeItem('lagnaSetu_membershipPaid');
+            sessionStorage.removeItem('mangalSetu_currentUser');
+            sessionStorage.removeItem('mangalSetu_user');
+            sessionStorage.removeItem('mangalSetu_activeScreen');
+            sessionStorage.removeItem('mangalSetu_profileComplete');
+            sessionStorage.removeItem('mangalSetu_membershipPaid');
             sessionStorage.clear();
             localStorage.removeItem('LS_ACTIVE_USER');
-            localStorage.removeItem('lagnaSetu_user');
+            localStorage.removeItem('mangalSetu_user');
             state.history = ['scr-welcome'];
             resetRegistrationStateAndInputs();
             if (typeof closeAllModals === 'function') {
@@ -407,14 +407,14 @@ async function syncAndPruneDeletedAccounts() {
         if (accounts.length > 0) {
             const pruned = accounts.filter(a => a.email && activeEmails.has(a.email.toLowerCase()));
             if (pruned.length !== accounts.length) {
-                console.info(`[LagnaSetu] Pruned ${accounts.length - pruned.length} deleted accounts from local storage.`);
+                console.info(`[MangalSetu] Pruned ${accounts.length - pruned.length} deleted accounts from local storage.`);
                 saveStoredAccounts(pruned);
             }
         }
 
         // If currently logged-in user is not in Supabase, auto-logout
         if (state.currentUser && state.currentUser.email && !activeEmails.has(state.currentUser.email.toLowerCase())) {
-            console.warn('[LagnaSetu] Current active user was deleted in Supabase. Logging out immediately.');
+            console.warn('[MangalSetu] Current active user was deleted in Supabase. Logging out immediately.');
             purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
             if (typeof showToast === 'function') {
                 showToast('Your account has been deleted. Please register for a new account.');
@@ -422,7 +422,7 @@ async function syncAndPruneDeletedAccounts() {
             if (typeof go === 'function') go('scr-welcome', true);
         }
     } catch(err) {
-        console.warn('[LagnaSetu] Prune deleted accounts note:', err);
+        console.warn('[MangalSetu] Prune deleted accounts note:', err);
     }
 }
 window.syncAndPruneDeletedAccounts = syncAndPruneDeletedAccounts;
@@ -707,8 +707,8 @@ function saveRegDraft(step = null) {
         updatedAt: Date.now()
     };
     try {
-        localStorage.setItem('lagnaSetu_regDraft_' + email, JSON.stringify(draft));
-        sessionStorage.setItem('lagnaSetu_regDraft', JSON.stringify(draft));
+        localStorage.setItem('mangalSetu_regDraft_' + email, JSON.stringify(draft));
+        sessionStorage.setItem('mangalSetu_regDraft', JSON.stringify(draft));
     } catch (_) {}
 }
 window.saveRegDraft = saveRegDraft;
@@ -716,7 +716,7 @@ window.saveRegDraft = saveRegDraft;
 function loadRegDraft(email) {
     if (!email) return null;
     try {
-        const raw = localStorage.getItem('lagnaSetu_regDraft_' + String(email).toLowerCase().trim()) || sessionStorage.getItem('lagnaSetu_regDraft');
+        const raw = localStorage.getItem('mangalSetu_regDraft_' + String(email).toLowerCase().trim()) || sessionStorage.getItem('mangalSetu_regDraft');
         if (raw) return JSON.parse(raw);
     } catch (_) {}
     return null;
@@ -725,8 +725,8 @@ window.loadRegDraft = loadRegDraft;
 
 function clearRegDraft(email) {
     try {
-        if (email) localStorage.removeItem('lagnaSetu_regDraft_' + String(email).toLowerCase().trim());
-        sessionStorage.removeItem('lagnaSetu_regDraft');
+        if (email) localStorage.removeItem('mangalSetu_regDraft_' + String(email).toLowerCase().trim());
+        sessionStorage.removeItem('mangalSetu_regDraft');
     } catch (_) {}
 }
 window.clearRegDraft = clearRegDraft;
@@ -974,11 +974,11 @@ async function signupOtpVerified() {
 
     // Clear any stale flags from previous test sessions in browser storage
     try {
-        localStorage.removeItem('lagnaSetu_profileComplete');
-        localStorage.removeItem('lagnaSetu_membershipPaid');
-        localStorage.removeItem('lagnaSetu_activeScreen');
-        sessionStorage.removeItem('lagnaSetu_profileComplete');
-        sessionStorage.removeItem('lagnaSetu_membershipPaid');
+        localStorage.removeItem('mangalSetu_profileComplete');
+        localStorage.removeItem('mangalSetu_membershipPaid');
+        localStorage.removeItem('mangalSetu_activeScreen');
+        sessionStorage.removeItem('mangalSetu_profileComplete');
+        sessionStorage.removeItem('mangalSetu_membershipPaid');
     } catch (_) {}
 
     // Initialize registration wizard state
@@ -1028,7 +1028,7 @@ async function signupOtpVerified() {
 
     saveSessionState();
     try {
-        sessionStorage.setItem('lagnaSetu_just_registered', 'true');
+        sessionStorage.setItem('mangalSetu_just_registered', 'true');
     } catch (_) {}
     go('scr-reg-caste');
 }
@@ -1379,17 +1379,17 @@ async function doLogin() {
         const isRemember = remCheckbox ? remCheckbox.checked : false;
         if (isRemember) {
             try {
-                localStorage.setItem('lagnaSetu_rememberMe', 'true');
-                localStorage.setItem('lagnaSetu_rememberEmail', email);
+                localStorage.setItem('mangalSetu_rememberMe', 'true');
+                localStorage.setItem('mangalSetu_rememberEmail', email);
             } catch (_) {}
         } else {
             try {
-                localStorage.removeItem('lagnaSetu_rememberMe');
-                localStorage.removeItem('lagnaSetu_rememberEmail');
+                localStorage.removeItem('mangalSetu_rememberMe');
+                localStorage.removeItem('mangalSetu_rememberEmail');
             } catch (_) {}
         }
         // Always purge any insecure stored plaintext/base64 passwords from localStorage
-        try { localStorage.removeItem('lagnaSetu_rememberPass'); } catch (_) {}
+        try { localStorage.removeItem('mangalSetu_rememberPass'); } catch (_) {}
 
         // Start 10-minute inactivity timer
         if (typeof initInactivityTimer === 'function') {
@@ -1467,8 +1467,8 @@ async function doLogin() {
 
         // Existing login should never see the new user auto install prompt
         try {
-            sessionStorage.removeItem('lagnaSetu_just_registered');
-            localStorage.setItem('lagnaSetu_pwa_dismissed', 'true');
+            sessionStorage.removeItem('mangalSetu_just_registered');
+            localStorage.setItem('mangalSetu_pwa_dismissed', 'true');
         } catch (_) {}
 
         // RULE 2: If Girl -> 100% Free Lifetime, Direct Home Entry
@@ -1643,11 +1643,11 @@ function doLogout(isTimeout = false) {
     // 2. Wipe all session storage and persistent local user session
     sessionStorage.clear();
     try {
-        localStorage.removeItem('lagnaSetu_activeUser');
-        localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
-        localStorage.removeItem('lagnaSetu_profileComplete');
-        localStorage.removeItem('lagnaSetu_membershipPaid');
-        localStorage.removeItem('lagnaSetu_activeScreen');
+        localStorage.removeItem('mangalSetu_activeUser');
+        localStorage.removeItem('mangalSetu_lastActiveTimestamp');
+        localStorage.removeItem('mangalSetu_profileComplete');
+        localStorage.removeItem('mangalSetu_membershipPaid');
+        localStorage.removeItem('mangalSetu_activeScreen');
     } catch (_) {}
 
     // 3. Reset in-memory state cleanly
@@ -1973,10 +1973,10 @@ async function handleResetPassword() {
 function restoreRememberedLogin() {
     try {
         // Purge any legacy stored password immediately
-        try { localStorage.removeItem('lagnaSetu_rememberPass'); } catch (_) {}
+        try { localStorage.removeItem('mangalSetu_rememberPass'); } catch (_) {}
 
-        const isRemember = localStorage.getItem('lagnaSetu_rememberMe') === 'true';
-        const remEmail = localStorage.getItem('lagnaSetu_rememberEmail') || '';
+        const isRemember = localStorage.getItem('mangalSetu_rememberMe') === 'true';
+        const remEmail = localStorage.getItem('mangalSetu_rememberEmail') || '';
 
         const emailInput = document.getElementById('loginEmail');
         const chkBox = document.getElementById('loginRememberMe');
@@ -1999,9 +1999,9 @@ function restoreRememberedLogin() {
 function onRememberMeToggle(chk) {
     if (chk && !chk.checked) {
         try {
-            localStorage.removeItem('lagnaSetu_rememberMe');
-            localStorage.removeItem('lagnaSetu_rememberEmail');
-            localStorage.removeItem('lagnaSetu_rememberPass');
+            localStorage.removeItem('mangalSetu_rememberMe');
+            localStorage.removeItem('mangalSetu_rememberEmail');
+            localStorage.removeItem('mangalSetu_rememberPass');
         } catch (_) {}
     }
 }

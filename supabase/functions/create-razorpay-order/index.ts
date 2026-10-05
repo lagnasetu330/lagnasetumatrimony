@@ -1,5 +1,5 @@
 // ==============================================================================
-// LAGNA SETU — SUPABASE EDGE FUNCTION: CREATE RAZORPAY ORDER
+// MANGAL SETU — SUPABASE EDGE FUNCTION: CREATE RAZORPAY ORDER
 // Location: supabase/functions/create-razorpay-order/index.ts
 // Runtime: Deno / TypeScript (Supabase Edge Functions)
 // ==============================================================================
@@ -56,7 +56,7 @@ serve(async (req) => {
         notes: {
           userId: String(userId),
           userEmail: String(userEmail),
-          userName: String(userName || "Lagna Setu Member"),
+          userName: String(userName || "Mangal Setu Member"),
           plan: "Boys 30 Days Pass (₹99)"
         }
       })

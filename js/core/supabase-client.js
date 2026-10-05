@@ -859,7 +859,7 @@ async function supabaseFetchAllProfilesForAdmin() {
             const normEmail = String(u.email).toLowerCase().trim();
             const normId = String(u.id || '');
             if (seenEmails.has(normEmail) || seenIds.has(normId)) return;
-            if (normEmail.includes('@report.internal') || normEmail.includes('@deleted.local') || normEmail.includes('@lagnasetu.app')) return;
+            if (normEmail.includes('@report.internal') || normEmail.includes('@deleted.local') || normEmail.includes('@mangalsetu.in')) return;
 
             const isGirl = (u.gender === 'girls' || u.gender === 'Girl' || u.gender === 'girl');
             const synthProfile = {
@@ -2289,7 +2289,7 @@ async function supabaseUpdateInterestStatus(interestId, newStatus, senderProfile
    CHAT MESSAGES PERSISTENCE & REALTIME
    ============================================================================== */
 
-const CLEARED_CHATS_STORAGE_KEY = 'lagnaSetu_clearedChatTimestamps';
+const CLEARED_CHATS_STORAGE_KEY = 'mangalSetu_clearedChatTimestamps';
 
 function getClearedChatRecords() {
     try {
@@ -3662,7 +3662,7 @@ async function supabaseSubmitReport(reportData) {
     try {
         await client.from('email_logs').insert({
             id: 'log_' + repId,
-            recipient_email: 'admin@lagnasetu.app',
+            recipient_email: 'admin@mangalsetu.in',
             recipient_name: 'Admin Team',
             subject: `User Report: ${reportObj.reason}`,
             notification_type: 'USER_REPORT',
@@ -3864,7 +3864,7 @@ async function supabaseSetMaintenanceMode(isMaint) {
     try {
         const payload = {
             id: 'system_app_config',
-            email: 'system_app_config@lagnasetu.app',
+            email: 'system_app_config@mangalsetu.in',
             name: 'System App Config',
             role: 'system',
             status: enabled ? 'Maintenance' : 'Active',

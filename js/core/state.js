@@ -198,21 +198,21 @@ window.isProfileFullyComplete = isProfileFullyComplete;
 function saveSessionState() {
     try {
         const currentScreen = document.querySelector('.screen.active')?.id || 'scr-home';
-        sessionStorage.setItem('lagnaSetu_visited', 'true');
-        sessionStorage.setItem('lagnaSetu_activeScreen', currentScreen);
-        sessionStorage.setItem('lagnaSetu_activeProfileId', state.activeProfileId ? String(state.activeProfileId) : '');
-        sessionStorage.setItem('lagnaSetu_activeChatId', state.activeChatId ? String(state.activeChatId) : '');
+        sessionStorage.setItem('mangalSetu_visited', 'true');
+        sessionStorage.setItem('mangalSetu_activeScreen', currentScreen);
+        sessionStorage.setItem('mangalSetu_activeProfileId', state.activeProfileId ? String(state.activeProfileId) : '');
+        sessionStorage.setItem('mangalSetu_activeChatId', state.activeChatId ? String(state.activeChatId) : '');
         if (state.currentUser) {
-            sessionStorage.setItem('lagnaSetu_currentUser', JSON.stringify(state.currentUser));
+            sessionStorage.setItem('mangalSetu_currentUser', JSON.stringify(state.currentUser));
             try {
-                localStorage.setItem('lagnaSetu_activeUser', JSON.stringify(state.currentUser));
-                localStorage.setItem('lagnaSetu_lastActiveTimestamp', Date.now().toString());
+                localStorage.setItem('mangalSetu_activeUser', JSON.stringify(state.currentUser));
+                localStorage.setItem('mangalSetu_lastActiveTimestamp', Date.now().toString());
             } catch (_) {}
         } else {
-            sessionStorage.removeItem('lagnaSetu_currentUser');
-            sessionStorage.removeItem('lagnaSetu_user');
+            sessionStorage.removeItem('mangalSetu_currentUser');
+            sessionStorage.removeItem('mangalSetu_user');
             try {
-                localStorage.removeItem('lagnaSetu_activeUser');
+                localStorage.removeItem('mangalSetu_activeUser');
             } catch (_) {}
         }
 
@@ -220,26 +220,26 @@ function saveSessionState() {
         state.profileComplete = profileDone;
         if (state.currentUser) state.currentUser.profileComplete = profileDone;
 
-        sessionStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(profileDone));
-        sessionStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
+        sessionStorage.setItem('mangalSetu_profileComplete', JSON.stringify(profileDone));
+        sessionStorage.setItem('mangalSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
         try {
             if (state.currentUser) {
-                localStorage.setItem('lagnaSetu_profileComplete', JSON.stringify(profileDone));
-                localStorage.setItem('lagnaSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
+                localStorage.setItem('mangalSetu_profileComplete', JSON.stringify(profileDone));
+                localStorage.setItem('mangalSetu_membershipPaid', JSON.stringify(Boolean(state.membershipPaid)));
                 const activeScreen = (state.history && state.history[state.history.length - 1]) || 'scr-welcome';
-                localStorage.setItem('lagnaSetu_activeScreen', activeScreen);
+                localStorage.setItem('mangalSetu_activeScreen', activeScreen);
             } else {
-                localStorage.removeItem('lagnaSetu_profileComplete');
-                localStorage.removeItem('lagnaSetu_membershipPaid');
-                localStorage.removeItem('lagnaSetu_activeScreen');
+                localStorage.removeItem('mangalSetu_profileComplete');
+                localStorage.removeItem('mangalSetu_membershipPaid');
+                localStorage.removeItem('mangalSetu_activeScreen');
             }
         } catch (_) {}
-        sessionStorage.setItem('lagnaSetu_favorites', JSON.stringify(Array.from(state.favorites)));
-        sessionStorage.setItem('lagnaSetu_profiles', JSON.stringify(PROFILES));
-        sessionStorage.setItem('lagnaSetu_chatThreads', JSON.stringify(CHAT_THREADS));
-        sessionStorage.setItem('lagnaSetu_incomingRequests', JSON.stringify(typeof INCOMING_REQUESTS !== 'undefined' ? INCOMING_REQUESTS : []));
-        sessionStorage.setItem('lagnaSetu_outgoingRequests', JSON.stringify(typeof OUTGOING_REQUESTS !== 'undefined' ? OUTGOING_REQUESTS : []));
-        sessionStorage.setItem('lagnaSetu_history', JSON.stringify(state.history));
+        sessionStorage.setItem('mangalSetu_favorites', JSON.stringify(Array.from(state.favorites)));
+        sessionStorage.setItem('mangalSetu_profiles', JSON.stringify(PROFILES));
+        sessionStorage.setItem('mangalSetu_chatThreads', JSON.stringify(CHAT_THREADS));
+        sessionStorage.setItem('mangalSetu_incomingRequests', JSON.stringify(typeof INCOMING_REQUESTS !== 'undefined' ? INCOMING_REQUESTS : []));
+        sessionStorage.setItem('mangalSetu_outgoingRequests', JSON.stringify(typeof OUTGOING_REQUESTS !== 'undefined' ? OUTGOING_REQUESTS : []));
+        sessionStorage.setItem('mangalSetu_history', JSON.stringify(state.history));
     } catch (e) {
         console.error('saveSessionState error', e);
     }
@@ -247,7 +247,21 @@ function saveSessionState() {
 
 function loadSessionState() {
     try {
-        const savedProfiles = sessionStorage.getItem('lagnaSetu_profiles');
+        // Transparent backward-compatibility migration from legacy storage keys
+        try {
+            ['activeUser', 'lastActiveTimestamp', 'profileComplete', 'membershipPaid', 'activeScreen', 'profiles', 'currentUser', 'favorites', 'chatThreads', 'incomingRequests', 'outgoingRequests', 'history', 'visited'].forEach(k => {
+                const oldLs = localStorage.getItem('lagnaSetu_' + k);
+                if (oldLs !== null && localStorage.getItem('mangalSetu_' + k) === null) {
+                    localStorage.setItem('mangalSetu_' + k, oldLs);
+                }
+                const oldSs = sessionStorage.getItem('lagnaSetu_' + k);
+                if (oldSs !== null && sessionStorage.getItem('mangalSetu_' + k) === null) {
+                    sessionStorage.setItem('mangalSetu_' + k, oldSs);
+                }
+            });
+        } catch (_) {}
+
+        const savedProfiles = sessionStorage.getItem('mangalSetu_profiles');
         if (savedProfiles) {
             const parsed = JSON.parse(savedProfiles);
             if (Array.isArray(parsed) && parsed.length > 0) {
@@ -258,32 +272,32 @@ function loadSessionState() {
         // Strict 10-minute session validation:
         // Check whether more than 10 minutes have elapsed since last active timestamp
         const TEN_MINUTES_MS = 10 * 60 * 1000;
-        const lastActive = Number(localStorage.getItem('lagnaSetu_lastActiveTimestamp') || 0);
-        const lsUser = localStorage.getItem('lagnaSetu_activeUser');
-        const sessionUser = sessionStorage.getItem('lagnaSetu_currentUser');
+        const lastActive = Number(localStorage.getItem('mangalSetu_lastActiveTimestamp') || 0);
+        const lsUser = localStorage.getItem('mangalSetu_activeUser');
+        const sessionUser = sessionStorage.getItem('mangalSetu_currentUser');
 
         let savedUser = null;
         if (lastActive > 0 && (Date.now() - lastActive > TEN_MINUTES_MS)) {
             // More than 10 minutes have elapsed since last activity -> Session expired!
             console.warn(`[Session] Expired due to 10 minutes inactivity (${Date.now() - lastActive}ms). Clearing session.`);
-            sessionStorage.removeItem('lagnaSetu_currentUser');
-            sessionStorage.removeItem('lagnaSetu_user');
+            sessionStorage.removeItem('mangalSetu_currentUser');
+            sessionStorage.removeItem('mangalSetu_user');
             try {
-                localStorage.removeItem('lagnaSetu_activeUser');
-                localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
-                localStorage.removeItem('lagnaSetu_profileComplete');
-                localStorage.removeItem('lagnaSetu_membershipPaid');
-                localStorage.removeItem('lagnaSetu_activeScreen');
+                localStorage.removeItem('mangalSetu_activeUser');
+                localStorage.removeItem('mangalSetu_lastActiveTimestamp');
+                localStorage.removeItem('mangalSetu_profileComplete');
+                localStorage.removeItem('mangalSetu_membershipPaid');
+                localStorage.removeItem('mangalSetu_activeScreen');
             } catch (_) {}
             state.currentUser = null;
             window._sessionTimedOutOnBoot = true;
         } else if (sessionUser || lsUser) {
             // Within 10 minutes: session is valid!
             savedUser = sessionUser || lsUser;
-            sessionStorage.setItem('lagnaSetu_currentUser', savedUser);
+            sessionStorage.setItem('mangalSetu_currentUser', savedUser);
             try {
-                localStorage.setItem('lagnaSetu_activeUser', savedUser);
-                localStorage.setItem('lagnaSetu_lastActiveTimestamp', Date.now().toString());
+                localStorage.setItem('mangalSetu_activeUser', savedUser);
+                localStorage.setItem('mangalSetu_lastActiveTimestamp', Date.now().toString());
             } catch (_) {}
         }
         if (savedUser) {
@@ -349,11 +363,11 @@ function loadSessionState() {
         } else {
             state.membershipPaid = false;
         }
-        const savedFavs = sessionStorage.getItem('lagnaSetu_favorites');
+        const savedFavs = sessionStorage.getItem('mangalSetu_favorites');
         if (savedFavs) {
             state.favorites = new Set(JSON.parse(savedFavs));
         }
-        const savedChat = sessionStorage.getItem('lagnaSetu_chatThreads');
+        const savedChat = sessionStorage.getItem('mangalSetu_chatThreads');
         if (savedChat) {
             const parsedChat = JSON.parse(savedChat);
             if (Array.isArray(parsedChat) && parsedChat.length > 0) {
@@ -368,7 +382,7 @@ function loadSessionState() {
                 });
             }
         }
-        const savedIncoming = sessionStorage.getItem('lagnaSetu_incomingRequests');
+        const savedIncoming = sessionStorage.getItem('mangalSetu_incomingRequests');
         if (savedIncoming && typeof INCOMING_REQUESTS !== 'undefined') {
             const parsed = JSON.parse(savedIncoming);
             if (Array.isArray(parsed)) {
@@ -376,7 +390,7 @@ function loadSessionState() {
                 parsed.forEach(r => INCOMING_REQUESTS.push(r));
             }
         }
-        const savedOutgoing = sessionStorage.getItem('lagnaSetu_outgoingRequests');
+        const savedOutgoing = sessionStorage.getItem('mangalSetu_outgoingRequests');
         if (savedOutgoing && typeof OUTGOING_REQUESTS !== 'undefined') {
             const parsed = JSON.parse(savedOutgoing);
             if (Array.isArray(parsed)) {
@@ -384,13 +398,13 @@ function loadSessionState() {
                 parsed.forEach(r => OUTGOING_REQUESTS.push(r));
             }
         }
-        const savedHistory = sessionStorage.getItem('lagnaSetu_history');
+        const savedHistory = sessionStorage.getItem('mangalSetu_history');
         if (savedHistory) {
             state.history = JSON.parse(savedHistory);
         }
-        const pId = sessionStorage.getItem('lagnaSetu_activeProfileId');
+        const pId = sessionStorage.getItem('mangalSetu_activeProfileId');
         if (pId) state.activeProfileId = Number(pId);
-        const cId = sessionStorage.getItem('lagnaSetu_activeChatId');
+        const cId = sessionStorage.getItem('mangalSetu_activeChatId');
         if (cId) state.activeChatId = Number(cId);
 
         // If user is logged in, asynchronously trigger Supabase live chat & interest sync

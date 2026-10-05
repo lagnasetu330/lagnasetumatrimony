@@ -1,4 +1,4 @@
-/* ============================================================ LAGNA SETU APPLICATION ENTRY POINT ============================================================ */
+/* ============================================================ MANGAL SETU APPLICATION ENTRY POINT ============================================================ */
 
 function initApp() {
     loadSessionState();
@@ -29,10 +29,10 @@ function initApp() {
             supabaseCheckUserExists(state.currentUser.email).then(check => {
                 if (check && check.online && !check.exists) {
                     if (!state.profileComplete && typeof supabaseUpsertUser === 'function') {
-                        console.warn('[LagnaSetu] Incomplete profile user not in Supabase yet. Re-syncing.');
+                        console.warn('[MangalSetu] Incomplete profile user not in Supabase yet. Re-syncing.');
                         supabaseUpsertUser(state.currentUser).catch(() => {});
                     } else {
-                        console.warn('[LagnaSetu] Active session user was deleted in Supabase. Logging out.');
+                        console.warn('[MangalSetu] Active session user was deleted in Supabase. Logging out.');
                         if (typeof purgeUserAccountLocally === 'function') {
                             purgeUserAccountLocally(state.currentUser.email, state.currentUser.id);
                         } else {
@@ -87,8 +87,8 @@ function initApp() {
         }
     }
 
-    const visited = sessionStorage.getItem('lagnaSetu_visited');
-    const savedScreen = sessionStorage.getItem('lagnaSetu_activeScreen') || localStorage.getItem('lagnaSetu_activeScreen');
+    const visited = sessionStorage.getItem('mangalSetu_visited');
+    const savedScreen = sessionStorage.getItem('mangalSetu_activeScreen') || localStorage.getItem('mangalSetu_activeScreen');
     const rawHash = (window.location.hash || '').replace('#/', '').replace('#', '');
 
     const PUBLIC_GUEST_SCREENS = new Set([
@@ -264,14 +264,14 @@ function initApp() {
         if (targetScreen === 'scr-help') renderFaqs();
 
         showGlobalLoader('Loading...', 240);
-        sessionStorage.setItem('lagnaSetu_visited', 'true');
+        sessionStorage.setItem('mangalSetu_visited', 'true');
         saveSessionState();
     } else {
         // First fresh visit to root without session or hash: show splash briefly, then welcome
         setTimeout(() => {
             state.history = ['scr-welcome'];
             go('scr-welcome', true);
-            sessionStorage.setItem('lagnaSetu_visited', 'true');
+            sessionStorage.setItem('mangalSetu_visited', 'true');
             saveSessionState();
         }, 850);
     }
@@ -317,7 +317,7 @@ function bootstrapApp() {
                 if (typeof renderFilterCasteOptions === 'function') renderFilterCasteOptions();
             } else if (key === 'contact_details' && value) {
                 window.REMOTE_CONTACT = value;
-                try { localStorage.setItem('lagna_setu_contact_info', JSON.stringify(value)); } catch(e) {}
+                try { localStorage.setItem('mangal_setu_contact_info', JSON.stringify(value)); } catch(e) {}
             }
         });
     }

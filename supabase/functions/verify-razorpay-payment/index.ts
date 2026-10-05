@@ -1,5 +1,5 @@
 // ==============================================================================
-// LAGNA SETU — SUPABASE EDGE FUNCTION: VERIFY RAZORPAY PAYMENT
+// MANGAL SETU — SUPABASE EDGE FUNCTION: VERIFY RAZORPAY PAYMENT
 // Location: supabase/functions/verify-razorpay-payment/index.ts
 // Runtime: Deno / TypeScript (Supabase Edge Functions)
 // Prevents fraudulent client-side activation using HMAC-SHA256 signature verification

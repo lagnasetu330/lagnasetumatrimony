@@ -262,7 +262,7 @@ function validateGmail(value) {
 
     // Must be @gmail.com specifically (this app is Gmail-based)
     if (domain !== 'gmail.com') {
-        return { ok: false, msg: 'Only Gmail addresses (@gmail.com) are accepted on Lagna Setu' };
+        return { ok: false, msg: 'Only Gmail addresses (@gmail.com) are accepted on Mangal Setu' };
     }
 
     // Min 3 chars before @
@@ -434,7 +434,7 @@ function goToRegStep3() {
     }
     if (!state.regData.age || state.regData.age < 18) {
         const wrap = (dobInput && typeof dobInput.closest === 'function') ? dobInput.closest('.input-icon-wrap') : dobInput;
-        highlightFieldError(wrap, 'You must be at least 18 years old to register on Lagna Setu');
+        highlightFieldError(wrap, 'You must be at least 18 years old to register on Mangal Setu');
         return;
     }
 
@@ -654,7 +654,7 @@ function quickWhatsApp(phone, name) {
         return;
     }
     const clean = phone.replace(/[^0-9]/g, '');
-    const text = encodeURIComponent(`Namaste, we saw ${name}'s profile on Lagna Setu Matrimony and would like to connect.`);
+    const text = encodeURIComponent(`Namaste, we saw ${name}'s profile on Mangal Setu Matrimony and would like to connect.`);
     window.open(`https://wa.me/${clean}?text=${text}`, '_blank');
 }
 function openQuickReport(id) {
@@ -829,7 +829,7 @@ function recordUserActivity(force = false) {
         lastUserActivityTimestamp = now;
         if (typeof state !== 'undefined' && state.currentUser && state.currentUser.email) {
             try {
-                localStorage.setItem('lagnaSetu_lastActiveTimestamp', String(now));
+                localStorage.setItem('mangalSetu_lastActiveTimestamp', String(now));
             } catch (_) {}
         }
     }
@@ -848,7 +848,7 @@ function onVisibilityOrFocusChange() {
         recordUserActivity(true);
     } else {
         // App / tab resumed / foregrounded: check if > 10 minutes passed while away
-        const storedActive = Number(localStorage.getItem('lagnaSetu_lastActiveTimestamp') || lastUserActivityTimestamp || 0);
+        const storedActive = Number(localStorage.getItem('mangalSetu_lastActiveTimestamp') || lastUserActivityTimestamp || 0);
         const idleTime = now - storedActive;
         if (idleTime >= INACTIVITY_LIMIT_MS) {
             console.warn(`[AutoLogout] User resumed after ${Math.round(idleTime / 1000)}s (>10 minutes). Logging out.`);
@@ -893,7 +893,7 @@ function initInactivityTimer(customTimeoutMs) {
         }
 
         const now = Date.now();
-        const storedActive = Number(localStorage.getItem('lagnaSetu_lastActiveTimestamp') || 0);
+        const storedActive = Number(localStorage.getItem('mangalSetu_lastActiveTimestamp') || 0);
         const effectiveLast = Math.max(lastUserActivityTimestamp, storedActive);
         const idleTime = now - effectiveLast;
 
@@ -905,8 +905,8 @@ function initInactivityTimer(customTimeoutMs) {
             } else {
                 sessionStorage.clear();
                 try {
-                    localStorage.removeItem('lagnaSetu_activeUser');
-                    localStorage.removeItem('lagnaSetu_lastActiveTimestamp');
+                    localStorage.removeItem('mangalSetu_activeUser');
+                    localStorage.removeItem('mangalSetu_lastActiveTimestamp');
                 } catch (_) {}
                 if (typeof go === 'function') go('scr-welcome', true);
                 if (typeof showToast === 'function') {
