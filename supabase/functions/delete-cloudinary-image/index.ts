@@ -1,8 +1,11 @@
+// @ts-nocheck
 // ==============================================================================
 // MANGAL SETU — SUPABASE EDGE FUNCTION: DELETE CLOUDINARY IMAGES
 // Location: supabase/functions/delete-cloudinary-image/index.ts
 // Runtime: Deno / TypeScript (Supabase Edge Functions)
 // ==============================================================================
+
+declare const Deno: any;
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 

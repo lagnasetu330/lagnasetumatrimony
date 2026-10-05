@@ -1,8 +1,11 @@
+// @ts-nocheck
 // ==============================================================================
 // MANGAL SETU — SUPABASE EDGE FUNCTION: CREATE RAZORPAY ORDER
 // Location: supabase/functions/create-razorpay-order/index.ts
 // Runtime: Deno / TypeScript (Supabase Edge Functions)
 // ==============================================================================
+
+declare const Deno: any;
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 

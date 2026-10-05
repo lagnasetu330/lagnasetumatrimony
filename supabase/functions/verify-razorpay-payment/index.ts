@@ -1,9 +1,12 @@
+// @ts-nocheck
 // ==============================================================================
 // MANGAL SETU — SUPABASE EDGE FUNCTION: VERIFY RAZORPAY PAYMENT
 // Location: supabase/functions/verify-razorpay-payment/index.ts
 // Runtime: Deno / TypeScript (Supabase Edge Functions)
 // Prevents fraudulent client-side activation using HMAC-SHA256 signature verification
 // ==============================================================================
+
+declare const Deno: any;
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createHmac } from "https://deno.land/std@0.168.0/node/crypto.ts";
