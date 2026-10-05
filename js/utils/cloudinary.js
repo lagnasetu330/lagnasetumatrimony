@@ -4,8 +4,8 @@
    ============================================================================== */
 
 const CLOUDINARY_CONFIG = {
-    cloudName: window.CLOUDINARY_CLOUD_NAME || 'gsu8jot2',
-    uploadPreset: window.CLOUDINARY_UPLOAD_PRESET || 'lagna_setu_profiles',
+    cloudName: window.CLOUDINARY_CLOUD_NAME || 'yohel4bd',
+    uploadPreset: window.CLOUDINARY_UPLOAD_PRESET || 'mangal_setu_profiles',
     apiBase: 'https://api.cloudinary.com/v1_1'
 };
 
