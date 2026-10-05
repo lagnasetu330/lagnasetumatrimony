@@ -1320,22 +1320,24 @@ async function doLogin() {
             state.currentUser.photos = myProf.photos || [state.currentUser.img];
         }
 
-        // Handle Remember Me preference (Store only email, NEVER plaintext or base64 password)
+        // Handle Remember Me preference (Save email & password if checked)
         const remCheckbox = document.getElementById('loginRememberMe');
         const isRemember = remCheckbox ? remCheckbox.checked : false;
         if (isRemember) {
             try {
                 localStorage.setItem('mangalSetu_rememberMe', 'true');
                 localStorage.setItem('mangalSetu_rememberEmail', email);
+                if (pass) {
+                    localStorage.setItem('mangalSetu_rememberPass', encodeStoredUserPass(pass));
+                }
             } catch (_) {}
         } else {
             try {
                 localStorage.removeItem('mangalSetu_rememberMe');
                 localStorage.removeItem('mangalSetu_rememberEmail');
+                localStorage.removeItem('mangalSetu_rememberPass');
             } catch (_) {}
         }
-        // Always purge any insecure stored plaintext/base64 passwords from localStorage
-        try { localStorage.removeItem('mangalSetu_rememberPass'); } catch (_) {}
 
         // Start 10-minute inactivity timer
         if (typeof initInactivityTimer === 'function') {
@@ -1900,25 +1902,47 @@ async function handleResetPassword() {
 }
 
 // ============================================================ REMEMBER ME CREDENTIAL HELPERS ============================================================
+function encodeStoredUserPass(p) {
+    if (!p) return '';
+    try {
+        return btoa(unescape(encodeURIComponent(p)));
+    } catch (_) {
+        return btoa(p);
+    }
+}
+
+function decodeStoredUserPass(p) {
+    if (!p) return '';
+    try {
+        return decodeURIComponent(escape(atob(p)));
+    } catch (_) {
+        return atob(p);
+    }
+}
+
 function restoreRememberedLogin() {
     try {
-        // Purge any legacy stored password immediately
-        try { localStorage.removeItem('mangalSetu_rememberPass'); } catch (_) {}
-
         const isRemember = localStorage.getItem('mangalSetu_rememberMe') === 'true';
         const remEmail = localStorage.getItem('mangalSetu_rememberEmail') || '';
+        const remPass = decodeStoredUserPass(localStorage.getItem('mangalSetu_rememberPass') || '');
 
         const emailInput = document.getElementById('loginEmail');
+        const passInput = document.getElementById('loginPass');
         const chkBox = document.getElementById('loginRememberMe');
 
         if (chkBox) {
             chkBox.checked = isRemember;
         }
 
-        if (isRemember && emailInput && remEmail && !emailInput.value) {
-            emailInput.value = remEmail;
-            if (typeof liveGmailValidate === 'function') {
-                liveGmailValidate(emailInput);
+        if (isRemember) {
+            if (emailInput && remEmail && !emailInput.value) {
+                emailInput.value = remEmail;
+                if (typeof liveGmailValidate === 'function') {
+                    liveGmailValidate(emailInput);
+                }
+            }
+            if (passInput && remPass && !passInput.value) {
+                passInput.value = remPass;
             }
         }
     } catch (e) {
@@ -1932,6 +1956,18 @@ function onRememberMeToggle(chk) {
             localStorage.removeItem('mangalSetu_rememberMe');
             localStorage.removeItem('mangalSetu_rememberEmail');
             localStorage.removeItem('mangalSetu_rememberPass');
+        } catch (_) {}
+    } else if (chk && chk.checked) {
+        try {
+            localStorage.setItem('mangalSetu_rememberMe', 'true');
+            const emailInput = document.getElementById('loginEmail');
+            const passInput = document.getElementById('loginPass');
+            if (emailInput && emailInput.value) {
+                localStorage.setItem('mangalSetu_rememberEmail', emailInput.value.trim().toLowerCase());
+            }
+            if (passInput && passInput.value) {
+                localStorage.setItem('mangalSetu_rememberPass', encodeStoredUserPass(passInput.value));
+            }
         } catch (_) {}
     }
 }
