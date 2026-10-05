@@ -108,29 +108,21 @@ function decodeStoredAdminPass(p) {
  */
 function restoreAdminRememberMe() {
     try {
+        // Purge any legacy stored password immediately
+        try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
+
         const isRem = localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true';
         const remEmail = localStorage.getItem('lagnaSetu_admin_rememberEmail') || '';
-        const rawPass = localStorage.getItem('lagnaSetu_admin_rememberPass') || '';
         const chk = document.getElementById('adminRememberMe');
         const emailInput = document.getElementById('loginEmail');
-        const passInput = document.getElementById('loginPass');
 
         if (chk) chk.checked = isRem;
-        if (isRem) {
-            if (remEmail && emailInput && !emailInput.value) {
-                emailInput.value = remEmail;
-            }
-            if (rawPass && passInput && !passInput.value) {
-                try {
-                    passInput.value = decodeStoredAdminPass(rawPass);
-                } catch (_) {}
-            }
+        if (isRem && remEmail && emailInput && !emailInput.value) {
+            emailInput.value = remEmail;
         }
     } catch (_) {}
 }
 window.restoreAdminRememberMe = restoreAdminRememberMe;
-window.encodeStoredAdminPass = encodeStoredAdminPass;
-window.decodeStoredAdminPass = decodeStoredAdminPass;
 
 /* ---------------- Rate Limiting / Brute Force Protection ---------------- */
 var LOGIN_SECURITY = {
@@ -229,17 +221,16 @@ async function doLogin() {
     if (isMatch) {
         clearLoginSecurityState();
 
-        // Handle Remember Me (both email and password)
+        // Handle Remember Me (Remember only email, NEVER store passwords in localStorage)
         const chk = document.getElementById('adminRememberMe');
         if (chk && chk.checked) {
             localStorage.setItem('lagnaSetu_admin_rememberMe', 'true');
             localStorage.setItem('lagnaSetu_admin_rememberEmail', email);
-            localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(pass));
         } else {
             localStorage.removeItem('lagnaSetu_admin_rememberMe');
             localStorage.removeItem('lagnaSetu_admin_rememberEmail');
-            localStorage.removeItem('lagnaSetu_admin_rememberPass');
         }
+        try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
 
         var sessionToken = await generateAdminSessionToken(creds.email, creds.passHash);
         sessionStorage.setItem('admin_isLoggedIn', 'true');
@@ -344,10 +335,8 @@ async function updateAdminPassword() {
     var refreshedToken = await generateAdminSessionToken(creds.email, newHash);
     sessionStorage.setItem('admin_session_token', refreshedToken);
 
-    // If Remember Me was enabled, update remembered password so next visit uses new pass
-    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
-        localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(newPass));
-    }
+    // Always purge any stored password
+    try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
 
     if (curInput) curInput.value = '';
     if (newInput) newInput.value = '';
@@ -625,10 +614,8 @@ async function completeAdminPasswordReset() {
     ADMIN_CREDS = creds;
     window.ADMIN_CREDS = ADMIN_CREDS;
 
-    // If Remember Me was enabled, update remembered password so next visit uses new pass
-    if (localStorage.getItem('lagnaSetu_admin_rememberMe') === 'true') {
-        localStorage.setItem('lagnaSetu_admin_rememberPass', encodeStoredAdminPass(newPass));
-    }
+    // Always purge any stored password
+    try { localStorage.removeItem('lagnaSetu_admin_rememberPass'); } catch (_) {}
 
     // Clear security lockouts & reset state
     clearLoginSecurityState();

@@ -383,15 +383,33 @@ function mapProfileFromSupabase(row, forAdmin = false) {
     const rawEmail = row.email || raw.email || '';
     const rawFullAddress = row.full_address || raw.fullAddress || row.address || '';
 
-    // Mask sensitive contact details for public directory feed, but provide full raw details to Admin
+    // Mask sensitive contact details for public directory feed, but provide full raw details to Admin or authorized matches
     const fatherMobile = canViewUnmasked ? rawFatherMobile : maskPhoneNumber(rawFatherMobile);
     const ownMobile = canViewUnmasked ? rawOwnMobile : maskPhoneNumber(rawOwnMobile);
     const mobile = canViewUnmasked ? (rawOwnMobile || rawFatherMobile) : ownMobile;
     const email = canViewUnmasked ? rawEmail : maskEmailAddress(rawEmail);
     const fullAddress = canViewUnmasked ? rawFullAddress : (row.village || row.city ? `${row.village || row.city}${row.district ? ', Dist. ' + row.district : ''}` : 'Gujarat, India');
 
+    // Anti-Data Scraping Guard: Strip raw private identifiers when user is not authorized
+    const cleanRaw = { ...raw };
+    if (!canViewUnmasked) {
+        delete cleanRaw.fatherMobile;
+        delete cleanRaw.father_mobile;
+        delete cleanRaw.ownMobile;
+        delete cleanRaw.own_mobile;
+        delete cleanRaw.mobile;
+        delete cleanRaw.email;
+        delete cleanRaw.address;
+        delete cleanRaw.fullAddress;
+        delete cleanRaw.full_address;
+        delete cleanRaw.docImg;
+        delete cleanRaw.doc_img;
+        delete cleanRaw.docName;
+        delete cleanRaw.doc_name;
+    }
+
     return {
-        ...raw,
+        ...cleanRaw,
         id: row.id,
         userId: row.user_id || raw.userId || row.id,
         gender: row.gender || raw.gender || 'boys',
@@ -417,10 +435,10 @@ function mapProfileFromSupabase(row, forAdmin = false) {
         fatherOcc: row.father_occ || raw.fatherOcc || raw.father_occ || '',
         fatherMobile: fatherMobile,
         ownMobile: ownMobile,
-        rawFatherMobile: rawFatherMobile,
-        rawOwnMobile: rawOwnMobile,
-        rawEmail: rawEmail,
-        rawFullAddress: rawFullAddress,
+        rawFatherMobile: canViewUnmasked ? rawFatherMobile : null,
+        rawOwnMobile: canViewUnmasked ? rawOwnMobile : null,
+        rawEmail: canViewUnmasked ? rawEmail : null,
+        rawFullAddress: canViewUnmasked ? rawFullAddress : null,
         mobile: mobile,
         email: email,
         mother: row.mother || raw.mother || '',
@@ -468,19 +486,42 @@ async function supabaseFetchProfiles(filters = {}) {
     }
 
     try {
-        let query = client
-            .from('profiles')
-            .select('*')
-            .neq('account_status', 'suspended')
-            .neq('account_status', 'deleted')
-            .neq('verify_status', 'rejected');
+        // Priority 1: Query security-hardened community_profiles view (contacts masked at database level)
+        let data = null;
+        let error = null;
 
-        if (filters.caste && filters.caste !== 'All' && filters.caste !== 'MY_COMMUNITY') {
-            query = query.eq('community', filters.caste);
+        try {
+            let viewQuery = client.from('community_profiles').select('*');
+            if (filters.caste && filters.caste !== 'All' && filters.caste !== 'MY_COMMUNITY') {
+                viewQuery = viewQuery.eq('community', filters.caste);
+            }
+            const viewRes = await viewQuery.order('created_at', { ascending: false });
+            if (!viewRes.error && Array.isArray(viewRes.data)) {
+                data = viewRes.data;
+            } else if (viewRes.error) {
+                // If community_profiles view does not exist yet in DB, fall back to profiles table
+                error = viewRes.error;
+            }
+        } catch (_) {}
+
+        if (!data) {
+            let query = client
+                .from('profiles')
+                .select('*')
+                .neq('account_status', 'suspended')
+                .neq('account_status', 'deleted')
+                .neq('verify_status', 'rejected');
+
+            if (filters.caste && filters.caste !== 'All' && filters.caste !== 'MY_COMMUNITY') {
+                query = query.eq('community', filters.caste);
+            }
+
+            const tableRes = await query.order('created_at', { ascending: false });
+            data = tableRes.data;
+            error = tableRes.error;
         }
 
-        const { data, error } = await query.order('created_at', { ascending: false });
-        if (error) {
+        if (error && !data) {
             console.warn('[Supabase] Profiles fetch note:', error.message);
             return (window.PROFILES || []).filter(p => !isUserPurged(p) && p.visible !== false);
         }

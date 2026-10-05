@@ -922,8 +922,6 @@ async function signupOtpVerified() {
     }
     if (!isValid && state.regData && state.regData.generatedOtp && entered === state.regData.generatedOtp) {
         isValid = true;
-    } else if (!isValid && entered === '123456') {
-        isValid = true;
     }
 
     if (!isValid) {
@@ -1376,24 +1374,22 @@ async function doLogin() {
             state.currentUser.photos = myProf.photos || [state.currentUser.img];
         }
 
-        // Handle Remember Me preference
+        // Handle Remember Me preference (Store only email, NEVER plaintext or base64 password)
         const remCheckbox = document.getElementById('loginRememberMe');
         const isRemember = remCheckbox ? remCheckbox.checked : false;
         if (isRemember) {
             try {
                 localStorage.setItem('lagnaSetu_rememberMe', 'true');
                 localStorage.setItem('lagnaSetu_rememberEmail', email);
-                if (pass) {
-                    localStorage.setItem('lagnaSetu_rememberPass', btoa(pass));
-                }
             } catch (_) {}
         } else {
             try {
                 localStorage.removeItem('lagnaSetu_rememberMe');
                 localStorage.removeItem('lagnaSetu_rememberEmail');
-                localStorage.removeItem('lagnaSetu_rememberPass');
             } catch (_) {}
         }
+        // Always purge any insecure stored plaintext/base64 passwords from localStorage
+        try { localStorage.removeItem('lagnaSetu_rememberPass'); } catch (_) {}
 
         // Start 10-minute inactivity timer
         if (typeof initInactivityTimer === 'function') {
@@ -1843,8 +1839,6 @@ async function verifyForgotOtp() {
     }
     if (!isValid && forgotPasswordState.otp && entered === forgotPasswordState.otp) {
         isValid = true;
-    } else if (!isValid && entered === '123456') {
-        isValid = true;
     }
 
     if (!isValid) {
@@ -1976,29 +1970,23 @@ async function handleResetPassword() {
 // ============================================================ REMEMBER ME CREDENTIAL HELPERS ============================================================
 function restoreRememberedLogin() {
     try {
+        // Purge any legacy stored password immediately
+        try { localStorage.removeItem('lagnaSetu_rememberPass'); } catch (_) {}
+
         const isRemember = localStorage.getItem('lagnaSetu_rememberMe') === 'true';
         const remEmail = localStorage.getItem('lagnaSetu_rememberEmail') || '';
-        const remPassEnc = localStorage.getItem('lagnaSetu_rememberPass') || '';
 
         const emailInput = document.getElementById('loginEmail');
-        const passInput = document.getElementById('loginPass');
         const chkBox = document.getElementById('loginRememberMe');
 
         if (chkBox) {
             chkBox.checked = isRemember;
         }
 
-        if (isRemember) {
-            if (emailInput && remEmail && !emailInput.value) {
-                emailInput.value = remEmail;
-                if (typeof liveGmailValidate === 'function') {
-                    liveGmailValidate(emailInput);
-                }
-            }
-            if (passInput && remPassEnc && !passInput.value) {
-                try {
-                    passInput.value = atob(remPassEnc);
-                } catch (_) {}
+        if (isRemember && emailInput && remEmail && !emailInput.value) {
+            emailInput.value = remEmail;
+            if (typeof liveGmailValidate === 'function') {
+                liveGmailValidate(emailInput);
             }
         }
     } catch (e) {
