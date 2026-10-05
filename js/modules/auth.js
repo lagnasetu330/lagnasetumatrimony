@@ -499,31 +499,29 @@ function handleSendSignupOtp() {
         if (inp) inp.value = '';
     }
 
-    // Dispatch 6-digit OTP code: Primary is Supabase Live SMTP (supports 500+ emails/day free).
-    // EmailJS is kept strictly as a fallback if Supabase fails or client is offline,
-    // ensuring users receive only ONE single OTP email without duplicates.
+    // Dispatch 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaSupabase = false;
-        if (typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
+        let sentViaEmailJs = false;
+        if (typeof sendOtpEmail === 'function') {
+            try {
+                await sendOtpEmail(email, generatedOtp, state.regData.name || 'Member', 'signup');
+                sentViaEmailJs = true;
+                console.info('[Auth] Signup OTP dispatched successfully via EmailJS');
+            } catch (err) {
+                console.warn('[EmailService] Signup OTP notice:', err);
+            }
+        }
+
+        // Secondary fallback to Supabase if EmailJS is unavailable
+        if (!sentViaEmailJs && typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
             try {
                 const res = await supabaseSendEmailOtp(email);
                 if (res && !res.error) {
-                    sentViaSupabase = true;
-                    console.info('[Auth] Signup OTP dispatched successfully via Supabase SMTP');
-                } else if (res && res.error) {
-                    console.warn('[Supabase] Signup OTP note:', res.error.message);
+                    console.info('[Auth] Signup OTP dispatched via Supabase fallback');
                 }
             } catch (err) {
                 console.warn('[Supabase] SMTP notice:', err);
             }
-        }
-
-        // Only fallback to EmailJS if Supabase was unable to send
-        if (!sentViaSupabase && typeof sendOtpEmail === 'function') {
-            console.info('[Auth] Supabase unavailable, falling back to EmailJS for signup OTP');
-            sendOtpEmail(email, generatedOtp, state.regData.name || 'Member', 'signup').catch(err => {
-                console.warn('[EmailService] OTP notice:', err);
-            });
         }
     })();
 
@@ -572,27 +570,29 @@ function handleResendSignupOtp() {
         if (inp) inp.value = '';
     }
 
-    // Dispatch fresh 6-digit OTP code: Primary is Supabase SMTP. EmailJS is strictly a fallback.
+    // Dispatch fresh 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaSupabase = false;
-        if (typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
+        let sentViaEmailJs = false;
+        if (typeof sendOtpEmail === 'function') {
+            try {
+                await sendOtpEmail(state.regData.email, generatedOtp, state.regData.name || 'Member', 'signup');
+                sentViaEmailJs = true;
+                console.info('[Auth] Resend OTP dispatched successfully via EmailJS');
+            } catch (err) {
+                console.warn('[EmailService] Resend OTP notice:', err);
+            }
+        }
+
+        // Secondary fallback to Supabase if EmailJS is unavailable
+        if (!sentViaEmailJs && typeof supabaseSendEmailOtp === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
             try {
                 const res = await supabaseSendEmailOtp(state.regData.email);
                 if (res && !res.error) {
-                    sentViaSupabase = true;
-                    console.info('[Auth] Resend OTP dispatched successfully via Supabase SMTP');
-                } else if (res && res.error) {
-                    console.warn('[Supabase] Resend OTP note:', res.error.message);
+                    console.info('[Auth] Resend OTP dispatched via Supabase fallback');
                 }
             } catch (err) {
                 console.warn('[Supabase] Resend OTP notice:', err);
             }
-        }
-
-        // Only fallback to EmailJS if Supabase was unable to send
-        if (!sentViaSupabase && typeof sendOtpEmail === 'function') {
-            console.info('[Auth] Supabase unavailable, falling back to EmailJS for resend OTP');
-            sendOtpEmail(state.regData.email, generatedOtp, state.regData.name || 'Member', 'signup').catch(() => {});
         }
     })();
 
@@ -1764,27 +1764,29 @@ function handleSendForgotOtp(isResend = false) {
         if (inp) inp.value = '';
     }
 
-    // Dispatch 6-digit OTP code: Primary is Supabase SMTP. EmailJS is strictly a fallback.
+    // Dispatch 6-digit OTP code via EmailJS (branded Royal Purple template from mangalsetu.in@gmail.com)
     (async () => {
-        let sentViaSupabase = false;
-        if (typeof supabaseSendPasswordReset === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
+        let sentViaEmailJs = false;
+        if (typeof sendOtpEmail === 'function') {
+            try {
+                await sendOtpEmail(email, generatedOtp, 'Member', 'reset');
+                sentViaEmailJs = true;
+                console.info('[Auth] Password reset OTP dispatched successfully via EmailJS');
+            } catch (err) {
+                console.warn('[EmailService] Reset OTP notice:', err);
+            }
+        }
+
+        // Secondary fallback to Supabase if EmailJS is unavailable
+        if (!sentViaEmailJs && typeof supabaseSendPasswordReset === 'function' && typeof getSupabaseClient === 'function' && getSupabaseClient()) {
             try {
                 const res = await supabaseSendPasswordReset(email);
                 if (res && !res.error) {
-                    sentViaSupabase = true;
-                    console.info('[Auth] Password reset OTP dispatched via Supabase SMTP');
-                } else if (res && res.error) {
-                    console.warn('[Supabase] Password reset note:', res.error.message);
+                    console.info('[Auth] Password reset OTP dispatched via Supabase fallback');
                 }
             } catch (err) {
                 console.warn('[Supabase] Reset OTP notice:', err);
             }
-        }
-
-        // Only fallback to EmailJS if Supabase was unable to send
-        if (!sentViaSupabase && typeof sendOtpEmail === 'function') {
-            console.info('[Auth] Supabase unavailable, falling back to EmailJS for password reset');
-            sendOtpEmail(email, generatedOtp, 'Member', 'reset').catch(e => {});
         }
     })();
 
