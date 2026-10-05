@@ -256,6 +256,35 @@ async function deleteFromCloudinary(publicIdOrUrl, options = {}) {
 async function deleteMultipleCloudinaryImages(items = []) {
     if (!Array.isArray(items) || items.length === 0) return [];
     console.info(`[Cloudinary] Purging ${items.length} photo asset(s)...`);
+
+    // Method A: Call Supabase Edge Function to securely destroy via backend API Secret
+    try {
+        const edgeUrl = 'https://zlxxegebqyatlpiyvggh.supabase.co/functions/v1/delete-cloudinary-image';
+        const anonKey = (typeof SUPABASE_CONFIG !== 'undefined' && SUPABASE_CONFIG.anonKey) || window.SUPABASE_ANON_KEY || 'sb_publishable_iRLyJJVLkpOUhjMxSD-uAA_HhpEemI0';
+        const res = await fetch(edgeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': anonKey,
+                'Authorization': `Bearer ${anonKey}`
+            },
+            body: JSON.stringify({
+                imageUrls: items.filter(i => typeof i === 'string' && i.includes('http')),
+                publicIds: items.filter(i => typeof i === 'string' && !i.includes('http'))
+            })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.success) {
+                console.info('[Cloudinary] Successfully purged via Edge Function:', data);
+                return data.results || [];
+            }
+        }
+    } catch(edgeErr) {
+        console.warn('[Cloudinary] Edge function purge note:', edgeErr);
+    }
+
+    // Method B: Client-side direct signed destroy fallback
     const results = [];
     for (const item of items) {
         if (!item) continue;
