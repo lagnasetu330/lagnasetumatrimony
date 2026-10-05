@@ -195,7 +195,7 @@ async function deleteFromCloudinary(publicIdOrUrl, options = {}) {
     if (!publicIdOrUrl) return { success: false, reason: 'Empty identifier' };
     const publicId = publicIdOrUrl.includes('http') ? extractCloudinaryPublicId(publicIdOrUrl) : publicIdOrUrl;
     const deleteToken = options.deleteToken || null;
-    const cloudName = options.cloudName || CLOUDINARY_CONFIG.cloudName || 'gsu8jot2';
+    const cloudName = options.cloudName || CLOUDINARY_CONFIG.cloudName || 'yohel4bd';
     const apiKey = options.apiKey || window.CLOUDINARY_API_KEY || '';
     const apiSecret = options.apiSecret || window.CLOUDINARY_API_SECRET || '';
 
