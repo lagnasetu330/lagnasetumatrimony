@@ -27,25 +27,11 @@ function getSupabaseClient() {
  * @param {Object} metadata { name, gender }
  */
 async function supabaseAuthSignUp(email, password, metadata = {}) {
-    const client = getSupabaseClient();
-    if (!client) {
-        console.warn('[Supabase] Client not configured. Operating in LocalStorage mode.');
-        return { user: { id: 'local_' + Date.now(), email }, session: null };
-    }
-
-    const { data, error } = await client.auth.signUp({
-        email: email.toLowerCase(),
-        password: password,
-        options: {
-            data: {
-                name: metadata.name || '',
-                gender: metadata.gender || ''
-            }
-        }
-    });
-
-    if (error) throw error;
-    return data;
+    // Mangal Setu uses EmailJS as the official branded email OTP provider.
+    // Suppress client.auth.signUp to prevent Supabase's unbranded "Confirm your email address" email.
+    const normEmail = email ? email.toLowerCase() : '';
+    console.info('[Supabase] Auth registration handled via database single source of truth for:', normEmail);
+    return { user: { id: 'usr_' + Date.now(), email: normEmail }, session: null };
 }
 
 /**
@@ -80,25 +66,13 @@ async function supabaseAuthSignOut() {
 }
 
 /**
- * Send OTP via Supabase Auth (Dispatches real email to user's Gmail via configured SMTP)
+ * Send OTP via Supabase Auth (Supabase emails suppressed — EmailJS is official OTP provider)
  * @param {string} email
  */
 async function supabaseSendEmailOtp(email) {
-    const client = getSupabaseClient();
-    if (!client) {
-        console.warn('[Supabase] Client not initialized. Operating in local mode.');
-        return { data: null, error: null };
-    }
-    try {
-        const res = await client.auth.signInWithOtp({
-            email: email.toLowerCase(),
-            options: { shouldCreateUser: true }
-        });
-        return res;
-    } catch (err) {
-        console.warn('[Supabase] Send Email OTP note:', err?.message || err);
-        return { data: null, error: err };
-    }
+    // Suppress Supabase email dispatch: EmailJS is the sole authenticated provider
+    console.info('[Supabase] Email OTP dispatch bypassed (handled exclusively by EmailJS)');
+    return { data: null, error: null };
 }
 
 /**
@@ -133,19 +107,13 @@ async function supabaseVerifyEmailOtp(email, token) {
 }
 
 /**
- * Send Password Reset Email via Supabase Auth
+ * Send Password Reset Email via Supabase Auth (Supabase emails suppressed — EmailJS is official OTP provider)
  * @param {string} email
  */
 async function supabaseSendPasswordReset(email) {
-    const client = getSupabaseClient();
-    if (!client) return { data: null, error: null };
-    try {
-        const res = await client.auth.resetPasswordForEmail(email.toLowerCase());
-        return res;
-    } catch (err) {
-        console.warn('[Supabase] Send password reset note:', err?.message || err);
-        return { data: null, error: err };
-    }
+    // Suppress Supabase email dispatch: EmailJS is the sole authenticated provider
+    console.info('[Supabase] Password reset email dispatch bypassed (handled exclusively by EmailJS)');
+    return { data: null, error: null };
 }
 
 /**
