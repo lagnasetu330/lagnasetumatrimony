@@ -1149,6 +1149,7 @@ function openProfile(id) {
 
     // Authorized On-Demand Contact Reveal:
     // Only fetch real unmasked contact if Interest is ACCEPTED, or viewer is self/admin!
+    const isSelf = typeof isSelfProfile === 'function' ? isSelfProfile(p) : (state.currentUser && (String(state.currentUser.id) === String(p.id) || (state.currentUser.email && p.email && state.currentUser.email.toLowerCase() === p.email.toLowerCase())));
     const interestStatus = typeof interestStatusFor === 'function' ? interestStatusFor(p.id) : null;
     const isContactUnlocked = isSelf || (interestStatus === 'accepted') || ((typeof isSessionValidSync === 'function' && isSessionValidSync()));
     if (isContactUnlocked && typeof supabaseFetchAuthorizedContact === 'function') {
