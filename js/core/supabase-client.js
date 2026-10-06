@@ -202,7 +202,12 @@ function mapProfileForSupabase(p) {
         img: p.img || (Array.isArray(p.photos) ? p.photos[0] : '') || '',
         photos: Array.isArray(p.photos) && p.photos.length > 0 ? p.photos : (p.img ? [p.img] : []),
         email: p.email || '',
-        mobile: p.mobile || p.ownMobile || '',
+        mobile: (!p.mobile?.includes('•') && p.mobile) ||
+                (!p.ownMobile?.includes('•') && p.ownMobile) ||
+                (!p.own_mobile?.includes('•') && p.own_mobile) ||
+                (!p.rawOwnMobile?.includes('•') && p.rawOwnMobile) ||
+                (!p.fatherMobile?.includes('•') && p.fatherMobile) ||
+                '',
         verify_status: p.verifyStatus || p.verify_status || 'approved',
         payment_status: p.paymentStatus || p.payment_status || 'unpaid',
         account_status: p.accountStatus || p.account_status || 'active',
@@ -869,12 +874,27 @@ async function supabaseFetchAllProfilesForAdmin() {
                 mapped.agreedTerms = uMatch.agreed_terms !== false;
                 mapped.agreedTermsAt = uMatch.agreed_terms_at || mapped.agreedTermsAt || p.created_at || null;
                 if (uMatch.role) mapped.role = uMatch.role;
-                if (!mapped.mobile && uMatch.mobile) mapped.mobile = uMatch.mobile;
+                if (uMatch.mobile && typeof uMatch.mobile === 'string' && uMatch.mobile.replace(/\D/g, '').length >= 10) {
+                    mapped.rawOwnMobile = uMatch.mobile;
+                    mapped.ownMobile = uMatch.mobile;
+                    if (!mapped.mobile || mapped.mobile.includes('•') || mapped.mobile.replace(/\D/g, '').length < 10) {
+                        mapped.mobile = uMatch.mobile;
+                    }
+                }
+                if (uMatch.email && !uMatch.email.includes('•')) {
+                    mapped.rawEmail = uMatch.email;
+                    mapped.email = uMatch.email;
+                }
                 if (!mapped.caste && uMatch.caste) mapped.community = uMatch.caste;
             } else {
                 mapped.agreedTerms = (mapped.agreedTerms !== undefined) ? mapped.agreedTerms : true;
                 mapped.agreedTermsAt = mapped.agreedTermsAt || p.created_at || null;
             }
+
+            // Normalise status to active or suspended
+            const pStatus = String(p.account_status || mapped.accountStatus || 'active').trim().toLowerCase();
+            mapped.accountStatus = (pStatus === 'suspended') ? 'suspended' : 'active';
+            mapped.account_status = mapped.accountStatus;
             return mapped;
         }).filter(Boolean);
 
@@ -965,8 +985,10 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
             payload.visible = isVisibleUpdate;
         }
         if (updates.featured !== undefined) payload.featured = updates.featured;
-        if (updates.suspensionReason !== undefined || updates.suspension_reason !== undefined) {
-            payload.suspension_reason = updates.suspensionReason || updates.suspension_reason;
+        if (updates.suspensionReason !== undefined) {
+            payload.suspension_reason = updates.suspensionReason;
+        } else if (updates.suspension_reason !== undefined) {
+            payload.suspension_reason = updates.suspension_reason;
         }
         if (updates.rejectReason !== undefined || updates.reject_reason !== undefined) {
             payload.reject_reason = updates.rejectReason || updates.reject_reason;
@@ -984,7 +1006,8 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
                 if (payload.account_status !== undefined) updatedRaw.accountStatus = payload.account_status;
                 if (isVisibleUpdate !== undefined) updatedRaw.visible = isVisibleUpdate;
                 if (updates.featured !== undefined) updatedRaw.featured = updates.featured;
-                if (updates.suspensionReason !== undefined) updatedRaw.suspensionReason = updates.suspensionReason || null;
+                if (updates.suspensionReason !== undefined) updatedRaw.suspensionReason = updates.suspensionReason;
+                else if (updates.suspension_reason !== undefined) updatedRaw.suspensionReason = updates.suspension_reason;
                 payload.raw_data = updatedRaw;
             } else if (isVisibleUpdate !== undefined) {
                 payload.raw_data = { visible: isVisibleUpdate };
@@ -1031,20 +1054,31 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         // Synchronize account status directly to users table as well
         if (payload.account_status !== undefined) {
             const userStatus = payload.account_status === 'suspended' ? 'Suspended' : 'Active';
+            const userSuspReason = (payload.account_status === 'suspended') ? (payload.suspension_reason || 'Suspended by admin review.') : null;
             try {
                 await client.from('users').update({
                     status: userStatus,
-                    suspension_reason: payload.suspension_reason || null,
+                    suspension_reason: userSuspReason,
                     updated_at: new Date().toISOString()
                 }).eq('id', String(profileId));
             } catch (_) {}
-            if (updates.email) {
+            if (updates.userId && String(updates.userId) !== String(profileId)) {
                 try {
                     await client.from('users').update({
                         status: userStatus,
-                        suspension_reason: payload.suspension_reason || null,
+                        suspension_reason: userSuspReason,
                         updated_at: new Date().toISOString()
-                    }).eq('email', String(updates.email).trim().toLowerCase());
+                    }).eq('id', String(updates.userId));
+                } catch (_) {}
+            }
+            const cleanTargetEmail = (updates.email && !updates.email.includes('•')) ? updates.email.trim().toLowerCase() : '';
+            if (cleanTargetEmail) {
+                try {
+                    await client.from('users').update({
+                        status: userStatus,
+                        suspension_reason: userSuspReason,
+                        updated_at: new Date().toISOString()
+                    }).eq('email', cleanTargetEmail);
                 } catch (_) {}
             }
         }
@@ -1148,17 +1182,24 @@ async function supabaseAdminUpdateMember(profileId, u) {
         }
 
         // 3. Keep public.users table synchronized as well
-        if (normEmail) {
-            await client
-                .from('users')
-                .update({
-                    name: u.name || '',
-                    gender: (u.gender === 'girls' || u.gender === 'Girl') ? 'Girl' : 'Boy',
-                    caste: u.community || u.caste || '',
-                    mobile: u.ownMobile || u.mobile || '',
-                    updated_at: new Date().toISOString()
-                })
-                .eq('email', normEmail);
+        const unmaskedPhone = (!u.ownMobile?.includes('•') && u.ownMobile) || (!u.mobile?.includes('•') && u.mobile) || '';
+        const userUpdatePayload = {
+            name: u.name || '',
+            gender: (u.gender === 'girls' || u.gender === 'Girl') ? 'Girl' : 'Boy',
+            caste: u.community || u.caste || '',
+            updated_at: new Date().toISOString()
+        };
+        if (unmaskedPhone && unmaskedPhone.replace(/\D/g, '').length >= 10) {
+            userUpdatePayload.mobile = unmaskedPhone;
+        }
+        if (normEmail && !normEmail.includes('•')) {
+            await client.from('users').update(userUpdatePayload).eq('email', normEmail);
+        }
+        if (profileId) {
+            await client.from('users').update(userUpdatePayload).eq('id', String(profileId));
+        }
+        if (u.userId && String(u.userId) !== String(profileId)) {
+            await client.from('users').update(userUpdatePayload).eq('id', String(u.userId));
         }
 
         console.info('[Supabase] Admin member profile updated live:', u.name, profileId);

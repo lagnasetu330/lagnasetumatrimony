@@ -58,56 +58,87 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
                 const myEmail = state.currentUser.email.trim().toLowerCase();
                 const curId = state.currentUser.id || state.currentUser.profileId;
                 const myProf = PROFILES.find(p => p && ((p.email && p.email.trim().toLowerCase() === myEmail) || (curId && (p.id == curId || p.userId == curId || p.user_id == curId))));
-                if (myProf && myProf.name && myProf.community) {
-                    if (!state.currentUser.name || state.currentUser.name === 'Member') {
-                        state.currentUser.name = myProf.name;
-                    }
-                    if (!state.currentUser.gender) {
-                        state.currentUser.gender = (myProf.gender === 'girls' || myProf.gender === 'Girl') ? 'Girl' : 'Boy';
-                    }
-                    if (!state.currentUser.caste) {
+                if (myProf) {
+                    if (myProf.name) state.currentUser.name = myProf.name;
+                    if (myProf.gender) state.currentUser.gender = (myProf.gender === 'girls' || myProf.gender === 'Girl') ? 'Girl' : 'Boy';
+                    if (myProf.community) {
                         state.currentUser.caste = myProf.community;
+                        state.currentUser.community = myProf.community;
                     }
-                    state.currentUser.community = myProf.community;
-                    if (!state.currentUser.img || !state.currentUser.photo) {
-                        state.currentUser.img = myProf.img || (Array.isArray(myProf.photos) && myProf.photos[0]);
-                        state.currentUser.photo = state.currentUser.img;
+                    if (myProf.img) {
+                        state.currentUser.img = myProf.img;
+                        state.currentUser.photo = myProf.img;
                     }
                     state.currentUser.profileId = myProf.id;
-                    state.currentUser.dob = myProf.dob || state.currentUser.dob || '';
-                    state.currentUser.age = myProf.age || state.currentUser.age || 24;
-                    state.currentUser.height = myProf.height || state.currentUser.height || '';
-                    state.currentUser.weight = myProf.weight || state.currentUser.weight || '';
-                    state.currentUser.education = myProf.education || state.currentUser.education || '';
-                    state.currentUser.occupation = myProf.occ || myProf.occupation || state.currentUser.occupation || '';
-                    state.currentUser.occ = myProf.occ || myProf.occupation || state.currentUser.occ || '';
-                    state.currentUser.income = myProf.income || state.currentUser.income || '';
-                    state.currentUser.marital = myProf.marital || state.currentUser.marital || 'Unmarried';
-                    state.currentUser.physical = myProf.physical || state.currentUser.physical || 'Normal';
-                    state.currentUser.hobbies = Array.isArray(myProf.hobbies) ? myProf.hobbies : (state.currentUser.hobbies || []);
-                    state.currentUser.father = myProf.father || state.currentUser.father || '';
-                    state.currentUser.fatherName = myProf.father || state.currentUser.fatherName || '';
-                    state.currentUser.fatherOcc = myProf.fatherOcc || state.currentUser.fatherOcc || '';
-                    state.currentUser.fatherMobile = myProf.fatherMobile || state.currentUser.fatherMobile || '';
-                    state.currentUser.mother = myProf.mother || state.currentUser.mother || '';
-                    state.currentUser.motherName = myProf.mother || state.currentUser.motherName || '';
-                    state.currentUser.motherOcc = myProf.motherOcc || state.currentUser.motherOcc || '';
-                    state.currentUser.sister = myProf.sister || state.currentUser.sister || 'None';
-                    state.currentUser.brother = myProf.brother || state.currentUser.brother || 'None';
-                    state.currentUser.village = myProf.village || myProf.city || state.currentUser.village || '';
-                    state.currentUser.city = myProf.village || myProf.city || state.currentUser.city || '';
-                    state.currentUser.taluka = myProf.taluka || state.currentUser.taluka || '';
-                    state.currentUser.district = myProf.district || state.currentUser.district || '';
-                    state.currentUser.address = myProf.fullAddress || myProf.address || state.currentUser.address || '';
-                    state.currentUser.fullAddress = myProf.fullAddress || myProf.address || state.currentUser.fullAddress || '';
-                    state.currentUser.ownMobile = myProf.ownMobile || state.currentUser.ownMobile || '';
-                    state.currentUser.mobile = myProf.ownMobile || myProf.mobile || state.currentUser.mobile || '';
-                    state.currentUser.photos = (Array.isArray(myProf.photos) && myProf.photos.length > 0) ? myProf.photos : (state.currentUser.photos || [state.currentUser.img]);
+                    if (myProf.dob !== undefined) state.currentUser.dob = myProf.dob || '';
+                    if (myProf.age !== undefined && myProf.age !== null) state.currentUser.age = myProf.age;
+                    if (myProf.height !== undefined) state.currentUser.height = myProf.height || '';
+                    if (myProf.weight !== undefined) state.currentUser.weight = myProf.weight || '';
+                    if (myProf.education !== undefined) state.currentUser.education = myProf.education || '';
+                    if (myProf.occ !== undefined || myProf.occupation !== undefined) {
+                        state.currentUser.occupation = myProf.occ || myProf.occupation || '';
+                        state.currentUser.occ = myProf.occ || myProf.occupation || '';
+                    }
+                    if (myProf.income !== undefined) state.currentUser.income = myProf.income || '';
+                    if (myProf.marital !== undefined) state.currentUser.marital = myProf.marital || 'Unmarried';
+                    if (myProf.physical !== undefined) state.currentUser.physical = myProf.physical || 'Normal';
+                    if (Array.isArray(myProf.hobbies)) state.currentUser.hobbies = myProf.hobbies;
+                    if (myProf.father !== undefined || myProf.fatherName !== undefined) {
+                        state.currentUser.father = myProf.father || myProf.fatherName || '';
+                        state.currentUser.fatherName = myProf.father || myProf.fatherName || '';
+                    }
+                    if (myProf.fatherOcc !== undefined) state.currentUser.fatherOcc = myProf.fatherOcc || '';
+                    if (myProf.fatherMobile !== undefined) state.currentUser.fatherMobile = myProf.fatherMobile || '';
+                    if (myProf.mother !== undefined || myProf.motherName !== undefined) {
+                        state.currentUser.mother = myProf.mother || myProf.motherName || '';
+                        state.currentUser.motherName = myProf.mother || myProf.motherName || '';
+                    }
+                    if (myProf.motherOcc !== undefined) state.currentUser.motherOcc = myProf.motherOcc || '';
+                    if (myProf.sister !== undefined) state.currentUser.sister = myProf.sister || 'None';
+                    if (myProf.brother !== undefined) state.currentUser.brother = myProf.brother || 'None';
+                    if (myProf.village !== undefined || myProf.city !== undefined) {
+                        state.currentUser.village = myProf.village || myProf.city || '';
+                        state.currentUser.city = myProf.village || myProf.city || '';
+                    }
+                    if (myProf.taluka !== undefined) state.currentUser.taluka = myProf.taluka || '';
+                    if (myProf.district !== undefined) state.currentUser.district = myProf.district || '';
+                    if (myProf.fullAddress !== undefined || myProf.address !== undefined) {
+                        state.currentUser.address = myProf.fullAddress || myProf.address || '';
+                        state.currentUser.fullAddress = myProf.fullAddress || myProf.address || '';
+                    }
+                    if (myProf.ownMobile !== undefined || myProf.mobile !== undefined) {
+                        state.currentUser.ownMobile = myProf.ownMobile || myProf.mobile || '';
+                        state.currentUser.mobile = myProf.ownMobile || myProf.mobile || '';
+                    }
+                    if (Array.isArray(myProf.photos) && myProf.photos.length > 0) {
+                        state.currentUser.photos = myProf.photos;
+                    }
+
+                    // Also sync account status if suspended/active
+                    if (myProf.account_status === 'suspended' || myProf.accountStatus === 'suspended') {
+                        state.currentUser.status = 'Suspended';
+                        state.currentUser.accountStatus = 'suspended';
+                    } else if (myProf.account_status === 'active' || myProf.accountStatus === 'active') {
+                        state.currentUser.status = 'Active';
+                        state.currentUser.accountStatus = 'active';
+                    }
 
                     const isDone = typeof isProfileFullyComplete === 'function' ? isProfileFullyComplete(state.currentUser) : true;
                     state.currentUser.profileComplete = isDone;
                     state.profileComplete = isDone;
                     if (typeof saveSessionState === 'function') saveSessionState();
+
+                    // Keep stored accounts in localStorage updated as well
+                    if (typeof getStoredAccounts === 'function' && typeof saveStoredAccounts === 'function') {
+                        try {
+                            const accounts = getStoredAccounts();
+                            const accIdx = accounts.findIndex(a => a && ((a.email && a.email.toLowerCase() === myEmail) || (curId && String(a.id) === String(curId))));
+                            if (accIdx !== -1) {
+                                accounts[accIdx] = { ...accounts[accIdx], ...state.currentUser };
+                                saveStoredAccounts(accounts);
+                            }
+                        } catch (_) {}
+                    }
                 }
             }
 
@@ -213,6 +244,40 @@ function setupProfilesRealtime() {
                 }
                 window.PROFILES = PROFILES;
                 saveCommunityProfiles();
+
+                // Live update currentUser model if own profile was updated remotely
+                if (typeof state !== 'undefined' && state.currentUser && prof) {
+                    const myId = String(state.currentUser.id || state.currentUser.profileId || '');
+                    const myEmail = (state.currentUser.email || '').trim().toLowerCase();
+                    const profId = String(prof.id || '');
+                    const profEmail = (prof.email || '').trim().toLowerCase();
+                    if ((profId && profId === myId) || (profEmail && profEmail === myEmail)) {
+                        if (prof.name) state.currentUser.name = prof.name;
+                        if (prof.gender) state.currentUser.gender = (prof.gender === 'girls' || prof.gender === 'Girl') ? 'Girl' : 'Boy';
+                        if (prof.community) { state.currentUser.caste = prof.community; state.currentUser.community = prof.community; }
+                        if (prof.img) { state.currentUser.img = prof.img; state.currentUser.photo = prof.img; }
+                        if (prof.age) state.currentUser.age = prof.age;
+                        if (prof.dob) state.currentUser.dob = prof.dob;
+                        if (prof.education) state.currentUser.education = prof.education;
+                        if (prof.occ || prof.occupation) { state.currentUser.occ = prof.occ || prof.occupation; state.currentUser.occupation = prof.occ || prof.occupation; }
+                        if (prof.income) state.currentUser.income = prof.income;
+                        if (prof.marital) state.currentUser.marital = prof.marital;
+                        if (prof.height) state.currentUser.height = prof.height;
+                        if (prof.weight) state.currentUser.weight = prof.weight;
+                        if (prof.village || prof.city) { state.currentUser.village = prof.village || prof.city; state.currentUser.city = prof.village || prof.city; }
+                        if (prof.taluka) state.currentUser.taluka = prof.taluka;
+                        if (prof.district) state.currentUser.district = prof.district;
+                        if (prof.fullAddress || prof.address) { state.currentUser.address = prof.fullAddress || prof.address; state.currentUser.fullAddress = prof.fullAddress || prof.address; }
+                        if (prof.ownMobile || prof.mobile) { state.currentUser.ownMobile = prof.ownMobile || prof.mobile; state.currentUser.mobile = prof.ownMobile || prof.mobile; }
+                        if (prof.father || prof.fatherName) { state.currentUser.father = prof.father || prof.fatherName; state.currentUser.fatherName = prof.father || prof.fatherName; }
+                        if (prof.mother || prof.motherName) { state.currentUser.mother = prof.mother || prof.motherName; state.currentUser.motherName = prof.mother || prof.motherName; }
+                        if (prof.fatherMobile) state.currentUser.fatherMobile = prof.fatherMobile;
+                        if (Array.isArray(prof.photos) && prof.photos.length > 0) state.currentUser.photos = prof.photos;
+                        if (typeof saveSessionState === 'function') saveSessionState();
+                        if (typeof updateHeaderUserDisplay === 'function') updateHeaderUserDisplay();
+                    }
+                }
+
                 if (typeof updateHomeStats === 'function') updateHomeStats();
                 if (typeof updateHeaderUserDisplay === 'function') updateHeaderUserDisplay();
                 if (typeof renderHome === 'function' && document.getElementById('homeGirlsList')) renderHome();

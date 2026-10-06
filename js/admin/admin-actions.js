@@ -23,26 +23,27 @@ window.escapeHtml = escapeHtmlAdmin;
             let list = USERS.slice();
             const checkBoy = typeof isBoyGender === 'function' ? isBoyGender : g => (g === 'boys' || g === 'Boy' || g === 'boy');
             const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
-            const isUserPending = u => (u.verifyStatus === 'pending' || u.accountStatus === 'pending' || (u.visible === false && u.accountStatus !== 'suspended'));
+            const isSuspendedUser = u => (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const isUserPending = u => (String(u.verifyStatus || '').toLowerCase() === 'pending' || (u.accountStatus || u.account_status || '').toLowerCase() === 'pending' || (u.visible === false && !isSuspendedUser(u)));
 
             if (state.userTab === 'suspended') {
-                list = list.filter(u => u.accountStatus === 'suspended');
+                list = list.filter(u => isSuspendedUser(u));
             } else if (state.userTab === 'pending') {
-                list = list.filter(u => isUserPending(u) && u.accountStatus !== 'suspended');
+                list = list.filter(u => isUserPending(u) && !isSuspendedUser(u));
             } else if (state.userTab === 'boys') {
-                list = list.filter(u => checkBoy(u.gender) && u.accountStatus !== 'suspended');
+                list = list.filter(u => checkBoy(u.gender) && !isSuspendedUser(u));
             } else if (state.userTab === 'girls') {
-                list = list.filter(u => checkGirl(u.gender) && u.accountStatus !== 'suspended');
+                list = list.filter(u => checkGirl(u.gender) && !isSuspendedUser(u));
             }
             if (query) {
                 const q = query.toLowerCase();
                 list = list.filter(u => (u.name && u.name.toLowerCase().includes(q)) || (u.email && u.email.toLowerCase().includes(q)) || (u.city && u.city.toLowerCase().includes(q)));
             }
-            const boysCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkBoy(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
-            const girlsCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && checkGirl(u.gender) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
-            const pendingCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && isUserPending(u) && u.accountStatus !== 'suspended' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
-            const suspendedCount = USERS.filter(u => u && u.accountStatus === 'suspended').length;
-            const allActiveCount = USERS.filter(u => u && u.accountStatus !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const boysCount = USERS.filter(u => u && (u.accountStatus || u.account_status) !== 'deleted' && checkBoy(u.gender) && !isSuspendedUser(u) && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const girlsCount = USERS.filter(u => u && (u.accountStatus || u.account_status) !== 'deleted' && checkGirl(u.gender) && !isSuspendedUser(u) && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const pendingCount = USERS.filter(u => u && (u.accountStatus || u.account_status) !== 'deleted' && isUserPending(u) && !isSuspendedUser(u) && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
+            const suspendedCount = USERS.filter(u => u && isSuspendedUser(u)).length;
+            const allActiveCount = USERS.filter(u => u && (u.accountStatus || u.account_status) !== 'deleted' && (typeof isUserPurged !== 'function' || !isUserPurged(u))).length;
 
             if (document.getElementById('uCountAll')) document.getElementById('uCountAll').textContent = allActiveCount;
             if (document.getElementById('uCountBoys')) document.getElementById('uCountBoys').textContent = boysCount;
@@ -73,19 +74,54 @@ window.escapeHtml = escapeHtmlAdmin;
 
         function getAdminUnmaskedPhone(u, type = 'own') {
             if (!u) return '—';
-            const isMasked = (str) => !str || String(str).includes('••••') || String(str).includes('***');
+            const isValidPhone = (str) => {
+                if (!str || typeof str !== 'string') return false;
+                if (str.includes('•') || str.includes('*') || str.includes('—')) return false;
+                const digits = str.replace(/\D/g, '');
+                return digits.length >= 10;
+            };
             if (type === 'own') {
-                const candidates = [u.rawOwnMobile, u.own_mobile, u.raw_data?.own_mobile, u.raw_data?.ownMobile, u.raw_data?.mobile, u.ownMobile, u.mobile];
+                const candidates = [
+                    u.rawOwnMobile, u.own_mobile, u.ownMobile,
+                    u.raw_data?.own_mobile, u.raw_data?.ownMobile, u.raw_data?.rawOwnMobile,
+                    u.mobile, u.raw_data?.mobile
+                ];
                 for (const c of candidates) {
-                    if (c && !isMasked(c)) return String(c);
+                    if (isValidPhone(c)) return String(c);
                 }
             } else {
-                const candidates = [u.rawFatherMobile, u.father_mobile, u.raw_data?.father_mobile, u.raw_data?.fatherMobile, u.fatherMobile, u.raw_data?.mobile, u.mobile];
+                const candidates = [
+                    u.rawFatherMobile, u.father_mobile, u.fatherMobile,
+                    u.raw_data?.father_mobile, u.raw_data?.fatherMobile, u.raw_data?.rawFatherMobile,
+                    u.mobile, u.raw_data?.mobile
+                ];
                 for (const c of candidates) {
-                    if (c && !isMasked(c)) return String(c);
+                    if (isValidPhone(c)) return String(c);
                 }
             }
-            return u.rawOwnMobile || u.ownMobile || u.rawFatherMobile || u.fatherMobile || u.mobile || '—';
+            // Fallback: check all candidates for any valid 10-digit phone
+            const allCandidates = [
+                u.rawOwnMobile, u.own_mobile, u.ownMobile,
+                u.rawFatherMobile, u.father_mobile, u.fatherMobile,
+                u.mobile, u.raw_data?.mobile
+            ];
+            for (const c of allCandidates) {
+                if (isValidPhone(c)) return String(c);
+            }
+
+            // Secondary fallback: lookup by ID or unmasked email in PROFILES / USERS
+            const uid = String(u.id || '');
+            const uEmail = (u.rawEmail || u.email || '').trim().toLowerCase();
+            const pool = (Array.isArray(window.PROFILES) ? window.PROFILES : []).concat(Array.isArray(window.USERS) ? window.USERS : []);
+            for (const other of pool) {
+                if (!other || other === u) continue;
+                if ((uid && String(other.id) === uid) || (uEmail && !uEmail.includes('•') && (other.rawEmail || other.email || '').trim().toLowerCase() === uEmail)) {
+                    const c = type === 'own' ? (other.rawOwnMobile || other.ownMobile || other.mobile) : (other.rawFatherMobile || other.fatherMobile);
+                    if (isValidPhone(c)) return String(c);
+                    if (isValidPhone(other.mobile)) return String(other.mobile);
+                }
+            }
+            return '—';
         }
         window.getAdminUnmaskedPhone = getAdminUnmaskedPhone;
 
@@ -94,9 +130,10 @@ window.escapeHtml = escapeHtmlAdmin;
             row.className = 'row-item';
             const checkGirl = typeof isGirlGender === 'function' ? isGirlGender : g => (g === 'girls' || g === 'Girl' || g === 'girl');
             const isGirl = checkGirl(u.gender);
-            const payBadge = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> Free</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99</span>' : '<span class="status-badge pending">Unpaid</span>');
-            const isPending = (u.verifyStatus === 'pending' || u.accountStatus === 'pending' || (u.visible === false && u.accountStatus !== 'suspended'));
-            const statusBadge = u.accountStatus === 'suspended'
+            const payBadge = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> Free</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-crown"></i> Paid ₹99</span>' : '<span class="status-badge pending">Unpaid</span>');
+            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const isPending = (String(u.verifyStatus || '').toLowerCase() === 'pending' || (u.accountStatus || u.account_status || '').toLowerCase() === 'pending' || (u.visible === false && !isSuspended));
+            const statusBadge = isSuspended
                 ? '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended</span>'
                 : (isPending
                     ? '<span class="status-badge pending" style="background:rgba(234,179,8,0.14);color:#b45309;border:1px solid rgba(234,179,8,0.3);"><i class="fa-solid fa-hourglass-half"></i> Pending Review</span>'
@@ -113,7 +150,7 @@ window.escapeHtml = escapeHtmlAdmin;
             row.innerHTML = `
     <img class="ravatar" src="${u.img || ((u.photos && u.photos[0]) || '')}" alt="${escapeHtmlAdmin(u.name || '')}">
     <div class="rbody">
-      <div class="rtitle">${escapeHtmlAdmin(u.name || '')}${u.accountStatus === 'suspended' ? ' <span style="color:var(--error);font-size:11px;font-weight:800;">(Suspended)</span>' : ''}</div>
+      <div class="rtitle">${escapeHtmlAdmin(u.name || '')}${isSuspended ? ' <span style="color:var(--error);font-size:11px;font-weight:800;">(Suspended)</span>' : ''}</div>
       <div class="rsub">${photoBadge}${phoneToDisplay ? `<strong style="color:var(--primary);letter-spacing:0.3px;"><i class="fa-solid fa-phone" style="font-size:10px;"></i> ${escapeHtmlAdmin(phoneToDisplay)}</strong> • ` : ''}<i class="fa-solid fa-location-dot"></i> ${escapeHtmlAdmin(u.village || u.city || '')} • ${isGirl ? 'Girl' : 'Boy'}${occEdu ? ` • ${escapeHtmlAdmin(occEdu)}` : ''}</div>
     </div>
     <div class="rmeta">
@@ -191,8 +228,9 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!el) return;
             const isGirl = u.gender === 'girls' || u.gender === 'Girl';
             const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
-            const isPending = (u.verifyStatus === 'pending') || (u.accountStatus === 'pending') || (u.visible === false && u.accountStatus !== 'suspended');
-            const statusBadge = u.accountStatus === 'suspended'
+            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const isPending = (String(u.verifyStatus || '').toLowerCase() === 'pending') || ((u.accountStatus || u.account_status || '').toLowerCase() === 'pending') || (u.visible === false && !isSuspended);
+            const statusBadge = isSuspended
                 ? '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>'
                 : (isPending
                     ? '<span class="status-badge pending" style="background:rgba(234,179,8,0.14);color:#b45309;border:1px solid rgba(234,179,8,0.3);"><i class="fa-solid fa-hourglass-half"></i> Pending Review</span>'
@@ -221,7 +259,7 @@ window.escapeHtml = escapeHtmlAdmin;
       </div>
     </div>
 
-    ${isPending && u.accountStatus !== 'suspended' ? `
+    ${isPending && !isSuspended ? `
     <div class="card" style="margin-top:14px;background:#fefce8;border:1.5px solid #fde047;padding:14px 16px;border-radius:14px;box-shadow:0 2px 8px rgba(202,138,4,0.08);">
       <div style="color:#a16207;font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-hourglass-half"></i> This profile is Pending Admin Review</div>
       <p style="font-size:12px;color:var(--text);margin:6px 0 12px;line-height:1.5;">Auto-approve is currently turned OFF or this profile was submitted for manual review. It is hidden from public searches until you approve it.</p>
@@ -230,7 +268,7 @@ window.escapeHtml = escapeHtmlAdmin;
       </button>
     </div>` : ''}
 
-    ${u.accountStatus === 'suspended' ? `
+    ${isSuspended ? `
     <div class="card" style="margin-top:14px;background:var(--error-bg);border:1px solid rgba(217,4,41,0.2);padding:12px 14px;">
       <div style="color:var(--error);font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-circle-exclamation"></i> This account is currently Suspended</div>
       <p style="font-size:12px;color:var(--text);margin-top:4px;">This profile is hidden from the community. You can reactivate it below anytime.</p>
@@ -249,7 +287,7 @@ window.escapeHtml = escapeHtmlAdmin;
       </div>
       <div class="btn-row">
         <button class="btn btn-outline" style="flex:1;" onclick="openSuspendModal('${u.id}')">
-          <i class="fa-solid fa-power-off"></i> ${u.accountStatus === 'active' ? 'Suspend Account' : 'Reactivate Account'}
+          <i class="fa-solid fa-power-off"></i> ${isSuspended ? 'Reactivate Account' : 'Suspend Account'}
         </button>
         <button class="btn btn-danger" style="flex:1;" onclick="openDeleteModal('${u.id}')">
           <i class="fa-solid fa-trash"></i> Delete Account
@@ -335,8 +373,22 @@ window.escapeHtml = escapeHtmlAdmin;
 
     <div class="section-label">Contact Information</div>
     <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-envelope"></i> Email</div><div class="dval"><strong style="font-size:14px;color:var(--text);">${escapeHtmlAdmin(u.rawEmail || u.email || (u.raw_data && u.raw_data.email) || '—')}</strong></div></div>
-    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-mobile-screen"></i> Own Mobile (Internal)</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--primary);">${escapeHtmlAdmin(getAdminUnmaskedPhone(u, 'own'))}</strong><span class="privacy-tag"><i class="fa-solid fa-user-shield"></i> Admin view</span></div></div>
-    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-phone"></i> Father's Mobile</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--text);">${escapeHtmlAdmin(getAdminUnmaskedPhone(u, 'father'))}</strong><span class="privacy-tag" style="background:var(--success-bg);color:var(--success);"><i class="fa-solid fa-phone-volume"></i> Public Contact</span></div></div>
+    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-mobile-screen"></i> Own Mobile (Internal)</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--primary);">${(function(){
+        const pStr = getAdminUnmaskedPhone(u, 'own');
+        const digits = String(pStr || '').replace(/\D/g, '');
+        const formatted = digits.length >= 10 && typeof formatPhoneNumber === 'function' ? formatPhoneNumber(pStr) : pStr;
+        const telNum = digits.length === 10 ? '+91' + digits : (digits.startsWith('91') ? '+' + digits : digits);
+        const callBtn = digits.length >= 10 ? `<a href="tel:${telNum}" style="margin-left:8px;font-size:11px;font-weight:700;color:var(--primary);text-decoration:none;background:rgba(230,57,70,0.1);padding:3px 9px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;" title="Direct Call Member"><i class="fa-solid fa-phone"></i> Call</a>` : '';
+        return escapeHtmlAdmin(formatted) + callBtn;
+    })()}</strong><span class="privacy-tag"><i class="fa-solid fa-user-shield"></i> Admin view</span></div></div>
+    <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-phone"></i> Father's Mobile</div><div class="dval"><strong style="font-size:15px;letter-spacing:0.5px;color:var(--text);">${(function(){
+        const pStr = getAdminUnmaskedPhone(u, 'father');
+        const digits = String(pStr || '').replace(/\D/g, '');
+        const formatted = digits.length >= 10 && typeof formatPhoneNumber === 'function' ? formatPhoneNumber(pStr) : pStr;
+        const telNum = digits.length === 10 ? '+91' + digits : (digits.startsWith('91') ? '+' + digits : digits);
+        const callBtn = digits.length >= 10 ? `<a href="tel:${telNum}" style="margin-left:8px;font-size:11px;font-weight:700;color:#2e7d32;text-decoration:none;background:rgba(46,125,50,0.1);padding:3px 9px;border-radius:6px;display:inline-flex;align-items:center;gap:4px;" title="Direct Call Father"><i class="fa-solid fa-phone"></i> Call</a>` : '';
+        return escapeHtmlAdmin(formatted) + callBtn;
+    })()}</strong><span class="privacy-tag" style="background:var(--success-bg);color:var(--success);"><i class="fa-solid fa-phone-volume"></i> Public Contact</span></div></div>
     <div class="detail-row"><div class="dlabel"><i class="fa-solid fa-calendar-days"></i> Registered Date</div><div class="dval">${escapeHtmlAdmin(u.registered || '—')}</div></div>
 
     <div class="section-label">Interests & Matches <span class="sl-action" onclick="setInterestTab('pending');go('scr-interests')">View all</span></div>

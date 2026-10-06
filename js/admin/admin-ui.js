@@ -827,11 +827,16 @@
             const physicalVal = u.physical || 'Normal';
             pickAdminEditDropdown('adminEditDdPhysical', 'adminEditPhysical', physicalVal, physicalVal);
 
+            const isValidPhoneField = (str) => {
+                if (!str || typeof str !== 'string') return false;
+                if (str.includes('•') || str.includes('*') || str.includes('—')) return false;
+                return str.replace(/\D/g, '').length >= 10;
+            };
             const unmaskedOwn = (typeof getAdminUnmaskedPhone === 'function') ? getAdminUnmaskedPhone(u, 'own') : (u.rawOwnMobile || u.ownMobile || u.mobile || '');
             const unmaskedFather = (typeof getAdminUnmaskedPhone === 'function') ? getAdminUnmaskedPhone(u, 'father') : (u.rawFatherMobile || u.fatherMobile || '');
-            document.getElementById('adminEditOwnMobile').value = (unmaskedOwn && unmaskedOwn !== '—' && !unmaskedOwn.includes('••')) ? unmaskedOwn : (u.mobile || '');
-            document.getElementById('adminEditEmail').value = u.rawEmail || u.email || (u.raw_data && u.raw_data.email) || '';
-            document.getElementById('adminEditFatherMobile').value = (unmaskedFather && unmaskedFather !== '—' && !unmaskedFather.includes('••')) ? unmaskedFather : '';
+            document.getElementById('adminEditOwnMobile').value = isValidPhoneField(unmaskedOwn) ? unmaskedOwn : (isValidPhoneField(u.mobile) ? u.mobile : '');
+            document.getElementById('adminEditEmail').value = (u.rawEmail && !u.rawEmail.includes('•')) ? u.rawEmail : (u.email && !u.email.includes('•') ? u.email : (u.raw_data && u.raw_data.email && !u.raw_data.email.includes('•') ? u.raw_data.email : ''));
+            document.getElementById('adminEditFatherMobile').value = isValidPhoneField(unmaskedFather) ? unmaskedFather : '';
             document.getElementById('adminEditFather').value = u.father || u.fatherName || '';
             document.getElementById('adminEditFatherOcc').value = u.fatherOcc || '';
             document.getElementById('adminEditMother').value = u.mother || u.motherName || '';
@@ -927,6 +932,15 @@
             u.district = district;
             u.fullAddress = address;
             u.address = address;
+
+            // Also synchronize in window.PROFILES and localStorage
+            if (Array.isArray(window.PROFILES)) {
+                const pIdx = window.PROFILES.findIndex(p => p && String(p.id) === String(u.id));
+                if (pIdx !== -1) {
+                    window.PROFILES[pIdx] = { ...window.PROFILES[pIdx], ...u };
+                }
+            }
+            if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
 
             closeModal('modalAdminEditUser');
             showGlobalLoader('Saving member updates to Supabase...');
@@ -1068,9 +1082,11 @@
         function openSuspendModal(id) {
             state.activeUserId = id;
             const u = findUser(id);
-            const suspending = u.accountStatus === 'active';
-            document.getElementById('suspendTitle').textContent = suspending ? 'Suspend account?' : 'Reactivate account?';
-            document.getElementById('suspendText').textContent = suspending ?
+            if (!u) return;
+            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const willSuspend = !isSuspended;
+            document.getElementById('suspendTitle').textContent = willSuspend ? 'Suspend account?' : 'Reactivate account?';
+            document.getElementById('suspendText').textContent = willSuspend ?
                 `${u.name} will no longer be able to log in or appear in search.` :
                 `${u.name} will be able to log in and appear in search again.`;
             openModal('modalSuspend');
@@ -1079,34 +1095,59 @@
         async function doSuspendToggle() {
             const u = findUser(state.activeUserId);
             if (!u) return;
-            const willSuspend = u.accountStatus === 'active';
-            u.accountStatus = willSuspend ? 'suspended' : 'active';
-            if (u.accountStatus === 'suspended') u.visible = false;
+            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const willSuspend = !isSuspended;
+            const newStatus = willSuspend ? 'suspended' : 'active';
+            u.accountStatus = newStatus;
+            u.account_status = newStatus;
+            u.status = willSuspend ? 'Suspended' : 'Active';
+            if (willSuspend) u.visible = false;
             else u.visible = true;
+
+            // Keep window.PROFILES and localStorage in sync
+            if (Array.isArray(window.PROFILES)) {
+                const p = window.PROFILES.find(p => p && String(p.id) === String(u.id));
+                if (p) {
+                    p.accountStatus = newStatus;
+                    p.account_status = newStatus;
+                    p.status = u.status;
+                    p.visible = u.visible;
+                }
+            }
+            if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
+
             closeModal('modalSuspend');
             showGlobalLoader(willSuspend ? 'Suspending member in Supabase...' : 'Reactivating member in Supabase...');
+
+            // Resolve clean unmasked email
+            let cleanEmail = '';
+            if (typeof resolveUnmaskedUserEmail === 'function') {
+                cleanEmail = await resolveUnmaskedUserEmail(u, u.id, u.userUid || u.userId);
+            }
+            if (!cleanEmail && u.rawEmail && !u.rawEmail.includes('•')) cleanEmail = u.rawEmail;
+            if (!cleanEmail && u.email && !u.email.includes('•')) cleanEmail = u.email;
 
             // Sync to live Supabase PostgreSQL
             if (typeof supabaseUpdateProfileStatus === 'function') {
                 try {
                     await supabaseUpdateProfileStatus(u.id, {
-                        email: u.email,
-                        accountStatus: u.accountStatus,
+                        email: cleanEmail || u.email,
+                        accountStatus: newStatus,
                         visible: u.visible,
-                        suspensionReason: u.accountStatus === 'suspended' ? 'Suspended by admin review.' : null
+                        suspensionReason: willSuspend ? 'Suspended by admin review.' : null
                     });
-                    console.info('[Admin] Member status successfully updated in Supabase:', u.id, u.accountStatus);
+                    console.info('[Admin] Member status successfully updated in Supabase:', u.id, newStatus);
                 } catch(err) {
                     console.warn('[Supabase] Suspend sync note:', err);
                 } finally {
                     hideGlobalLoader();
                     refreshCurrentScreen();
-                    showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
+                    showToast(`${u.name} ${newStatus === 'active' ? 'reactivated' : 'suspended'}`);
                 }
             } else {
                 hideGlobalLoader();
                 refreshCurrentScreen();
-                showToast(`${u.name} ${u.accountStatus === 'active' ? 'reactivated' : 'suspended'}`);
+                showToast(`${u.name} ${newStatus === 'active' ? 'reactivated' : 'suspended'}`);
             }
         }
 

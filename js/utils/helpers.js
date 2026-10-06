@@ -305,6 +305,7 @@ function liveGmailValidate(inputEl) {
 function extract10DigitMobile(val) {
     if (!val) return '';
     let clean = String(val).trim();
+    if (clean.includes('•') || clean.includes('*') || clean.includes('—')) return '';
     let digits = '';
     if (clean.startsWith('+91')) {
         clean = clean.slice(3).trim();
@@ -324,6 +325,9 @@ function extract10DigitMobile(val) {
 }
 
 function formatPhoneNumber(val) {
+    if (!val) return '+91 ';
+    const s = String(val).trim();
+    if (s.includes('•') || s.includes('*')) return s;
     const d = extract10DigitMobile(val);
     if (!d || d.length === 0) return '+91 ';
     if (d.length <= 5) return '+91 ' + d;
