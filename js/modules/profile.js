@@ -891,7 +891,10 @@ function sendInterest(id) {
         const usage = getDailyInterestUsage();
         if (usage && usage.isLimitReached) {
             if (typeof showToast === 'function') {
-                showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+                const msg = (typeof getDailyInterestLimitMessage === 'function')
+                    ? getDailyInterestLimitMessage(usage)
+                    : `Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests in ${usage.resetTimeText || '24 hours'}.`;
+                showToast(msg, 3500);
             }
             return;
         }

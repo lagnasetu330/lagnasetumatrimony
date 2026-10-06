@@ -12,13 +12,13 @@ function escapeHtml(str) {
 
 /* ============================================================ TOAST ============================================================ */
 var toastTimer;
-function showToast(msg) {
+function showToast(msg, duration = 3000) {
     const t = document.getElementById('toast');
     if (!t) return;
     document.getElementById('toastMsg').textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+    toastTimer = setTimeout(() => t.classList.remove('show'), duration || 3000);
 }
 
 

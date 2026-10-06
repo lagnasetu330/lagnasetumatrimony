@@ -282,11 +282,23 @@ function getDailyInterestUsage() {
 
     let resetInHours = 0;
     let resetInMinutes = 0;
+    let resetDiffMs = 0;
+    let resetTimeText = '';
+    let fullResetInHours = 0;
+    let fullResetDiffMs = 0;
+    let fullResetTimeText = '';
+
     if (validEntries.length > 0) {
         const oldest = validEntries[0].timestamp;
-        const diffMs = Math.max(0, (oldest + TWENTY_FOUR_HOURS) - now);
-        resetInHours = Math.ceil(diffMs / (60 * 60 * 1000));
-        resetInMinutes = Math.ceil(diffMs / (60 * 1000));
+        resetDiffMs = Math.max(0, (oldest + TWENTY_FOUR_HOURS) - now);
+        resetInHours = Math.ceil(resetDiffMs / (60 * 60 * 1000));
+        resetInMinutes = Math.ceil(resetDiffMs / (60 * 1000));
+        resetTimeText = formatRemainingTime(resetDiffMs);
+
+        const newest = validEntries[validEntries.length - 1].timestamp;
+        fullResetDiffMs = Math.max(0, (newest + TWENTY_FOUR_HOURS) - now);
+        fullResetInHours = Math.ceil(fullResetDiffMs / (60 * 60 * 1000));
+        fullResetTimeText = formatRemainingTime(fullResetDiffMs);
     }
 
     return {
@@ -295,10 +307,60 @@ function getDailyInterestUsage() {
         isLimitReached,
         resetInHours,
         resetInMinutes,
+        resetDiffMs,
+        resetTimeText,
+        fullResetInHours,
+        fullResetDiffMs,
+        fullResetTimeText,
         timestamps: validEntries.map(e => e.timestamp)
     };
 }
 window.getDailyInterestUsage = getDailyInterestUsage;
+
+/**
+ * Format milliseconds into human-readable hours and minutes text
+ * e.g., "12 hours", "12 hours 30 mins", "45 minutes", "1 hour", etc.
+ */
+function formatRemainingTime(ms) {
+    if (!ms || ms <= 0) return 'a few moments';
+    const totalMinutes = Math.ceil(ms / (60 * 1000));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (hours >= 24) {
+        return '24 hours';
+    }
+    if (hours > 0 && minutes > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''} ${minutes} min${minutes > 1 ? 's' : ''}`;
+    } else if (hours > 0) {
+        return `${hours} hour${hours > 1 ? 's' : ''}`;
+    } else {
+        return `${Math.max(1, minutes)} minute${minutes > 1 ? 's' : ''}`;
+    }
+}
+window.formatRemainingTime = formatRemainingTime;
+
+/**
+ * Returns dynamic, friendly toast message indicating how many hours/mins
+ * remain before the next 5 user requests unlock
+ */
+function getDailyInterestLimitMessage(usage) {
+    const u = usage || (typeof getDailyInterestUsage === 'function' ? getDailyInterestUsage() : null);
+    if (!u) {
+        return 'Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours.';
+    }
+    const nextTime = u.resetTimeText || '24 hours';
+    const fullTime = u.fullResetTimeText || nextTime;
+
+    // When next request and full quota reset are close (within 30 mins) or identical:
+    if (!u.fullResetTimeText || u.fullResetTimeText === nextTime || Math.abs((u.fullResetDiffMs || 0) - (u.resetDiffMs || 0)) <= 30 * 60 * 1000) {
+        return `Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests in ${nextTime}.`;
+    }
+
+    // When requests were sent at spaced intervals across the 24-hr period:
+    return `Daily limit reached! Your daily credit of 5 interest requests is finished for today. Next request unlocks in ${nextTime} (all 5 reset in ${fullTime}).`;
+}
+window.getDailyInterestLimitMessage = getDailyInterestLimitMessage;
 
 function recordDailyInterestSent(profileId, timestamp = Date.now()) {
     const curUser = (typeof state !== 'undefined' && state.currentUser) ? state.currentUser : null;
@@ -330,17 +392,18 @@ function openInterestModal(id) {
     // Strict Anti-Spam: Daily Limit of 5 Requests (for both girls and boys)
     const usage = getDailyInterestUsage();
     if (usage.isLimitReached) {
-        showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+        showToast(getDailyInterestLimitMessage(usage), 3500);
         return;
     }
 
     state.activeInterestId = id;
     const txtEl = document.getElementById('interestText');
     if (txtEl) {
+        const resetNote = (usage.count > 0 && usage.resetTimeText) ? ` (resets in ${usage.resetTimeText})` : '';
         txtEl.innerHTML =
             `You're about to send an interest request to <b>${escapeHtml(p.name || 'this member')}</b>. They will receive an instant email notification on their registered email with your profile details. If they accept, safe text chat and family contact details will unlock immediately.<br><br>` +
             `<div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(123,44,191,0.08);color:var(--primary,#7B2CBF);border:1px solid rgba(123,44,191,0.2);border-radius:20px;font-size:12px;font-weight:700;">` +
-            `<i class="fa-solid fa-clock-rotate-left"></i> Daily Limit: ${usage.remaining} of 5 interest requests left today</div>`;
+            `<i class="fa-solid fa-clock-rotate-left"></i> Daily Limit: ${usage.remaining} of 5 interest requests left today${resetNote}</div>`;
     }
     openModal('modalInterest');
 }
@@ -369,7 +432,7 @@ async function confirmSendInterest() {
     const usage = getDailyInterestUsage();
     if (usage.isLimitReached) {
         closeModal('modalInterest');
-        showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+        showToast(getDailyInterestLimitMessage(usage), 3500);
         return;
     }
 
@@ -435,7 +498,8 @@ async function confirmSendInterest() {
             console.info('[Interest] Successfully persisted to Supabase for:', p.name);
         } catch (err) {
             if (err && err.message === 'DAILY_LIMIT_EXCEEDED') {
-                showToast('Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours (tomorrow).');
+                const curUsage = getDailyInterestUsage();
+                showToast(getDailyInterestLimitMessage(curUsage), 3500);
             } else {
                 console.warn('[Interest] Supabase note:', err);
             }
