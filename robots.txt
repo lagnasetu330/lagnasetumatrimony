@@ -3,6 +3,7 @@ User-agent: *
 Allow: /
 Allow: /index.html
 Allow: /app.html
+Allow: /favicon.ico
 Allow: /legal/
 Allow: /images/
 Allow: /css/
