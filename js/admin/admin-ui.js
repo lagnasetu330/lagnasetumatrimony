@@ -12,7 +12,9 @@
         }
 
         function updateDesktopNav(id) {
-            if (document.body) document.body.classList.toggle('sidebar-active', APP_SCREENS.has(id));
+            if (document.body && document.body.classList && typeof document.body.classList.toggle === 'function') {
+                document.body.classList.toggle('sidebar-active', APP_SCREENS.has(id));
+            }
             const key = navKeyFor(id);
             document.querySelectorAll('.desktop-sidebar .ds-item[data-nav]').forEach(btn => {
                 if (btn && btn.classList) {
@@ -190,9 +192,10 @@
                     }).catch(() => {});
                 }
             }
-            if (id === 'scr-notifs') renderNotifs();
-            if (id === 'scr-help') renderHelp();
-            if (id === 'scr-settings') syncSettingsUI();
+            if (id === 'scr-notifs' && typeof renderNotifs === 'function') renderNotifs();
+            if (id === 'scr-help' && typeof renderHelp === 'function') renderHelp();
+            if (id === 'scr-settings' && typeof syncSettingsUI === 'function') syncSettingsUI();
+            else if (id === 'scr-settings' && typeof window !== 'undefined' && typeof window.syncSettingsUI === 'function') window.syncSettingsUI();
             if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
             updateDesktopNav(id);
             window.scrollTo(0, 0);
@@ -237,11 +240,13 @@
             if (adminAppInitialized) return;
             adminAppInitialized = true;
 
-            loadAdminData();
+            if (typeof loadAdminData === 'function') loadAdminData();
+            else if (typeof window !== 'undefined' && typeof window.loadAdminData === 'function') window.loadAdminData();
             // Clear stale purge cache — prevents old deleted-user IDs from hiding current active users
             try { sessionStorage.removeItem('LS_PURGED_USER_CACHE'); } catch(_) {}
             if (typeof initializeMockDataIfNeeded === 'function') initializeMockDataIfNeeded();
-            syncSettingsUI();
+            if (typeof syncSettingsUI === 'function') syncSettingsUI();
+            else if (typeof window !== 'undefined' && typeof window.syncSettingsUI === 'function') window.syncSettingsUI();
             if (typeof updateAdminNotifBadge === 'function') updateAdminNotifBadge();
 
             const loggedIn = (typeof isSessionValidSync === 'function')
@@ -340,7 +345,8 @@
                     setHelpTab(state.helpTab || 'faq');
                 }
                 else if (targetScreen === 'scr-settings') {
-                    syncSettingsUI();
+                    if (typeof syncSettingsUI === 'function') syncSettingsUI();
+                    else if (typeof window !== 'undefined' && typeof window.syncSettingsUI === 'function') window.syncSettingsUI();
                 }
 
                 // Keep global loader visible smoothly, then dismiss without any blank flash
@@ -349,7 +355,8 @@
                 // First fresh visit or not logged in: display splash briefly, then transition to login
                 setTimeout(() => {
                     go('scr-login', true);
-                    syncSettingsUI();
+                    if (typeof syncSettingsUI === 'function') syncSettingsUI();
+                    else if (typeof window !== 'undefined' && typeof window.syncSettingsUI === 'function') window.syncSettingsUI();
                 }, 800);
             }
         }

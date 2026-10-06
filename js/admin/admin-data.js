@@ -270,13 +270,14 @@ function loadAdminData() {
         GUIDE_STEPS = JSON.parse(JSON.stringify(DEFAULT_GUIDE_STEPS));
         CASTES_DATA = JSON.parse(JSON.stringify(DEFAULT_COMMUNITIES));
 
-        const storedCreds = localStorage.getItem(LS_ADMIN_CREDS_KEY);
+        const credsKey = (typeof LS_ADMIN_CREDS_KEY !== 'undefined') ? LS_ADMIN_CREDS_KEY : (window.LS_ADMIN_CREDS_KEY || 'LS_ADMIN_CREDENTIALS');
+        const storedCreds = localStorage.getItem(credsKey);
         if (storedCreds) {
             try {
                 const parsedCreds = JSON.parse(storedCreds);
                 if (parsedCreds && parsedCreds.email && (parsedCreds.passHash || parsedCreds.pass)) {
-                    ADMIN_CREDS = parsedCreds;
-                    window.ADMIN_CREDS = ADMIN_CREDS;
+                    if (typeof ADMIN_CREDS !== 'undefined') ADMIN_CREDS = parsedCreds;
+                    window.ADMIN_CREDS = parsedCreds;
                 }
             } catch(e) {}
         }

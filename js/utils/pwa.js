@@ -17,9 +17,9 @@
     // Detect if running in standalone mode (already installed & opened from home screen)
     function isRunningStandalone() {
         return (
-            window.matchMedia('(display-mode: standalone)').matches ||
-            window.navigator.standalone === true ||
-            document.referrer.includes('android-app://')
+            (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches) ||
+            (window.navigator && window.navigator.standalone === true) ||
+            (typeof document !== 'undefined' && document.referrer && document.referrer.includes('android-app://'))
         );
     }
 

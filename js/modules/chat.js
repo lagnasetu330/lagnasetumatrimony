@@ -1860,7 +1860,7 @@ function handleChatInputKeyDown(event) {
             return;
         }
         // Enter without Shift:
-        const isCoarseTouchOnly = window.matchMedia('(pointer: coarse) and (hover: none)').matches;
+        const isCoarseTouchOnly = (typeof window.matchMedia === 'function') ? window.matchMedia('(pointer: coarse) and (hover: none)').matches : false;
         if (!isCoarseTouchOnly) {
             event.preventDefault();
             sendChatMessage();
