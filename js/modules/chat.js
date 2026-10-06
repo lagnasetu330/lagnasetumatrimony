@@ -284,21 +284,15 @@ function getDailyInterestUsage() {
     let resetInMinutes = 0;
     let resetDiffMs = 0;
     let resetTimeText = '';
-    let fullResetInHours = 0;
-    let fullResetDiffMs = 0;
-    let fullResetTimeText = '';
 
     if (validEntries.length > 0) {
-        const oldest = validEntries[0].timestamp;
-        resetDiffMs = Math.max(0, (oldest + TWENTY_FOUR_HOURS) - now);
+        // Use the timestamp of the LAST (most recent / 5th) interest sent
+        const lastEntry = validEntries[validEntries.length - 1];
+        const lastTimestamp = lastEntry.timestamp;
+        resetDiffMs = Math.max(0, (lastTimestamp + TWENTY_FOUR_HOURS) - now);
         resetInHours = Math.ceil(resetDiffMs / (60 * 60 * 1000));
         resetInMinutes = Math.ceil(resetDiffMs / (60 * 1000));
         resetTimeText = formatRemainingTime(resetDiffMs);
-
-        const newest = validEntries[validEntries.length - 1].timestamp;
-        fullResetDiffMs = Math.max(0, (newest + TWENTY_FOUR_HOURS) - now);
-        fullResetInHours = Math.ceil(fullResetDiffMs / (60 * 60 * 1000));
-        fullResetTimeText = formatRemainingTime(fullResetDiffMs);
     }
 
     return {
@@ -309,9 +303,6 @@ function getDailyInterestUsage() {
         resetInMinutes,
         resetDiffMs,
         resetTimeText,
-        fullResetInHours,
-        fullResetDiffMs,
-        fullResetTimeText,
         timestamps: validEntries.map(e => e.timestamp)
     };
 }
@@ -341,24 +332,13 @@ function formatRemainingTime(ms) {
 window.formatRemainingTime = formatRemainingTime;
 
 /**
- * Returns dynamic, friendly toast message indicating how many hours/mins
- * remain before the next 5 user requests unlock
+ * Returns clean single toast message based on the last (5th) sent interest request
+ * e.g., "Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests in 5 hours 48 mins."
  */
 function getDailyInterestLimitMessage(usage) {
     const u = usage || (typeof getDailyInterestUsage === 'function' ? getDailyInterestUsage() : null);
-    if (!u) {
-        return 'Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests after 24 hours.';
-    }
-    const nextTime = u.resetTimeText || '24 hours';
-    const fullTime = u.fullResetTimeText || nextTime;
-
-    // When next request and full quota reset are close (within 30 mins) or identical:
-    if (!u.fullResetTimeText || u.fullResetTimeText === nextTime || Math.abs((u.fullResetDiffMs || 0) - (u.resetDiffMs || 0)) <= 30 * 60 * 1000) {
-        return `Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests in ${nextTime}.`;
-    }
-
-    // When requests were sent at spaced intervals across the 24-hr period:
-    return `Daily limit reached! Your daily credit of 5 interest requests is finished for today. Next request unlocks in ${nextTime} (all 5 reset in ${fullTime}).`;
+    const timeText = (u && u.resetTimeText) ? u.resetTimeText : '24 hours';
+    return `Daily limit reached! Your daily credit of 5 interest requests is finished for today. You can send 5 more interest requests in ${timeText}.`;
 }
 window.getDailyInterestLimitMessage = getDailyInterestLimitMessage;
 
