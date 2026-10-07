@@ -2127,3 +2127,215 @@
             margin-left: 8px;
         }
 
+        /* ============================================================
+           INSTAGRAM & LINKEDIN STYLE SKELETON SHIMMER SYSTEM
+           ============================================================ */
+        @keyframes msShimmerSweep {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .ms-shimmer-el {
+            background: linear-gradient(90deg, #F0EAF8 0%, #FAF6FD 45%, #E8DCF5 65%, #F0EAF8 100%) !important;
+            background-size: 250% 100% !important;
+            animation: msShimmerSweep 1.6s ease-in-out infinite !important;
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            display: block;
+        }
+
+        /* Profile Card Skeleton (Exact pixel match with .profile-card to eliminate layout shift) */
+        .skeleton-profile-card {
+            background: var(--surface, #fff);
+            border-radius: var(--radius-md, 20px);
+            overflow: hidden;
+            box-shadow: var(--shadow-card, 0 4px 18px rgba(123, 44, 191, 0.08));
+            border: 1px solid rgba(123, 44, 191, 0.08);
+            margin-bottom: 16px;
+            animation: fadeIn .3s ease;
+        }
+
+        .skeleton-profile-card .sk-img-wrap {
+            height: 210px;
+            position: relative;
+            border-radius: 0;
+        }
+
+        @media (max-width: 767px) {
+            .skeleton-profile-card .sk-img-wrap {
+                height: 180px;
+            }
+        }
+
+        .skeleton-profile-card .sk-badge {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            width: 75px;
+            height: 22px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 2;
+        }
+
+        .skeleton-profile-card .sk-fav {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 2;
+        }
+
+        .skeleton-profile-card .sk-body {
+            padding: 15px 16px 17px;
+        }
+
+        .skeleton-profile-card .sk-title {
+            width: 60%;
+            height: 20px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .skeleton-profile-card .sk-loc {
+            width: 38%;
+            height: 13px;
+            border-radius: 5px;
+            margin-bottom: 14px;
+        }
+
+        .skeleton-profile-card .sk-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin: 12px 0 14px;
+        }
+
+        .skeleton-profile-card .sk-grid-item {
+            height: 26px;
+            border-radius: 8px;
+        }
+
+        .skeleton-profile-card .sk-btn {
+            width: 100%;
+            height: 42px;
+            border-radius: 13px;
+            margin-top: 4px;
+        }
+
+        /* Header User Info Skeleton */
+        .sk-avatar-circle {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            flex-shrink: 0;
+            border: 2px solid #fff;
+            box-shadow: var(--shadow-card);
+        }
+
+        .sk-line-name {
+            width: 90px;
+            height: 16px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+        }
+
+        .sk-line-sub {
+            width: 120px;
+            height: 11px;
+            border-radius: 4px;
+        }
+
+        /* Stat Strip Skeleton */
+        .sk-stat-num {
+            width: 40px;
+            height: 20px;
+            border-radius: 6px;
+            margin: 0 auto;
+        }
+
+        /* Hero Tile Counts Skeleton */
+        .sk-hero-count {
+            width: 90px;
+            height: 12px;
+            border-radius: 4px;
+            margin-top: 3px;
+        }
+
+        /* Inbox List Skeleton */
+        .skeleton-inbox-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #fff;
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(123, 44, 191, 0.06);
+            box-shadow: 0 2px 8px rgba(123, 44, 191, 0.04);
+        }
+
+        .skeleton-inbox-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .skeleton-inbox-lines {
+            flex: 1;
+        }
+
+        .skeleton-inbox-name {
+            width: 45%;
+            height: 15px;
+            border-radius: 5px;
+            margin-bottom: 7px;
+        }
+
+        .skeleton-inbox-preview {
+            width: 75%;
+            height: 12px;
+            border-radius: 4px;
+        }
+
+        /* Notification List Skeleton */
+        .skeleton-notif-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #fff;
+            border-radius: 14px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(123, 44, 191, 0.06);
+        }
+
+        .skeleton-notif-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+
+        .skeleton-notif-text {
+            flex: 1;
+        }
+
+        .skeleton-notif-line1 {
+            width: 65%;
+            height: 14px;
+            border-radius: 5px;
+            margin-bottom: 6px;
+        }
+
+        .skeleton-notif-line2 {
+            width: 85%;
+            height: 11px;
+            border-radius: 4px;
+        }
+

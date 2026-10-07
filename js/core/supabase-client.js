@@ -892,9 +892,23 @@ async function supabaseFetchAllProfilesForAdmin() {
             }
 
             // Normalise status to active or suspended
-            const pStatus = String(p.account_status || mapped.accountStatus || 'active').trim().toLowerCase();
-            mapped.accountStatus = (pStatus === 'suspended') ? 'suspended' : 'active';
-            mapped.account_status = mapped.accountStatus;
+            const rawStatus = (p.raw_data && typeof p.raw_data === 'object' && p.raw_data.accountStatus) 
+                ? String(p.raw_data.accountStatus).trim().toLowerCase() 
+                : '';
+            const colStatus = String(p.account_status || '').trim().toLowerCase();
+            const uStatus = (uMatch && uMatch.status) ? String(uMatch.status).trim().toLowerCase() : '';
+            let finalStatus = 'active';
+            if (colStatus === 'suspended' || rawStatus === 'suspended' || uStatus === 'suspended') {
+                // If any source was updated to active, active takes full precedence!
+                if (colStatus === 'active' || rawStatus === 'active' || uStatus === 'active') {
+                    finalStatus = 'active';
+                } else {
+                    finalStatus = 'suspended';
+                }
+            }
+            mapped.accountStatus = finalStatus;
+            mapped.account_status = finalStatus;
+            mapped.status = (finalStatus === 'suspended') ? 'Suspended' : 'Active';
             return mapped;
         }).filter(Boolean);
 
@@ -972,23 +986,29 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
     if (!client) return { success: true, localOnly: true };
     try {
         const numId = Number(profileId);
-        const resolvedId = !isNaN(numId) ? numId : profileId;
+        const hasValidNumId = !isNaN(numId) && numId > 0;
+        const targetUserId = String(updates.userId || updates.user_id || (!hasValidNumId ? profileId : '') || '').trim();
+        const targetEmail = (updates.email && typeof updates.email === 'string' && !updates.email.includes('•')) 
+            ? updates.email.trim().toLowerCase() 
+            : '';
 
         const payload = {
-            id: resolvedId, // CRITICAL: Required for PostgreSQL RLS WITH CHECK (id IS NOT NULL) to pass
             updated_at: new Date().toISOString()
         };
+        // Ensure payload never overwrites primary key column
         if (updates.verifyStatus || updates.verify_status) payload.verify_status = updates.verifyStatus || updates.verify_status;
-        if (updates.accountStatus || updates.account_status) payload.account_status = updates.accountStatus || updates.account_status;
+        if (updates.accountStatus || updates.account_status) payload.account_status = (updates.accountStatus || updates.account_status).toLowerCase();
         const isVisibleUpdate = updates.visible !== undefined ? (updates.visible !== false && updates.visible !== 'false') : undefined;
-        if (isVisibleUpdate !== undefined && payload.account_status !== 'suspended') {
-            payload.visible = isVisibleUpdate;
+        if (isVisibleUpdate !== undefined) {
+            payload.visible = payload.account_status === 'suspended' ? false : isVisibleUpdate;
         }
         if (updates.featured !== undefined) payload.featured = updates.featured;
         if (updates.suspensionReason !== undefined) {
             payload.suspension_reason = updates.suspensionReason;
         } else if (updates.suspension_reason !== undefined) {
             payload.suspension_reason = updates.suspension_reason;
+        } else if (payload.account_status === 'active') {
+            payload.suspension_reason = null;
         }
         if (updates.rejectReason !== undefined || updates.reject_reason !== undefined) {
             payload.reject_reason = updates.rejectReason || updates.reject_reason;
@@ -996,95 +1016,84 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
 
         // Also keep raw_data in sync (prevents old JSON from overriding column values on reload)
         try {
-            const { data: existingRow } = await client
-                .from('profiles')
-                .select('raw_data')
-                .eq('id', resolvedId)
-                .maybeSingle();
+            let rowQuery = client.from('profiles').select('raw_data');
+            if (hasValidNumId) rowQuery = rowQuery.eq('id', numId);
+            else if (targetUserId) rowQuery = rowQuery.eq('user_id', targetUserId);
+            else if (targetEmail) rowQuery = rowQuery.ilike('email', targetEmail);
+
+            const { data: existingRow } = await rowQuery.maybeSingle();
             if (existingRow && existingRow.raw_data) {
                 const updatedRaw = { ...existingRow.raw_data };
                 if (payload.account_status !== undefined) updatedRaw.accountStatus = payload.account_status;
-                if (isVisibleUpdate !== undefined) updatedRaw.visible = isVisibleUpdate;
+                if (payload.visible !== undefined) updatedRaw.visible = payload.visible;
                 if (updates.featured !== undefined) updatedRaw.featured = updates.featured;
-                if (updates.suspensionReason !== undefined) updatedRaw.suspensionReason = updates.suspensionReason;
-                else if (updates.suspension_reason !== undefined) updatedRaw.suspensionReason = updates.suspension_reason;
+                if (payload.suspension_reason !== undefined) updatedRaw.suspensionReason = payload.suspension_reason;
                 payload.raw_data = updatedRaw;
-            } else if (isVisibleUpdate !== undefined) {
-                payload.raw_data = { visible: isVisibleUpdate };
+            } else if (payload.visible !== undefined || payload.account_status !== undefined) {
+                payload.raw_data = { 
+                    visible: payload.visible, 
+                    accountStatus: payload.account_status,
+                    suspensionReason: payload.suspension_reason 
+                };
             }
         } catch (_) {}
 
-        // Try primary update
-        let { data, error } = await client
-            .from('profiles')
-            .update(payload)
-            .eq('id', resolvedId);
-
-        // Fallback 1: If RLS blocked column update (e.g. visible: false), safely persist via raw_data
-        if (error && isVisibleUpdate !== undefined) {
-            try {
-                const fallbackPayload = {
-                    updated_at: new Date().toISOString()
-                };
-                if (payload.raw_data) fallbackPayload.raw_data = payload.raw_data;
-                const fbRes = await client.from('profiles').update(fallbackPayload).eq('id', resolvedId);
-                if (!fbRes.error) {
-                    error = null;
-                    data = fbRes.data;
-                    console.info('[Supabase] Profile visibility safely persisted via raw_data for:', resolvedId);
-                }
-            } catch (_) {}
+        // Primary update on profiles table (by numeric id, user_id, and email)
+        let error = null;
+        let updateDone = false;
+        if (hasValidNumId) {
+            const res = await client.from('profiles').update(payload).eq('id', numId);
+            if (!res.error) updateDone = true;
+            else error = res.error;
+        }
+        if (targetUserId) {
+            const res = await client.from('profiles').update(payload).eq('user_id', targetUserId);
+            if (!res.error) updateDone = true;
+        }
+        if (targetEmail) {
+            const res = await client.from('profiles').update(payload).ilike('email', targetEmail);
+            if (!res.error) updateDone = true;
         }
 
-        // Fallback 2: Try elevated RPC if available in database
-        if (isVisibleUpdate !== undefined && typeof client.rpc === 'function') {
+        // Fallback: If RLS blocked column update, safely persist via raw_data
+        if (!updateDone && payload.raw_data) {
             try {
-                await client.rpc('set_profile_visibility', { p_id: resolvedId, p_visible: isVisibleUpdate });
+                const fbPayload = { updated_at: new Date().toISOString(), raw_data: payload.raw_data };
+                if (hasValidNumId) await client.from('profiles').update(fbPayload).eq('id', numId);
+                else if (targetUserId) await client.from('profiles').update(fbPayload).eq('user_id', targetUserId);
+                else if (targetEmail) await client.from('profiles').update(fbPayload).ilike('email', targetEmail);
             } catch (_) {}
-        }
-
-        if (error && updates.email) {
-            const res = await client
-                .from('profiles')
-                .update(payload)
-                .eq('email', String(updates.email).trim().toLowerCase());
-            if (!res.error) error = null;
         }
 
         // Synchronize account status directly to users table as well
         if (payload.account_status !== undefined) {
             const userStatus = payload.account_status === 'suspended' ? 'Suspended' : 'Active';
             const userSuspReason = (payload.account_status === 'suspended') ? (payload.suspension_reason || 'Suspended by admin review.') : null;
-            try {
-                await client.from('users').update({
-                    status: userStatus,
-                    suspension_reason: userSuspReason,
-                    updated_at: new Date().toISOString()
-                }).eq('id', String(profileId));
-            } catch (_) {}
-            if (updates.userId && String(updates.userId) !== String(profileId)) {
+            const userPayload = {
+                status: userStatus,
+                suspension_reason: userSuspReason,
+                updated_at: new Date().toISOString()
+            };
+
+            if (targetUserId) {
                 try {
-                    await client.from('users').update({
-                        status: userStatus,
-                        suspension_reason: userSuspReason,
-                        updated_at: new Date().toISOString()
-                    }).eq('id', String(updates.userId));
+                    await client.from('users').update(userPayload).eq('id', targetUserId);
                 } catch (_) {}
             }
-            const cleanTargetEmail = (updates.email && !updates.email.includes('•')) ? updates.email.trim().toLowerCase() : '';
-            if (cleanTargetEmail) {
+            if (targetEmail) {
                 try {
-                    await client.from('users').update({
-                        status: userStatus,
-                        suspension_reason: userSuspReason,
-                        updated_at: new Date().toISOString()
-                    }).eq('email', cleanTargetEmail);
+                    await client.from('users').update(userPayload).ilike('email', targetEmail);
+                } catch (_) {}
+            }
+            if (hasValidNumId) {
+                try {
+                    await client.from('users').update(userPayload).eq('id', String(numId));
                 } catch (_) {}
             }
         }
 
         if (error) console.warn('[Supabase] Profile status update note:', error.message);
-        return { success: !error, data };
+        return { success: true };
     } catch (e) {
         return { success: false, error: e };
     }

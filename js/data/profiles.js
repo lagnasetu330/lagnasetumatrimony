@@ -42,10 +42,16 @@ function saveCommunityProfiles() {
  */
 async function syncProfilesFromSupabase(force = false, silent = false) {
     if (typeof supabaseFetchProfiles !== 'function') return;
-    const shouldShowLoader = !silent && (!PROFILES || PROFILES.length === 0);
+    const isInitialEmpty = (!PROFILES || PROFILES.length === 0);
+    window.isProfilesLoading = true;
     try {
-        if (shouldShowLoader && typeof showGlobalLoader === 'function') {
-            showGlobalLoader('Loading verified profiles from Supabase...', 800);
+        if (isInitialEmpty) {
+            if (typeof renderHomeSkeletons === 'function' && document.getElementById('homeGirlsList')) {
+                renderHomeSkeletons();
+            }
+            if (typeof renderBrowseSkeletons === 'function' && document.getElementById('browseList')) {
+                renderBrowseSkeletons();
+            }
         }
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
@@ -161,7 +167,8 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
     } catch (err) {
         console.warn('[Profiles] Supabase sync note:', err);
     } finally {
-        if (shouldShowLoader && typeof hideGlobalLoader === 'function') {
+        window.isProfilesLoading = false;
+        if (typeof hideGlobalLoader === 'function') {
             hideGlobalLoader();
         }
     }

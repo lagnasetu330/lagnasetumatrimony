@@ -1111,9 +1111,9 @@
             if (willSuspend) u.visible = false;
             else u.visible = true;
 
-            // Keep window.PROFILES and localStorage in sync
+            // 1. Keep window.PROFILES and localStorage in sync
             if (Array.isArray(window.PROFILES)) {
-                const p = window.PROFILES.find(p => p && String(p.id) === String(u.id));
+                const p = window.PROFILES.find(p => p && (String(p.id) === String(u.id) || (p.email && u.email && p.email.toLowerCase() === u.email.toLowerCase())));
                 if (p) {
                     p.accountStatus = newStatus;
                     p.account_status = newStatus;
@@ -1122,6 +1122,42 @@
                 }
             }
             if (typeof saveCommunityProfiles === 'function') saveCommunityProfiles();
+
+            // 2. Keep USERS and window.USERS in sync
+            const syncUserItem = (targetList) => {
+                if (Array.isArray(targetList)) {
+                    const foundUsr = targetList.find(x => x && (String(x.id) === String(u.id) || (x.email && u.email && x.email.toLowerCase() === u.email.toLowerCase())));
+                    if (foundUsr) {
+                        foundUsr.accountStatus = newStatus;
+                        foundUsr.account_status = newStatus;
+                        foundUsr.status = u.status;
+                        foundUsr.visible = u.visible;
+                    }
+                }
+            };
+            syncUserItem(USERS);
+            syncUserItem(window.USERS);
+
+            // 3. Keep localStorage accounts in sync so findUser doesn't return stale suspended status
+            try {
+                ['LS_AUTH_ACCOUNTS', 'LS_COMMUNITY_USERS', 'LS_COMMUNITY_PROFILES', 'mangalSetu_profiles'].forEach(k => {
+                    const raw = localStorage.getItem(k);
+                    if (raw) {
+                        const list = JSON.parse(raw);
+                        if (Array.isArray(list)) {
+                            list.forEach(a => {
+                                if (a && ((a.email && u.email && a.email.toLowerCase() === u.email.toLowerCase()) || String(a.id) === String(u.id) || (a.userId && u.userId && String(a.userId) === String(u.userId)))) {
+                                    a.accountStatus = newStatus;
+                                    a.account_status = newStatus;
+                                    a.status = u.status;
+                                    a.visible = u.visible;
+                                }
+                            });
+                            localStorage.setItem(k, JSON.stringify(list));
+                        }
+                    }
+                });
+            } catch (_) {}
 
             closeModal('modalSuspend');
             showGlobalLoader(willSuspend ? 'Suspending member in Supabase...' : 'Reactivating member in Supabase...');
@@ -1139,6 +1175,7 @@
                 try {
                     await supabaseUpdateProfileStatus(u.id, {
                         email: cleanEmail || u.email,
+                        userId: u.userId || u.user_id || u.userUid,
                         accountStatus: newStatus,
                         visible: u.visible,
                         suspensionReason: willSuspend ? 'Suspended by admin review.' : null
