@@ -478,15 +478,6 @@ if (typeof window !== 'undefined') {
         const isSilentInitial = Array.isArray(PROFILES) && PROFILES.length > 0;
         syncProfilesFromSupabase(false, isSilentInitial);
         setupProfilesRealtime();
-
-        // Silently sync platform auto_approve setting from Supabase
-        if (typeof supabaseGetAppSetting === 'function') {
-            supabaseGetAppSetting('auto_approve').then(res => {
-                if (res && typeof res.enabled === 'boolean') {
-                    try { localStorage.setItem('LS_COMMUNITY_AUTO_APPROVE', JSON.stringify(res)); } catch(_) {}
-                }
-            }).catch(() => {});
-        }
     });
 
     // Auto-sync when user returns to tab / unlocks phone

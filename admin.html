@@ -380,7 +380,6 @@
                     <button id="userTabAll" class="active" onclick="setUserTab('all')">All</button>
                     <button id="userTabBoys" onclick="setUserTab('boys')">Boys</button>
                     <button id="userTabGirls" onclick="setUserTab('girls')">Girls</button>
-                    <button id="userTabPending" onclick="setUserTab('pending')">Pending Review</button>
                     <button id="userTabSuspended" onclick="setUserTab('suspended')">Suspended</button>
                 </div>
                 <div class="search-bar" style="margin-top:16px;">
@@ -392,7 +391,6 @@
                     <div class="s"><b id="uCountAll">0</b><small>TOTAL</small></div>
                     <div class="s"><b id="uCountBoys">0</b><small>BOYS</small></div>
                     <div class="s"><b id="uCountGirls">0</b><small>GIRLS</small></div>
-                    <div class="s"><b id="uCountPending" style="color:#d97706;">0</b><small>PENDING</small></div>
                     <div class="s"><b id="uCountSuspended">0</b><small>SUSPENDED</small></div>
                 </div>
                 <div style="margin-top:6px;" id="userList"></div>
@@ -691,13 +689,7 @@
                     </div>
                     <button class="toggle on" id="toggleEmailNotifs" onclick="this.classList.toggle('on')"></button>
                 </div>
-                <div class="toggle-row">
-                    <div>
-                        <div class="tlabel">Auto-approve new profiles</div>
-                        <div class="tsub">Instantly activate new member registrations</div>
-                    </div>
-                    <button class="toggle on" id="toggleAutoApprove" onclick="toggleAutoApprove(this)"></button>
-                </div>
+
                 <div class="toggle-row">
                     <div>
                         <div class="tlabel">Maintenance mode</div>
@@ -1463,7 +1455,7 @@
         <script src="js/admin/admin-security.js?v=4.2"></script>
         <script src="js/admin/admin-data.js?v=4.2"></script>
         <script src="js/admin/admin-charts.js?v=4.2"></script>
-        <script src="js/admin/admin-actions.js?v=4.3"></script>
+        <script src="js/admin/admin-actions.js?v=4.4"></script>
         <script src="js/admin/admin-analytics.js?v=4.6"></script>
         <!-- EmailJS SDK (for account deletion email notification) -->
         <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
