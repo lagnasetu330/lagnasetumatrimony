@@ -42,16 +42,10 @@ function saveCommunityProfiles() {
  */
 async function syncProfilesFromSupabase(force = false, silent = false) {
     if (typeof supabaseFetchProfiles !== 'function') return;
-    const isInitialEmpty = (!PROFILES || PROFILES.length === 0);
-    window.isProfilesLoading = true;
+    const shouldShowLoader = !silent && (!PROFILES || PROFILES.length === 0);
     try {
-        if (isInitialEmpty) {
-            if (typeof renderHomeSkeletons === 'function' && document.getElementById('homeGirlsList')) {
-                renderHomeSkeletons();
-            }
-            if (typeof renderBrowseSkeletons === 'function' && document.getElementById('browseList')) {
-                renderBrowseSkeletons();
-            }
+        if (shouldShowLoader && typeof showGlobalLoader === 'function') {
+            showGlobalLoader('Loading verified profiles from Supabase...', 800);
         }
         const remoteProfiles = await supabaseFetchProfiles();
         if (Array.isArray(remoteProfiles)) {
@@ -124,9 +118,17 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
                     if (myProf.account_status === 'suspended' || myProf.accountStatus === 'suspended') {
                         state.currentUser.status = 'Suspended';
                         state.currentUser.accountStatus = 'suspended';
+                        state.currentUser.suspensionReason = myProf.suspension_reason || myProf.suspensionReason || 'Account suspended by administrator.';
+                        if (typeof enforceUserSuspendedModal === 'function') {
+                            enforceUserSuspendedModal(state.currentUser.suspensionReason);
+                        }
                     } else if (myProf.account_status === 'active' || myProf.accountStatus === 'active') {
                         state.currentUser.status = 'Active';
                         state.currentUser.accountStatus = 'active';
+                        state.currentUser.suspensionReason = null;
+                        if (typeof dismissUserSuspendedModal === 'function') {
+                            dismissUserSuspendedModal();
+                        }
                     }
 
                     const isDone = typeof isProfileFullyComplete === 'function' ? isProfileFullyComplete(state.currentUser) : true;
@@ -167,8 +169,7 @@ async function syncProfilesFromSupabase(force = false, silent = false) {
     } catch (err) {
         console.warn('[Profiles] Supabase sync note:', err);
     } finally {
-        window.isProfilesLoading = false;
-        if (typeof hideGlobalLoader === 'function') {
+        if (shouldShowLoader && typeof hideGlobalLoader === 'function') {
             hideGlobalLoader();
         }
     }
@@ -203,19 +204,30 @@ function setupProfilesRealtime() {
                 if (!updatedRow) return;
                 // Live check if current user was updated (e.g. suspended or reactivated)
                 if (typeof state !== 'undefined' && state.currentUser) {
-                    const myId = String(state.currentUser.id || state.currentUser.profileId || '');
+                    const myId = String(state.currentUser.id || state.currentUser.profileId || state.currentUser.userId || '');
+                    const myUserId = String(state.currentUser.userId || state.currentUser.user_id || '');
                     const myEmail = (state.currentUser.email || '').trim().toLowerCase();
                     const rowId = String(updatedRow.id || '');
+                    const rowUserId = String(updatedRow.user_id || '');
                     const rowEmail = (updatedRow.email || '').trim().toLowerCase();
-                    if ((rowId && rowId === myId) || (rowEmail && rowEmail === myEmail)) {
-                        if (updatedRow.account_status === 'suspended') {
+                    const isMatch = (rowId && (rowId === myId || rowId === myUserId)) ||
+                                    (rowUserId && (rowUserId === myId || rowUserId === myUserId)) ||
+                                    (rowEmail && myEmail && rowEmail === myEmail);
+                    if (isMatch) {
+                        const rowStatus = String(updatedRow.account_status || (updatedRow.raw_data && updatedRow.raw_data.accountStatus) || '').toLowerCase();
+                        if (rowStatus === 'suspended') {
                             state.currentUser.status = 'Suspended';
-                            state.currentUser.suspensionReason = updatedRow.suspension_reason || 'Account suspended by administrator.';
+                            state.currentUser.accountStatus = 'suspended';
+                            state.currentUser.account_status = 'suspended';
+                            state.currentUser.suspensionReason = updatedRow.suspension_reason || (updatedRow.raw_data && updatedRow.raw_data.suspensionReason) || 'Account suspended by administrator.';
                             if (typeof saveSessionState === 'function') saveSessionState();
                             if (typeof enforceUserSuspendedModal === 'function') enforceUserSuspendedModal(state.currentUser.suspensionReason);
                             return;
-                        } else if (updatedRow.account_status === 'active' || updatedRow.account_status === 'Active') {
+                        } else if (rowStatus === 'active') {
                             state.currentUser.status = 'Active';
+                            state.currentUser.accountStatus = 'active';
+                            state.currentUser.account_status = 'active';
+                            state.currentUser.suspensionReason = null;
                             if (typeof saveSessionState === 'function') saveSessionState();
                             if (typeof dismissUserSuspendedModal === 'function') dismissUserSuspendedModal();
                         }
@@ -501,12 +513,14 @@ if (typeof window !== 'undefined') {
 function enforceUserSuspendedModal(reason) {
     if (typeof state !== 'undefined' && state.currentUser) {
         state.currentUser.status = 'Suspended';
+        state.currentUser.accountStatus = 'suspended';
         state.currentUser.suspensionReason = reason || state.currentUser.suspensionReason || 'Violation of community guidelines or pending verification.';
     }
     const modal = document.getElementById('modalSuspended');
     if (modal) {
         modal.classList.add('open');
         modal.style.display = 'flex';
+        modal.style.zIndex = '99999';
         const reasonEl = document.getElementById('suspensionReasonText');
         if (reasonEl && reason) {
             reasonEl.textContent = reason;
@@ -518,8 +532,10 @@ function enforceUserSuspendedModal(reason) {
  * Dismiss suspended modal upon admin reactivation
  */
 function dismissUserSuspendedModal() {
-    if (typeof state !== 'undefined' && state.currentUser && state.currentUser.status === 'Suspended') {
+    if (typeof state !== 'undefined' && state.currentUser) {
         state.currentUser.status = 'Active';
+        state.currentUser.accountStatus = 'active';
+        state.currentUser.suspensionReason = null;
     }
     const modal = document.getElementById('modalSuspended');
     if (modal) {

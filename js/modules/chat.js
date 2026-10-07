@@ -687,7 +687,6 @@ function updateInboxBadge() {
  */
 async function syncUserChatAndInterests() {
     if (!state.currentUser || !state.currentUser.email) return;
-    window.isInboxLoading = true;
     try {
         const myId = Number(state.currentUser.id || 0);
         const myEmail = state.currentUser.email.trim().toLowerCase();
@@ -924,12 +923,6 @@ async function syncUserChatAndInterests() {
         }
     } catch (e) {
         console.warn('[Chat] syncUserChatAndInterests error:', e);
-    } finally {
-        window.isInboxLoading = false;
-        const activeScreen = document.querySelector('.screen.active');
-        if (activeScreen && activeScreen.id === 'scr-inbox') {
-            try { renderInbox(); } catch (_) {}
-        }
     }
 }
 
@@ -952,14 +945,6 @@ function renderInbox() {
         if (typeof buildTabbar === 'function') buildTabbar('tabbarInbox', 'inbox');
         const wrap = document.getElementById('inboxContent');
         if (!wrap) return;
-
-        // Skeleton Shimmer loader while syncing live messages and requests from Supabase
-        if (window.isInboxLoading) {
-            if (typeof renderInboxSkeletons === 'function') {
-                renderInboxSkeletons(4);
-                return;
-            }
-        }
 
         wrap.innerHTML = '';
         if (state.inboxTab === 'requests') {

@@ -228,7 +228,7 @@ window.escapeHtml = escapeHtmlAdmin;
             if (!el) return;
             const isGirl = u.gender === 'girls' || u.gender === 'Girl';
             const payText = isGirl ? '<span class="status-badge paid"><i class="fa-solid fa-heart"></i> 100% Free (Girls)</span>' : (u.paymentStatus === 'paid' ? '<span class="status-badge paid"><i class="fa-solid fa-crown"></i> Paid ₹99 / 30 Days</span>' : '<span class="status-badge pending">Unpaid</span>');
-            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const isSuspended = (u.accountStatus || u.account_status || u.status || '').toLowerCase() === 'suspended';
             const isPending = (String(u.verifyStatus || '').toLowerCase() === 'pending') || ((u.accountStatus || u.account_status || '').toLowerCase() === 'pending') || (u.visible === false && !isSuspended);
             const statusBadge = isSuspended
                 ? '<span class="status-badge rejected"><i class="fa-solid fa-ban"></i> Suspended Account</span>'

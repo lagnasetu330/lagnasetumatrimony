@@ -69,7 +69,15 @@ function go(id, replace = false) {
     }
 
     // 2. Account status interceptor (Strict blocking modal for suspended users)
-    if (state.currentUser && state.currentUser.status === 'Suspended') {
+    const isUserSuspended = Boolean(
+        state.currentUser && (
+            state.currentUser.status === 'Suspended' ||
+            state.currentUser.status === 'suspended' ||
+            state.currentUser.accountStatus === 'suspended' ||
+            state.currentUser.account_status === 'suspended'
+        )
+    );
+    if (isUserSuspended) {
         if (id !== 'scr-welcome') {
             if (typeof enforceUserSuspendedModal === 'function') {
                 enforceUserSuspendedModal(state.currentUser.suspensionReason);

@@ -257,6 +257,7 @@ function initApp() {
 
         if (targetScreen === 'scr-howitworks') renderHowItWorks();
         if (targetScreen === 'scr-help') renderFaqs();
+        showGlobalLoader('Loading...', 240);
         sessionStorage.setItem('mangalSetu_visited', 'true');
         saveSessionState();
     } else {

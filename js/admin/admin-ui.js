@@ -1102,7 +1102,7 @@
         async function doSuspendToggle() {
             const u = findUser(state.activeUserId);
             if (!u) return;
-            const isSuspended = (u.accountStatus || u.account_status || '').toLowerCase() === 'suspended';
+            const isSuspended = (u.accountStatus || u.account_status || u.status || '').toLowerCase() === 'suspended';
             const willSuspend = !isSuspended;
             const newStatus = willSuspend ? 'suspended' : 'active';
             u.accountStatus = newStatus;
@@ -1170,14 +1170,13 @@
             if (!cleanEmail && u.rawEmail && !u.rawEmail.includes('•')) cleanEmail = u.rawEmail;
             if (!cleanEmail && u.email && !u.email.includes('•')) cleanEmail = u.email;
 
-            // Sync to live Supabase PostgreSQL
+            // Sync to live Supabase PostgreSQL (Do NOT pass visible column directly to avoid RLS error)
             if (typeof supabaseUpdateProfileStatus === 'function') {
                 try {
                     await supabaseUpdateProfileStatus(u.id, {
                         email: cleanEmail || u.email,
                         userId: u.userId || u.user_id || u.userUid,
                         accountStatus: newStatus,
-                        visible: u.visible,
                         suspensionReason: willSuspend ? 'Suspended by admin review.' : null
                     });
                     console.info('[Admin] Member status successfully updated in Supabase:', u.id, newStatus);
@@ -1186,11 +1185,17 @@
                 } finally {
                     hideGlobalLoader();
                     refreshCurrentScreen();
+                    if (typeof openUserDetail === 'function' && state.activeUserId) {
+                        openUserDetail(state.activeUserId);
+                    }
                     showToast(`${u.name} ${newStatus === 'active' ? 'reactivated' : 'suspended'}`);
                 }
             } else {
                 hideGlobalLoader();
                 refreshCurrentScreen();
+                if (typeof openUserDetail === 'function' && state.activeUserId) {
+                    openUserDetail(state.activeUserId);
+                }
                 showToast(`${u.name} ${newStatus === 'active' ? 'reactivated' : 'suspended'}`);
             }
         }

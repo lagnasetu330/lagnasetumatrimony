@@ -891,20 +891,20 @@ async function supabaseFetchAllProfilesForAdmin() {
                 mapped.agreedTermsAt = mapped.agreedTermsAt || p.created_at || null;
             }
 
-            // Normalise status to active or suspended
+            // Normalise status to active or suspended (profiles.account_status is primary source of truth)
+            const colStatus = String(p.account_status || '').trim().toLowerCase();
             const rawStatus = (p.raw_data && typeof p.raw_data === 'object' && p.raw_data.accountStatus) 
                 ? String(p.raw_data.accountStatus).trim().toLowerCase() 
                 : '';
-            const colStatus = String(p.account_status || '').trim().toLowerCase();
             const uStatus = (uMatch && uMatch.status) ? String(uMatch.status).trim().toLowerCase() : '';
+
             let finalStatus = 'active';
-            if (colStatus === 'suspended' || rawStatus === 'suspended' || uStatus === 'suspended') {
-                // If any source was updated to active, active takes full precedence!
-                if (colStatus === 'active' || rawStatus === 'active' || uStatus === 'active') {
-                    finalStatus = 'active';
-                } else {
-                    finalStatus = 'suspended';
-                }
+            if (colStatus === 'suspended' || colStatus === 'active') {
+                finalStatus = colStatus;
+            } else if (rawStatus === 'suspended' || rawStatus === 'active') {
+                finalStatus = rawStatus;
+            } else if (uStatus === 'suspended' || uStatus === 'active') {
+                finalStatus = uStatus;
             }
             mapped.accountStatus = finalStatus;
             mapped.account_status = finalStatus;
@@ -998,10 +998,11 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
         // Ensure payload never overwrites primary key column
         if (updates.verifyStatus || updates.verify_status) payload.verify_status = updates.verifyStatus || updates.verify_status;
         if (updates.accountStatus || updates.account_status) payload.account_status = (updates.accountStatus || updates.account_status).toLowerCase();
-        const isVisibleUpdate = updates.visible !== undefined ? (updates.visible !== false && updates.visible !== 'false') : undefined;
-        if (isVisibleUpdate !== undefined) {
-            payload.visible = payload.account_status === 'suspended' ? false : isVisibleUpdate;
-        }
+        
+        // CRITICAL: NEVER set payload.visible on PostgreSQL profiles table directly!
+        // PostgreSQL RLS has a strict check policy that fails with 42501 error when setting visible: false.
+        // Visibility is handled securely via account_status column and raw_data JSONB.
+        
         if (updates.featured !== undefined) payload.featured = updates.featured;
         if (updates.suspensionReason !== undefined) {
             payload.suspension_reason = updates.suspensionReason;
@@ -1024,14 +1025,16 @@ async function supabaseUpdateProfileStatus(profileId, updates) {
             const { data: existingRow } = await rowQuery.maybeSingle();
             if (existingRow && existingRow.raw_data) {
                 const updatedRaw = { ...existingRow.raw_data };
-                if (payload.account_status !== undefined) updatedRaw.accountStatus = payload.account_status;
-                if (payload.visible !== undefined) updatedRaw.visible = payload.visible;
+                if (payload.account_status !== undefined) {
+                    updatedRaw.accountStatus = payload.account_status;
+                    updatedRaw.visible = (payload.account_status !== 'suspended');
+                }
                 if (updates.featured !== undefined) updatedRaw.featured = updates.featured;
                 if (payload.suspension_reason !== undefined) updatedRaw.suspensionReason = payload.suspension_reason;
                 payload.raw_data = updatedRaw;
-            } else if (payload.visible !== undefined || payload.account_status !== undefined) {
+            } else if (payload.account_status !== undefined) {
                 payload.raw_data = { 
-                    visible: payload.visible, 
+                    visible: (payload.account_status !== 'suspended'), 
                     accountStatus: payload.account_status,
                     suspensionReason: payload.suspension_reason 
                 };
@@ -1113,25 +1116,28 @@ async function supabaseCheckUserSuspended(userId, email) {
     try {
         const normEmail = email ? String(email).trim().toLowerCase() : '';
         const numId = Number(userId);
-        const resolvedId = !isNaN(numId) ? numId : userId;
+        const hasValidNumId = !isNaN(numId) && numId > 0;
 
-        // 1. Check profiles table first
-        let pQuery = client.from('profiles').select('id, email, account_status, suspension_reason');
+        // 1. Check profiles table first (single source of truth)
+        let pQuery = client.from('profiles').select('id, user_id, email, account_status, suspension_reason');
         if (normEmail) {
-            pQuery = pQuery.eq('email', normEmail);
-        } else if (resolvedId) {
-            pQuery = pQuery.eq('id', resolvedId);
+            pQuery = pQuery.ilike('email', normEmail);
+        } else if (hasValidNumId) {
+            pQuery = pQuery.eq('id', numId);
+        } else if (userId) {
+            pQuery = pQuery.eq('user_id', String(userId));
         }
 
-        const { data: pData } = await pQuery.maybeSingle();
+        const { data: pData } = await pQuery.limit(1).maybeSingle();
         if (pData) {
-            if (pData.account_status === 'suspended') {
+            const pStatus = String(pData.account_status || '').toLowerCase();
+            if (pStatus === 'suspended') {
                 return {
                     suspended: true,
                     reason: pData.suspension_reason || 'Account suspended by administrator for policy violation.'
                 };
             }
-            if (pData.account_status === 'active') {
+            if (pStatus === 'active') {
                 return { suspended: false, reason: null };
             }
         }
@@ -1139,12 +1145,12 @@ async function supabaseCheckUserSuspended(userId, email) {
         // 2. Check users table as fallback
         let uQuery = client.from('users').select('id, email, status, suspension_reason');
         if (normEmail) {
-            uQuery = uQuery.eq('email', normEmail);
+            uQuery = uQuery.ilike('email', normEmail);
         } else if (userId) {
             uQuery = uQuery.eq('id', String(userId));
         }
 
-        const { data: uData } = await uQuery.maybeSingle();
+        const { data: uData } = await uQuery.limit(1).maybeSingle();
         if (uData && (uData.status === 'Suspended' || uData.status === 'suspended')) {
             return {
                 suspended: true,
@@ -1746,6 +1752,7 @@ async function supabaseCheckUserExists(email) {
             online: true,
             exists,
             isSuspended,
+            suspensionReason: (profile && profile.suspension_reason) || (user && user.suspension_reason) || null,
             profile,
             user
         };

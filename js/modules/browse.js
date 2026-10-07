@@ -933,18 +933,7 @@ function updateHomeStats() {
     syncGenderUI();
     const list = (typeof window !== 'undefined' && Array.isArray(window.PROFILES)) ? window.PROFILES : [];
 
-    // If profiles are currently loading from Supabase, display modern skeleton shimmer loaders
-    if (window.isProfilesLoading || list.length === 0) {
-        const gc = document.getElementById('homeGirlsCount');
-        if (gc) gc.innerHTML = '<span class="ms-shimmer-el" style="width:70px;height:12px;border-radius:4px;display:inline-block;"></span>';
-        const bc = document.getElementById('homeBoysCount');
-        if (bc) bc.innerHTML = '<span class="ms-shimmer-el" style="width:70px;height:12px;border-radius:4px;display:inline-block;"></span>';
-        const tot = document.getElementById('homeTotalMembers');
-        if (tot) tot.innerHTML = '<span class="ms-shimmer-el" style="width:36px;height:18px;border-radius:5px;display:inline-block;margin:0 auto;"></span>';
-        const favEl = document.getElementById('favCountHome');
-        if (favEl && state.favorites) favEl.textContent = state.favorites.size;
-        return;
-    }
+
 
     // Count active, non-suspended, non-deleted, visible profiles
     const activeProfiles = list.filter(p => p && 
@@ -1001,78 +990,11 @@ function updateHomeStats() {
 }
 window.updateHomeStats = updateHomeStats;
 
-/* ============================================================
-   INSTAGRAM / LINKEDIN STYLE SKELETON SHIMMER GENERATORS
-   ============================================================ */
-function getSkeletonCardHtml() {
-    return `
-        <div class="skeleton-profile-card">
-            <div class="sk-img-wrap ms-shimmer-el">
-                <div class="sk-badge ms-shimmer-el"></div>
-                <div class="sk-fav ms-shimmer-el"></div>
-            </div>
-            <div class="sk-body">
-                <div class="sk-title ms-shimmer-el"></div>
-                <div class="sk-loc ms-shimmer-el"></div>
-                <div class="sk-grid">
-                    <div class="sk-grid-item ms-shimmer-el"></div>
-                    <div class="sk-grid-item ms-shimmer-el"></div>
-                    <div class="sk-grid-item ms-shimmer-el"></div>
-                    <div class="sk-grid-item ms-shimmer-el"></div>
-                </div>
-                <div class="sk-btn ms-shimmer-el"></div>
-            </div>
-        </div>
-    `;
-}
-
-function renderHomeSkeletons(count = 4) {
-    const wrap = document.getElementById('homeGirlsList') || document.getElementById('homeFeedWrap');
-    if (wrap) {
-        let html = '';
-        for (let i = 0; i < count; i++) {
-            html += getSkeletonCardHtml();
-        }
-        wrap.innerHTML = html;
-    }
-    const gc = document.getElementById('homeGirlsCount');
-    if (gc) gc.innerHTML = '<span class="ms-shimmer-el" style="width:70px;height:12px;border-radius:4px;display:inline-block;"></span>';
-    const bc = document.getElementById('homeBoysCount');
-    if (bc) bc.innerHTML = '<span class="ms-shimmer-el" style="width:70px;height:12px;border-radius:4px;display:inline-block;"></span>';
-    const tot = document.getElementById('homeTotalMembers');
-    if (tot) tot.innerHTML = '<span class="ms-shimmer-el" style="width:36px;height:18px;border-radius:5px;display:inline-block;margin:0 auto;"></span>';
-}
-
-function renderBrowseSkeletons(count = 6) {
-    const wrap = document.getElementById('browseList');
-    if (wrap) {
-        let html = '';
-        for (let i = 0; i < count; i++) {
-            html += getSkeletonCardHtml();
-        }
-        wrap.innerHTML = html;
-    }
-}
-
-function renderInboxSkeletons(count = 4) {
-    const wrap = document.getElementById('inboxContent');
-    if (wrap) {
-        let html = '';
-        for (let i = 0; i < count; i++) {
-            html += `
-                <div class="skeleton-inbox-item">
-                    <div class="skeleton-inbox-avatar ms-shimmer-el"></div>
-                    <div class="skeleton-inbox-lines">
-                        <div class="skeleton-inbox-name ms-shimmer-el"></div>
-                        <div class="skeleton-inbox-preview ms-shimmer-el"></div>
-                    </div>
-                </div>
-            `;
-        }
-        wrap.innerHTML = html;
-    }
-}
-
+// Skeleton compatibility stubs (no-op)
+function getSkeletonCardHtml() { return ''; }
+function renderHomeSkeletons() {}
+function renderBrowseSkeletons() {}
+function renderInboxSkeletons() {}
 window.getSkeletonCardHtml = getSkeletonCardHtml;
 window.renderHomeSkeletons = renderHomeSkeletons;
 window.renderBrowseSkeletons = renderBrowseSkeletons;
@@ -1117,12 +1039,7 @@ function renderHome() {
         seeAllEl.setAttribute('onclick', `setTab('${targetGender}');go('scr-browse');`);
     }
 
-    // 2. SKELETON LOADER: If profiles are loading / empty, show modern skeleton cards
-    if (window.isProfilesLoading || !window.PROFILES || window.PROFILES.length === 0) {
-        renderHomeSkeletons(4);
-        buildTabbar('tabbarHome', 'home');
-        return;
-    }
+
 
     wrap.innerHTML = '';
 
@@ -1605,11 +1522,7 @@ function renderBrowse(query) {
     const wrap = document.getElementById('browseList');
     if (!wrap) return;
 
-    // SKELETON LOADER: If profiles are loading / empty, show modern skeleton cards
-    if (window.isProfilesLoading || !window.PROFILES || window.PROFILES.length === 0) {
-        renderBrowseSkeletons(6);
-        return;
-    }
+
 
     wrap.innerHTML = '';
 
